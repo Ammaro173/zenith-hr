@@ -9,7 +9,7 @@ import { and, eq, sql } from "drizzle-orm";
 // Store scheduled reminders
 const scheduledReminders = new Map<string, NodeJS.Timeout>();
 
-export async function scheduleReminder(
+export function scheduleReminder(
   requestId: string,
   delayMs: number
 ): Promise<void> {
@@ -26,6 +26,7 @@ export async function scheduleReminder(
   }, delayMs);
 
   scheduledReminders.set(requestId, timeout);
+  return Promise.resolve();
 }
 
 export async function checkPendingRequests(): Promise<void> {

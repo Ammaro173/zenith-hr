@@ -3,7 +3,11 @@ import { v4 as uuidv4 } from "uuid";
 import type { CreateRequestInput, CreateRequestOutput } from "../dtos";
 
 export class CreateRequestUseCase {
-  constructor(private readonly requestRepository: IRequestRepository) {}
+  private readonly requestRepository: IRequestRepository;
+
+  constructor(requestRepository: IRequestRepository) {
+    this.requestRepository = requestRepository;
+  }
 
   private generateRequestCode(): string {
     const year = new Date().getFullYear();

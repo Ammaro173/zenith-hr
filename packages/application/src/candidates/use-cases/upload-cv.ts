@@ -3,10 +3,16 @@ import type { IStorageService } from "@zenith-hr/domain/contracts";
 import type { UploadCVInput, UploadCVOutput } from "../dtos";
 
 export class UploadCVUseCase {
+  private readonly candidateRepository: ICandidateRepository;
+  private readonly storageService: IStorageService;
+
   constructor(
-    private readonly candidateRepository: ICandidateRepository,
-    private readonly storageService: IStorageService
-  ) {}
+    candidateRepository: ICandidateRepository,
+    storageService: IStorageService
+  ) {
+    this.candidateRepository = candidateRepository;
+    this.storageService = storageService;
+  }
 
   async execute(input: UploadCVInput): Promise<UploadCVOutput> {
     // 1. Upload CV

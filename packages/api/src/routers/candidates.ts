@@ -96,8 +96,8 @@ export const candidatesRouter = {
           .where(eq(manpowerRequest.id, input.requestId));
 
         return result;
-      } catch (error: any) {
-        if (error.message === "CANDIDATE_NOT_FOUND") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "CANDIDATE_NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
         throw error;

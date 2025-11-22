@@ -38,7 +38,8 @@ export default function RequestsPage() {
                 className={`rounded px-2 py-1 text-xs ${
                   request.status === "APPROVED_OPEN"
                     ? "bg-green-100 text-green-800"
-                    : request.status === "REJECTED"
+                    : // biome-ignore lint/style/noNestedTernary: TODO
+                      request.status === "REJECTED"
                       ? "bg-red-100 text-red-800"
                       : "bg-yellow-100 text-yellow-800"
                 }`}

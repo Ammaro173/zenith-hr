@@ -5,7 +5,11 @@ import type {
 } from "../dtos";
 
 export class HandleDocusignWebhookUseCase {
-  constructor(private readonly contractRepository: IContractRepository) {}
+  private readonly contractRepository: IContractRepository;
+
+  constructor(contractRepository: IContractRepository) {
+    this.contractRepository = contractRepository;
+  }
 
   async execute(
     input: HandleDocusignWebhookInput

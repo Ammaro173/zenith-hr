@@ -6,17 +6,18 @@ import type {
 export class InMemoryCandidateRepository implements ICandidateRepository {
   private readonly storage = new Map<string, Candidate>();
 
-  async save(candidate: Candidate): Promise<void> {
+  save(candidate: Candidate): Promise<void> {
     this.storage.set(candidate.id, candidate);
+    return Promise.resolve();
   }
 
-  async findById(id: string): Promise<Candidate | null> {
-    return this.storage.get(id) || null;
+  findById(id: string): Promise<Candidate | null> {
+    return Promise.resolve(this.storage.get(id) || null);
   }
 
-  async findByRequestId(requestId: string): Promise<Candidate[]> {
-    return Array.from(this.storage.values()).filter(
-      (c) => c.requestId === requestId
+  findByRequestId(requestId: string): Promise<Candidate[]> {
+    return Promise.resolve(
+      Array.from(this.storage.values()).filter((c) => c.requestId === requestId)
     );
   }
 }

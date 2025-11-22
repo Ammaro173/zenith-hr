@@ -2,6 +2,7 @@ import { db } from "@zenith-hr/db";
 import { contract } from "@zenith-hr/db/schema/contracts";
 import type {
   Contract,
+  ContractTerms,
   IContractRepository,
 } from "@zenith-hr/domain/contracts";
 import { eq } from "drizzle-orm";
@@ -56,7 +57,7 @@ export class DrizzleContractRepository implements IContractRepository {
       status: found.status,
       pdfS3Url: found.pdfS3Url, // Assuming contentUrl maps to pdfS3Url
       signingProviderId: found.signingProviderId,
-      contractTerms: found.contractTerms as any, // Assuming terms maps to contractTerms
+      contractTerms: found.contractTerms as unknown as ContractTerms, // Assuming terms maps to contractTerms
       createdAt: found.createdAt,
       updatedAt: found.updatedAt,
     };

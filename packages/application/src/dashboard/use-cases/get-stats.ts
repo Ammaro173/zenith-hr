@@ -2,9 +2,13 @@ import type { IDashboardRepository } from "@zenith-hr/domain/dashboard/repositor
 import type { GetDashboardStatsOutput } from "../dtos";
 
 export class GetDashboardStatsUseCase {
-  constructor(private readonly dashboardRepository: IDashboardRepository) {}
+  private readonly dashboardRepository: IDashboardRepository;
 
-  async execute(): Promise<GetDashboardStatsOutput> {
+  constructor(dashboardRepository: IDashboardRepository) {
+    this.dashboardRepository = dashboardRepository;
+  }
+
+  execute(): Promise<GetDashboardStatsOutput> {
     return this.dashboardRepository.getStats();
   }
 }

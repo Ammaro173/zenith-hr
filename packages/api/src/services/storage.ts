@@ -3,7 +3,7 @@
 
 const storage = new Map<string, { data: Buffer; expiresAt: number }>();
 
-export async function uploadPDF(key: string, buffer: Buffer): Promise<string> {
+export function uploadPDF(key: string, buffer: Buffer): Promise<string> {
   // Store in memory (mock)
   storage.set(key, {
     data: buffer,
@@ -11,35 +11,37 @@ export async function uploadPDF(key: string, buffer: Buffer): Promise<string> {
   });
 
   // Return mock S3 URL
-  return `s3://zenith-hr-contracts/${key}`;
+  return Promise.resolve(`s3://zenith-hr-contracts/${key}`);
 }
 
-export async function generatePresignedURL(key: string): Promise<string> {
+export function generatePresignedURL(key: string): Promise<string> {
   const entry = storage.get(key);
   if (!entry) {
-    throw new Error("File not found");
+    return Promise.reject(new Error("File not found"));
   }
 
   if (Date.now() > entry.expiresAt) {
     storage.delete(key);
-    throw new Error("File expired");
+    return Promise.reject(new Error("File expired"));
   }
 
   // Return mock presigned URL (15 min expiry)
   const expiresIn = Math.floor((entry.expiresAt - Date.now()) / 1000);
-  return `https://storage.zenith-hr.com/contracts/${key}?expires=${expiresIn}`;
+  return Promise.resolve(
+    `https://storage.zenith-hr.com/contracts/${key}?expires=${expiresIn}`
+  );
 }
 
-export async function getPDF(key: string): Promise<Buffer | null> {
+export function getPDF(key: string): Promise<Buffer | null> {
   const entry = storage.get(key);
   if (!entry) {
-    return null;
+    return Promise.resolve(null);
   }
 
   if (Date.now() > entry.expiresAt) {
     storage.delete(key);
-    return null;
+    return Promise.resolve(null);
   }
 
-  return entry.data;
+  return Promise.resolve(entry.data);
 }

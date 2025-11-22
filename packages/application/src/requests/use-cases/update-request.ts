@@ -2,7 +2,11 @@ import type { IRequestRepository } from "@zenith-hr/domain/requests";
 import type { UpdateRequestInput, UpdateRequestOutput } from "../dtos";
 
 export class UpdateRequestUseCase {
-  constructor(private readonly requestRepository: IRequestRepository) {}
+  private readonly requestRepository: IRequestRepository;
+
+  constructor(requestRepository: IRequestRepository) {
+    this.requestRepository = requestRepository;
+  }
 
   async execute(input: UpdateRequestInput): Promise<UpdateRequestOutput> {
     const request = await this.requestRepository.findById(input.id);

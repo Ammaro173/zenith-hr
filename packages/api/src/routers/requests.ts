@@ -15,6 +15,23 @@ const requestRepository = new DrizzleRequestRepository();
 const createRequestUseCase = new CreateRequestUseCase(requestRepository);
 const updateRequestUseCase = new UpdateRequestUseCase(requestRepository);
 
+// Helper function to reduce cognitive complexity
+function handleUseCaseError(error: unknown): never {
+  if (error instanceof Error) {
+    const errorMap: Record<string, string> = {
+      REQUEST_NOT_FOUND: "NOT_FOUND",
+      FORBIDDEN: "FORBIDDEN",
+      BAD_REQUEST: "BAD_REQUEST",
+      CONFLICT: "CONFLICT",
+    };
+    const orpcError = errorMap[error.message];
+    if (orpcError) {
+      throw new ORPCError(orpcError as never);
+    }
+  }
+  throw error;
+}
+
 export const requestsRouter = {
   create: protectedProcedure
     .input(createRequestSchema)
@@ -129,20 +146,8 @@ export const requestsRouter = {
           throw new ORPCError("INTERNAL_SERVER_ERROR");
         }
         return updated;
-      } catch (error: any) {
-        if (error.message === "REQUEST_NOT_FOUND") {
-          throw new ORPCError("NOT_FOUND");
-        }
-        if (error.message === "FORBIDDEN") {
-          throw new ORPCError("FORBIDDEN");
-        }
-        if (error.message === "BAD_REQUEST") {
-          throw new ORPCError("BAD_REQUEST");
-        }
-        if (error.message === "CONFLICT") {
-          throw new ORPCError("CONFLICT");
-        }
-        throw error;
+      } catch (error: unknown) {
+        handleUseCaseError(error);
       }
     }),
 

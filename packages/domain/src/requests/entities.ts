@@ -1,14 +1,14 @@
 export type PositionDetails = {
   title: string;
   department: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export type BudgetDetails = {
   salaryMin: number;
   salaryMax: number;
   currency: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export type ManpowerRequest = {

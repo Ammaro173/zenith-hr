@@ -48,18 +48,21 @@ export default function ApprovalsPage() {
                 <button
                   className="rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600"
                   onClick={() => handleAction(request.id, "APPROVE")}
+                  type="button"
                 >
                   Approve
                 </button>
                 <button
                   className="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600"
                   onClick={() => handleAction(request.id, "REJECT")}
+                  type="button"
                 >
                   Reject
                 </button>
                 <button
                   className="rounded bg-yellow-500 px-3 py-1 text-sm text-white hover:bg-yellow-600"
                   onClick={() => handleAction(request.id, "REQUEST_CHANGE")}
+                  type="button"
                 >
                   Request Change
                 </button>

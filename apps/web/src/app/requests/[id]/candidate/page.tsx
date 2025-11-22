@@ -40,9 +40,12 @@ export default function CandidateSelectionPage() {
       <h1 className="mb-6 font-bold text-2xl">Select Candidate</h1>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block font-medium text-sm">Candidate Name</label>
+          <label className="block font-medium text-sm" htmlFor="candidate-name">
+            Candidate Name
+          </label>
           <input
             className="mt-1 w-full rounded border p-2"
+            id="candidate-name"
             onChange={(e) =>
               setFormData({ ...formData, candidateName: e.target.value })
             }
@@ -52,9 +55,15 @@ export default function CandidateSelectionPage() {
           />
         </div>
         <div>
-          <label className="block font-medium text-sm">Candidate Email</label>
+          <label
+            className="block font-medium text-sm"
+            htmlFor="candidate-email"
+          >
+            Candidate Email
+          </label>
           <input
             className="mt-1 w-full rounded border p-2"
+            id="candidate-email"
             onChange={(e) =>
               setFormData({ ...formData, candidateEmail: e.target.value })
             }
@@ -64,10 +73,13 @@ export default function CandidateSelectionPage() {
           />
         </div>
         <div>
-          <label className="block font-medium text-sm">CV File</label>
+          <label className="block font-medium text-sm" htmlFor="cv-file">
+            CV File
+          </label>
           <input
             accept=".pdf"
             className="mt-1 w-full rounded border p-2"
+            id="cv-file"
             onChange={(e) =>
               setFormData({
                 ...formData,

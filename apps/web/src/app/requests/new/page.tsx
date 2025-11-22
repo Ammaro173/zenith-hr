@@ -38,9 +38,12 @@ export default function NewRequestPage() {
       <h1 className="mb-6 font-bold text-2xl">Create Manpower Request</h1>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="block font-medium text-sm">Position Title</label>
+          <label className="block font-medium text-sm" htmlFor="position-title">
+            Position Title
+          </label>
           <input
             className="mt-1 w-full rounded border p-2"
+            id="position-title"
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -56,9 +59,12 @@ export default function NewRequestPage() {
           />
         </div>
         <div>
-          <label className="block font-medium text-sm">Department</label>
+          <label className="block font-medium text-sm" htmlFor="department">
+            Department
+          </label>
           <input
             className="mt-1 w-full rounded border p-2"
+            id="department"
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -74,9 +80,12 @@ export default function NewRequestPage() {
           />
         </div>
         <div>
-          <label className="block font-medium text-sm">Justification</label>
+          <label className="block font-medium text-sm" htmlFor="justification">
+            Justification
+          </label>
           <textarea
             className="mt-1 w-full rounded border p-2"
+            id="justification"
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -91,9 +100,12 @@ export default function NewRequestPage() {
           />
         </div>
         <div>
-          <label className="block font-medium text-sm">Salary Min</label>
+          <label className="block font-medium text-sm" htmlFor="salary-min">
+            Salary Min
+          </label>
           <input
             className="mt-1 w-full rounded border p-2"
+            id="salary-min"
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -109,9 +121,12 @@ export default function NewRequestPage() {
           />
         </div>
         <div>
-          <label className="block font-medium text-sm">Salary Max</label>
+          <label className="block font-medium text-sm" htmlFor="salary-max">
+            Salary Max
+          </label>
           <input
             className="mt-1 w-full rounded border p-2"
+            id="salary-max"
             onChange={(e) =>
               setFormData({
                 ...formData,

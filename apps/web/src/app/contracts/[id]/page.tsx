@@ -44,7 +44,8 @@ export default function ContractPage() {
             className={`rounded px-2 py-1 text-xs ${
               contract.status === "SIGNED"
                 ? "bg-green-100 text-green-800"
-                : contract.status === "SENT_FOR_SIGNATURE"
+                : // biome-ignore lint/style/noNestedTernary: TODO
+                  contract.status === "SENT_FOR_SIGNATURE"
                   ? "bg-yellow-100 text-yellow-800"
                   : "bg-gray-100 text-gray-800"
             }`}
@@ -57,6 +58,7 @@ export default function ContractPage() {
             className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
             disabled={sendMutation.isPending}
             onClick={() => sendMutation.mutate(contractId)}
+            type="button"
           >
             {sendMutation.isPending ? "Sending..." : "Send for Signature"}
           </button>

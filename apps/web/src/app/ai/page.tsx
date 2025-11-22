@@ -54,6 +54,7 @@ export default function AIPage() {
               </p>
               {message.parts?.map((part, index) => {
                 if (part.type === "text") {
+                  // biome-ignore lint/suspicious/noArrayIndexKey: TODO
                   return <Response key={index}>{part.text}</Response>;
                 }
                 return null;

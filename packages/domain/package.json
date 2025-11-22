@@ -4,7 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./*": "./src/*.ts"
+    "./*": "./src/*.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./candidates": "./src/candidates/index.ts",
+    "./requests": "./src/requests/index.ts",
+    "./dashboard": "./src/dashboard/index.ts",
+    "./dashboard/repositories": "./src/dashboard/repositories.ts"
   },
   "scripts": {
     "check": "biome check --write ."

@@ -8,11 +8,19 @@ import { v4 as uuidv4 } from "uuid";
 import type { GenerateContractInput, GenerateContractOutput } from "../dtos";
 
 export class GenerateContractUseCase {
+  private readonly contractRepository: IContractRepository;
+  private readonly pdfService: IPdfService;
+  private readonly storageService: IStorageService;
+
   constructor(
-    private readonly contractRepository: IContractRepository,
-    private readonly pdfService: IPdfService,
-    private readonly storageService: IStorageService
-  ) {}
+    contractRepository: IContractRepository,
+    pdfService: IPdfService,
+    storageService: IStorageService
+  ) {
+    this.contractRepository = contractRepository;
+    this.pdfService = pdfService;
+    this.storageService = storageService;
+  }
 
   async execute(
     input: GenerateContractInput,

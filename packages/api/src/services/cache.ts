@@ -8,21 +8,21 @@ type CacheEntry<T> = {
 
 const cache = new Map<string, CacheEntry<unknown>>();
 
-export async function get<T>(key: string): Promise<T | null> {
+export function get<T>(key: string): Promise<T | null> {
   const entry = cache.get(key);
   if (!entry) {
-    return null;
+    return Promise.resolve(null);
   }
 
   if (Date.now() > entry.expiresAt) {
     cache.delete(key);
-    return null;
+    return Promise.resolve(null);
   }
 
-  return entry.value as T;
+  return Promise.resolve(entry.value as T);
 }
 
-export async function set<T>(
+export function set<T>(
   key: string,
   value: T,
   ttlSeconds: number
@@ -31,16 +31,19 @@ export async function set<T>(
     value,
     expiresAt: Date.now() + ttlSeconds * 1000,
   });
+  return Promise.resolve();
 }
 
-export async function invalidate(key: string): Promise<void> {
+export function invalidate(key: string): Promise<void> {
   cache.delete(key);
+  return Promise.resolve();
 }
 
-export async function invalidatePattern(pattern: string): Promise<void> {
+export function invalidatePattern(pattern: string): Promise<void> {
   for (const key of cache.keys()) {
     if (key.includes(pattern)) {
       cache.delete(key);
     }
   }
+  return Promise.resolve();
 }
