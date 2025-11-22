@@ -23,7 +23,7 @@ export type ManpowerRequest = {
     | "PENDING_CEO"
     | "APPROVED_OPEN"
     | "HIRING_IN_PROGRESS"
-    | "CLOSED"
+    | "ARCHIVED"
     | "REJECTED";
   positionDetails: PositionDetails;
   budgetDetails: BudgetDetails;

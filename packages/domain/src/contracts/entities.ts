@@ -12,7 +12,7 @@ export type Contract = {
   candidateEmail: string;
   contractTerms: ContractTerms;
   pdfS3Url: string;
-  status: "DRAFT" | "SENT_FOR_SIGNATURE" | "SIGNED";
+  status: "DRAFT" | "SENT_FOR_SIGNATURE" | "SIGNED" | "VOIDED";
   signingProviderId?: string;
   createdAt?: Date;
   updatedAt?: Date;

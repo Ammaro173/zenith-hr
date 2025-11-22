@@ -55,8 +55,8 @@ export class DrizzleContractRepository implements IContractRepository {
       candidateName: found.candidateName, // Assuming candidateName maps to candidateId in the domain model
       candidateEmail: found.candidateEmail,
       status: found.status,
-      pdfS3Url: found.pdfS3Url, // Assuming contentUrl maps to pdfS3Url
-      signingProviderId: found.signingProviderId,
+      pdfS3Url: found.pdfS3Url || "", // Assuming contentUrl maps to pdfS3Url
+      signingProviderId: found.signingProviderId || undefined,
       contractTerms: found.contractTerms as unknown as ContractTerms, // Assuming terms maps to contractTerms
       createdAt: found.createdAt,
       updatedAt: found.updatedAt,

@@ -2,18 +2,18 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { orpc } from "@/utils/orpc";
+import { client, orpc } from "@/utils/orpc";
 
 export default function ContractPage() {
   const params = useParams();
   const contractId = params.id as string;
 
   const { data: contract, isLoading } = useQuery(
-    orpc.contracts.getById.queryOptions({ id: contractId })
+    orpc.contracts.getById.queryOptions({ input: { id: contractId } })
   );
 
   const sendMutation = useMutation({
-    mutationFn: (id: string) => orpc.contracts.sendForSignature.mutate({ id }),
+    mutationFn: (id: string) => client.contracts.sendForSignature({ id }),
     onSuccess: () => {
       // Refresh contract data
     },

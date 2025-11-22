@@ -4,8 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { orpc } from "@/utils/orpc";
 
+type DashboardStats = {
+  totalRequests: number;
+  pendingRequests: number;
+  approvedRequests: number;
+  signedContracts: number;
+  averageTimeToHire: number;
+};
+
 export default function Home() {
-  const { data: stats } = useQuery(orpc.dashboard.getStats.queryOptions());
+  const { data: stats } = useQuery<DashboardStats>(
+    // biome-ignore lint/suspicious/noExplicitAny: TODO
+    orpc.dashboard.getStats.queryOptions() as any
+  );
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">

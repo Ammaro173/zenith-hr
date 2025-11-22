@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { orpc } from "@/utils/orpc";
+import { client } from "@/utils/orpc";
 
 export default function NewRequestPage() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function NewRequestPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => orpc.requests.create.mutate(data),
+    mutationFn: (data: typeof formData) => client.requests.create(data),
     onSuccess: () => {
       router.push("/requests");
     },

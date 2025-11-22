@@ -3,8 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { orpc } from "@/utils/orpc";
-
+import { client } from "@/utils/orpc";
 export default function CandidateSelectionPage() {
   const params = useParams();
   const router = useRouter();
@@ -19,10 +18,15 @@ export default function CandidateSelectionPage() {
   const selectMutation = useMutation({
     mutationFn: async (data: { requestId: string; candidateId: string }) => {
       // In real implementation, upload CV first, then select
-      return orpc.candidates.selectCandidate.mutate(data);
+      return client.candidates.selectCandidate(data);
     },
     onSuccess: () => {
-      router.push(`/contracts?requestId=${requestId}`);
+      router.push(
+        `/contracts?requestId=${
+          requestId
+          // biome-ignore lint/suspicious/noExplicitAny: TODO
+        }` as any
+      );
     },
   });
 

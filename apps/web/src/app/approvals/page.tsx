@@ -2,7 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { orpc } from "@/utils/orpc";
+import { client, orpc } from "@/utils/orpc";
+
+type TransitionAction =
+  | "SUBMIT"
+  | "APPROVE"
+  | "REJECT"
+  | "REQUEST_CHANGE"
+  | "HOLD";
 
 export default function ApprovalsPage() {
   const queryClient = useQueryClient();
@@ -14,16 +21,16 @@ export default function ApprovalsPage() {
   const transitionMutation = useMutation({
     mutationFn: (data: {
       requestId: string;
-      action: string;
+      action: TransitionAction;
       comment?: string;
-    }) => orpc.workflow.transition.mutate(data),
+    }) => client.workflow.transition(data),
     onSuccess: () => {
       queryClient.invalidateQueries();
       setSelectedRequest(null);
     },
   });
 
-  const handleAction = (requestId: string, action: string) => {
+  const handleAction = (requestId: string, action: TransitionAction) => {
     transitionMutation.mutate({ requestId, action });
   };
 

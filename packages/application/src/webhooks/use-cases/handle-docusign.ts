@@ -36,7 +36,7 @@ export class HandleDocusignWebhookUseCase {
       if (contract) {
         contract.status = "SIGNED";
         contract.updatedAt = new Date();
-        await this.contractRepository.save(contract);
+        await this.contractRepository.update(contract);
 
         return { success: true, contractId: contract.id };
       }
