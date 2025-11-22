@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 
 dotenv.config({
-	path: "../../apps/server/.env",
+  path: "../../apps/server/.env",
 });
 
 import { neon, neonConfig } from "@neondatabase/serverless";
@@ -15,3 +15,7 @@ neonConfig.webSocketConstructor = ws;
 
 const sql = neon(process.env.DATABASE_URL || "");
 export const db = drizzle(sql);
+
+// Export all schemas (barrel file needed for Drizzle schema exports)
+// biome-ignore lint/performance/noBarrelFile: Required for Drizzle schema organization
+export * from "./schema";

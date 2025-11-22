@@ -11,23 +11,28 @@
   "type": "module",
   "scripts": {},
   "devDependencies": {
-    "@zenith-hr/config": "workspace:*"
+    "@types/react": "^19.2.6",
+    "@zenith-hr/config": "workspace:*",
+    "react": "^19.2.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@orpc/server": "catalog:",
+    "@ai-sdk/google": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
-    "elysia": "catalog:",
-    "drizzle-orm": "catalog:",
-    "ai": "catalog:",
-    "@ai-sdk/google": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:",
+    "@react-pdf/renderer": "^4.3.1",
     "@zenith-hr/auth": "workspace:*",
-    "@zenith-hr/db": "workspace:*"
+    "@zenith-hr/db": "workspace:*",
+    "ai": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
+    "elysia": "catalog:",
+    "uuid": "^13.0.0",
+    "xstate": "^5.24.0",
+    "zod": "catalog:"
   }
 }

@@ -16,18 +16,18 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.2",
     "@types/ws": "^8.18.1",
-    "@zenith-hr/config": "workspace:*"
+    "@zenith-hr/config": "workspace:*",
+    "drizzle-kit": "^0.31.7"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
-    "drizzle-orm": "catalog:",
     "@neondatabase/serverless": "^1.0.2",
-    "ws": "^8.18.3",
     "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
+    "ws": "^8.18.3",
     "zod": "catalog:"
   }
 }
