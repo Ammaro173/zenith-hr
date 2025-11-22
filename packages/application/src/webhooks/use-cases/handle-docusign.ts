@@ -5,7 +5,7 @@ import type {
 } from "../dtos";
 
 export class HandleDocusignWebhookUseCase {
-  constructor(private contractRepository: IContractRepository) {}
+  constructor(private readonly contractRepository: IContractRepository) {}
 
   async execute(
     input: HandleDocusignWebhookInput

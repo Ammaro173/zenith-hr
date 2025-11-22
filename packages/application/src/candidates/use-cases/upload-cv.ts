@@ -4,14 +4,14 @@ import type { UploadCVInput, UploadCVOutput } from "../dtos";
 
 export class UploadCVUseCase {
   constructor(
-    private candidateRepository: ICandidateRepository,
-    private storageService: IStorageService
+    private readonly candidateRepository: ICandidateRepository,
+    private readonly storageService: IStorageService
   ) {}
 
   async execute(input: UploadCVInput): Promise<UploadCVOutput> {
     // 1. Upload CV
     const cvKey = `cvs/${input.requestId}/${Date.now()}.pdf`;
-    const cvUrl = await this.storageService.upload(cvKey, input.cvFile);
+    const _cvUrl = await this.storageService.upload(cvKey, input.cvFile);
 
     // 2. Create Candidate ID
     const candidateId = `${input.requestId}_${input.candidateEmail}`;

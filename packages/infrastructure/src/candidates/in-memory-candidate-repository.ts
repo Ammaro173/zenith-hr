@@ -4,7 +4,7 @@ import type {
 } from "@zenith-hr/domain/candidates";
 
 export class InMemoryCandidateRepository implements ICandidateRepository {
-  private storage = new Map<string, Candidate>();
+  private readonly storage = new Map<string, Candidate>();
 
   async save(candidate: Candidate): Promise<void> {
     this.storage.set(candidate.id, candidate);

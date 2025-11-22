@@ -1,17 +1,17 @@
-export interface PositionDetails {
+export type PositionDetails = {
   title: string;
   department: string;
   [key: string]: any;
-}
+};
 
-export interface BudgetDetails {
+export type BudgetDetails = {
   salaryMin: number;
   salaryMax: number;
   currency: string;
   [key: string]: any;
-}
+};
 
-export interface ManpowerRequest {
+export type ManpowerRequest = {
   id: string;
   requesterId: string;
   requestCode: string;
@@ -31,4 +31,4 @@ export interface ManpowerRequest {
   version: number;
   createdAt?: Date;
   updatedAt?: Date;
-}
+};

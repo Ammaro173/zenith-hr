@@ -2,7 +2,7 @@ import type { ICandidateRepository } from "@zenith-hr/domain/candidates";
 import type { SelectCandidateInput, SelectCandidateOutput } from "../dtos";
 
 export class SelectCandidateUseCase {
-  constructor(private candidateRepository: ICandidateRepository) {}
+  constructor(private readonly candidateRepository: ICandidateRepository) {}
 
   async execute(input: SelectCandidateInput): Promise<SelectCandidateOutput> {
     const candidate = await this.candidateRepository.findById(

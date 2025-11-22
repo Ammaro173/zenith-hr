@@ -44,7 +44,9 @@ export class DrizzleContractRepository implements IContractRepository {
       .where(eq(contract.signingProviderId, signingProviderId))
       .limit(1);
 
-    if (!found) return null;
+    if (!found) {
+      return null;
+    }
 
     return {
       id: found.id,

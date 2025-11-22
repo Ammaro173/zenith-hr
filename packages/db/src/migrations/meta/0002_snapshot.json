@@ -66,12 +66,8 @@
           "name": "approval_log_request_id_manpower_request_id_fk",
           "tableFrom": "approval_log",
           "tableTo": "manpower_request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -79,12 +75,8 @@
           "name": "approval_log_actor_id_user_id_fk",
           "tableFrom": "approval_log",
           "tableTo": "user",
-          "columnsFrom": [
-            "actor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -184,12 +176,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -259,12 +247,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -274,9 +258,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -356,12 +338,8 @@
           "name": "user_reports_to_manager_id_user_id_fk",
           "tableFrom": "user",
           "tableTo": "user",
-          "columnsFrom": [
-            "reports_to_manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reports_to_manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -371,9 +349,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -505,12 +481,8 @@
           "name": "contract_request_id_manpower_request_id_fk",
           "tableFrom": "contract",
           "tableTo": "manpower_request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -599,12 +571,8 @@
           "name": "manpower_request_requester_id_user_id_fk",
           "tableFrom": "manpower_request",
           "tableTo": "user",
-          "columnsFrom": [
-            "requester_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requester_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -614,9 +582,7 @@
         "manpower_request_request_code_unique": {
           "name": "manpower_request_request_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "request_code"
-          ]
+          "columns": ["request_code"]
         }
       },
       "policies": {},
@@ -666,12 +632,8 @@
           "name": "request_version_request_id_manpower_request_id_fk",
           "tableFrom": "request_version",
           "tableTo": "manpower_request",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -687,34 +649,17 @@
     "public.approval_action": {
       "name": "approval_action",
       "schema": "public",
-      "values": [
-        "SUBMIT",
-        "APPROVE",
-        "REJECT",
-        "REQUEST_CHANGE",
-        "HOLD"
-      ]
+      "values": ["SUBMIT", "APPROVE", "REJECT", "REQUEST_CHANGE", "HOLD"]
     },
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "REQUESTER",
-        "MANAGER",
-        "HR",
-        "FINANCE",
-        "CEO"
-      ]
+      "values": ["REQUESTER", "MANAGER", "HR", "FINANCE", "CEO"]
     },
     "public.contract_status": {
       "name": "contract_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "SENT_FOR_SIGNATURE",
-        "SIGNED",
-        "VOIDED"
-      ]
+      "values": ["DRAFT", "SENT_FOR_SIGNATURE", "SIGNED", "VOIDED"]
     },
     "public.request_status": {
       "name": "request_status",

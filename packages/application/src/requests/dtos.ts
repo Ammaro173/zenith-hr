@@ -3,19 +3,19 @@ import type {
   PositionDetails,
 } from "@zenith-hr/domain/requests";
 
-export interface CreateRequestInput {
+export type CreateRequestInput = {
   requesterId: string;
   positionDetails: PositionDetails;
   budgetDetails: BudgetDetails;
-}
+};
 
-export interface CreateRequestOutput {
+export type CreateRequestOutput = {
   id: string;
   requestCode: string;
   status: string;
-}
+};
 
-export interface UpdateRequestInput {
+export type UpdateRequestInput = {
   id: string;
   requesterId: string;
   version: number;
@@ -23,10 +23,10 @@ export interface UpdateRequestInput {
     positionDetails?: PositionDetails;
     budgetDetails?: BudgetDetails;
   };
-}
+};
 
-export interface UpdateRequestOutput {
+export type UpdateRequestOutput = {
   id: string;
   version: number;
   status: string;
-}
+};

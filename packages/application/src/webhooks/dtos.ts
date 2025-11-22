@@ -1,13 +1,13 @@
-export interface HandleDocusignWebhookInput {
+export type HandleDocusignWebhookInput = {
   event: string;
   data: {
     envelopeId: string;
     status: string;
   };
-}
+};
 
-export interface HandleDocusignWebhookOutput {
+export type HandleDocusignWebhookOutput = {
   success: boolean;
   contractId?: string;
   message?: string;
-}
+};

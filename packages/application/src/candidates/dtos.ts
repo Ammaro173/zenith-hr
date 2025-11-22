@@ -1,25 +1,25 @@
-export interface UploadCVInput {
+export type UploadCVInput = {
   requestId: string;
   candidateName: string;
   candidateEmail: string;
   cvFile: Buffer;
-}
+};
 
-export interface UploadCVOutput {
+export type UploadCVOutput = {
   candidateId: string;
   cvUrl: string;
-}
+};
 
-export interface SelectCandidateInput {
+export type SelectCandidateInput = {
   requestId: string;
   candidateId: string;
-}
+};
 
-export interface SelectCandidateOutput {
+export type SelectCandidateOutput = {
   success: boolean;
   candidate: {
     name: string;
     email: string;
     cvUrl: string;
   };
-}
+};
