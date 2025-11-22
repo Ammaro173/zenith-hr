@@ -1,0 +1,1 @@
+ALTER TYPE "public"."approval_action" ADD VALUE 'SUBMIT' BEFORE 'APPROVE';

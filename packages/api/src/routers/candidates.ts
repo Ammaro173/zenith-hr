@@ -1,16 +1,25 @@
 import { ORPCError } from "@orpc/server";
+import { SelectCandidateUseCase } from "@zenith-hr/application/candidates/use-cases/select-candidate";
+import { UploadCVUseCase } from "@zenith-hr/application/candidates/use-cases/upload-cv";
 import { db } from "@zenith-hr/db";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
+import { InMemoryCandidateRepository } from "@zenith-hr/infrastructure/candidates/in-memory-candidate-repository";
+import { S3StorageService } from "@zenith-hr/infrastructure/services/s3-storage-service";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
-import { uploadPDF } from "../services/storage";
 
-// Mock candidate storage (in production, use a proper candidates table)
-const candidateStorage = new Map<
-  string,
-  { cvUrl: string; name: string; email: string }
->();
+// Composition Root (Manual DI)
+// Note: In a real app, this repository should be a singleton or scoped properly.
+// Since it's in-memory, we MUST instantiate it once outside the handler to persist data across requests (in memory).
+const candidateRepository = new InMemoryCandidateRepository();
+const storageService = new S3StorageService();
+
+const uploadCVUseCase = new UploadCVUseCase(
+  candidateRepository,
+  storageService
+);
+const selectCandidateUseCase = new SelectCandidateUseCase(candidateRepository);
 
 export const candidatesRouter = {
   uploadCV: protectedProcedure
@@ -19,7 +28,7 @@ export const candidatesRouter = {
         requestId: z.string().uuid(),
         candidateName: z.string().min(1),
         candidateEmail: z.string().email(),
-        cvFile: z.instanceof(Buffer), // In real implementation, handle file upload
+        cvFile: z.instanceof(Buffer),
       })
     )
     .handler(async ({ input, context }) => {
@@ -27,7 +36,7 @@ export const candidatesRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      // Verify request exists and is in approved state
+      // Verify request exists and is in approved state (Controller Logic / Authorization)
       const [request] = await db
         .select()
         .from(manpowerRequest)
@@ -42,22 +51,10 @@ export const candidatesRouter = {
         throw new ORPCError("BAD_REQUEST");
       }
 
-      // Upload CV (mock - store in memory)
-      const cvKey = `cvs/${input.requestId}/${Date.now()}.pdf`;
-      await uploadPDF(cvKey, input.cvFile);
+      // Execute Use Case
+      const result = await uploadCVUseCase.execute(input);
 
-      // Store candidate info
-      const candidateId = `${input.requestId}_${input.candidateEmail}`;
-      candidateStorage.set(candidateId, {
-        cvUrl: cvKey,
-        name: input.candidateName,
-        email: input.candidateEmail,
-      });
-
-      return {
-        candidateId,
-        cvUrl: cvKey,
-      };
+      return result;
     }),
 
   selectCandidate: protectedProcedure
@@ -83,25 +80,28 @@ export const candidatesRouter = {
         throw new ORPCError("NOT_FOUND");
       }
 
-      // Get candidate
-      const candidate = candidateStorage.get(input.candidateId);
-      if (!candidate) {
-        throw new ORPCError("NOT_FOUND");
+      try {
+        const result = await selectCandidateUseCase.execute(input);
+
+        // Update request status to HIRING_IN_PROGRESS (This could be part of a separate Use Case or Domain Event)
+        // For now, keeping it here or moving it to a "HiringService" would be better.
+        // But strictly speaking, "Select Candidate" use case *should* probably handle this side effect if it's core domain logic.
+        // Given the scope, I'll keep the DB update here to mirror previous logic, but ideally this belongs in the Use Case too.
+        await db
+          .update(manpowerRequest)
+          .set({
+            status: "HIRING_IN_PROGRESS",
+            updatedAt: new Date(),
+          })
+          .where(eq(manpowerRequest.id, input.requestId));
+
+        return result;
+      } catch (error: any) {
+        if (error.message === "CANDIDATE_NOT_FOUND") {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      // Update request status to HIRING_IN_PROGRESS
-      await db
-        .update(manpowerRequest)
-        .set({
-          status: "HIRING_IN_PROGRESS",
-          updatedAt: new Date(),
-        })
-        .where(eq(manpowerRequest.id, input.requestId));
-
-      return {
-        success: true,
-        candidate,
-      };
     }),
 
   getCandidates: protectedProcedure
@@ -111,14 +111,16 @@ export const candidatesRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      // Get all candidates for this request
-      const candidates = Array.from(candidateStorage.entries())
-        .filter(([id]) => id.startsWith(input.requestId))
-        .map(([id, data]) => ({
-          candidateId: id,
-          ...data,
-        }));
+      // Direct Repository access for query (CQRS-lite)
+      const candidates = await candidateRepository.findByRequestId(
+        input.requestId
+      );
 
-      return candidates;
+      return candidates.map((c) => ({
+        candidateId: c.id,
+        cvUrl: c.cvUrl,
+        name: c.name,
+        email: c.email,
+      }));
     }),
 };

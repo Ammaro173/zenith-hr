@@ -1,8 +1,13 @@
-import { db } from "@zenith-hr/db";
-import { contract } from "@zenith-hr/db/schema/contracts";
-import { eq } from "drizzle-orm";
+import { HandleDocusignWebhookUseCase } from "@zenith-hr/application/webhooks/use-cases/handle-docusign";
+import { DrizzleContractRepository } from "@zenith-hr/infrastructure/contracts/drizzle-contract-repository";
 import { z } from "zod";
 import { publicProcedure } from "../index";
+
+// Composition Root (Manual DI)
+const contractRepository = new DrizzleContractRepository();
+const handleDocusignWebhookUseCase = new HandleDocusignWebhookUseCase(
+  contractRepository
+);
 
 export const webhooksRouter = {
   docusign: publicProcedure
@@ -19,31 +24,8 @@ export const webhooksRouter = {
       // Mock DocuSign webhook handler
       // In production, validate webhook signature here
 
-      if (
-        input.event === "envelope_completed" &&
-        input.data.status === "completed"
-      ) {
-        // Find contract by signing provider ID
-        const [contractRecord] = await db
-          .select()
-          .from(contract)
-          .where(eq(contract.signingProviderId, input.data.envelopeId))
-          .limit(1);
+      const result = await handleDocusignWebhookUseCase.execute(input);
 
-        if (contractRecord) {
-          // Update contract status to SIGNED
-          await db
-            .update(contract)
-            .set({
-              status: "SIGNED",
-              updatedAt: new Date(),
-            })
-            .where(eq(contract.id, contractRecord.id));
-
-          return { success: true, contractId: contractRecord.id };
-        }
-      }
-
-      return { success: true, message: "Webhook received" };
+      return result;
     }),
 };
