@@ -282,8 +282,9 @@ export class WorkflowService {
       APPROVED_OPEN: "Approved - Open",
       HIRING_IN_PROGRESS: "Hiring in Progress",
       REJECTED: "Rejected",
-      COMPLETED: "Completed",
-      CANCELLED: "Cancelled",
+      // COMPLETED: "Completed",
+      // CANCELLED: "Cancelled",
+      ARCHIVED: "Archived",
     };
     return stepNames[status] || status;
   }
