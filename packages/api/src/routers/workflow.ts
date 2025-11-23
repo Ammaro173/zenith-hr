@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
 import { transitionSchema } from "../schemas/request";
-import { transitionRequest } from "../workflow/service";
+import { WorkflowService } from "../services/workflow.service";
 
 export const workflowRouter = {
   transition: protectedProcedure
@@ -20,7 +20,7 @@ export const workflowRouter = {
       const ipAddress: string | undefined = undefined;
 
       try {
-        const newStatus = await transitionRequest(
+        const newStatus = await WorkflowService.transitionRequest(
           context.db,
           input.requestId,
           actorId,

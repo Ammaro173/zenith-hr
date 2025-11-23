@@ -22,5 +22,16 @@
       "!**/.source"
     ]
   },
-  "extends": ["ultracite/core", "ultracite/next"]
+  "extends": ["ultracite/core", "ultracite/next"],
+  "linter": {
+    "rules": {
+      "complexity": {
+        "noStaticOnlyClass": "off",
+        "noExcessiveCognitiveComplexity": "off"
+      },
+      "nursery": {
+        "useMaxParams": "off"
+      }
+    }
+  }
 }

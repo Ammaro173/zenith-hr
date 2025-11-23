@@ -59,7 +59,6 @@ export function shouldSkipStep(
   return false;
 }
 
-// biome-ignore lint/nursery/useMaxParams: TODO
 export async function createApprovalLog(
   db: typeof _db,
   requestId: string,
@@ -95,8 +94,6 @@ export async function archiveVersion(
   });
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TODO
-// biome-ignore lint/nursery/useMaxParams: TODO
 export async function transitionRequest(
   db: typeof _db,
   requestId: string,

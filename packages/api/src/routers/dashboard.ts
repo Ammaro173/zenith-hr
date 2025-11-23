@@ -4,6 +4,7 @@ import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq, sql } from "drizzle-orm";
 import { protectedProcedure } from "../index";
 import { get, set } from "../services/cache";
+import { DashboardService } from "../services/dashboard.service";
 
 export const dashboardRouter = {
   getStats: protectedProcedure.handler(async ({ context }) => {
@@ -18,29 +19,11 @@ export const dashboardRouter = {
       return cached;
     }
 
-    // Calculate statistics
-    const [
-      [totalRequests],
-      [pendingRequests],
-      [approvedRequests],
-      [signedContracts],
-      completedContracts,
-    ] = await Promise.all([
-      context.db.select({ count: sql<number>`count(*)` }).from(manpowerRequest),
-      context.db
-        .select({ count: sql<number>`count(*)` })
-        .from(manpowerRequest)
-        .where(
-          sql`${manpowerRequest.status} IN ('PENDING_MANAGER', 'PENDING_HR', 'PENDING_FINANCE', 'PENDING_CEO')`
-        ),
-      context.db
-        .select({ count: sql<number>`count(*)` })
-        .from(manpowerRequest)
-        .where(eq(manpowerRequest.status, "APPROVED_OPEN")),
-      context.db
-        .select({ count: sql<number>`count(*)` })
-        .from(contract)
-        .where(eq(contract.status, "SIGNED")),
+    // Get statistics from service
+    const stats = await DashboardService.getDashboardStats(context.db);
+
+    // Calculate average time to hire separately (needs contract data)
+    const [completedContracts] = await Promise.all([
       context.db.select().from(contract).where(eq(contract.status, "SIGNED")),
     ]);
 
@@ -55,18 +38,15 @@ export const dashboardRouter = {
     }
     averageTimeToHire = Math.round(averageTimeToHire * 10) / 10;
 
-    const stats = {
-      totalRequests: Number(totalRequests?.count || 0),
-      pendingRequests: Number(pendingRequests?.count || 0),
-      approvedRequests: Number(approvedRequests?.count || 0),
-      signedContracts: Number(signedContracts?.count || 0),
+    const result = {
+      ...stats,
       averageTimeToHire,
     };
 
     // Cache for 1 hour
-    await set(cacheKey, stats, 3600);
+    await set(cacheKey, result, 3600);
 
-    return stats;
+    return result;
   }),
 
   getPendingCount: protectedProcedure.handler(async ({ context }) => {
