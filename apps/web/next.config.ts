@@ -1,3 +1,4 @@
+import "./src/env"; // Validate environment variables
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

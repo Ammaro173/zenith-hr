@@ -27,6 +27,7 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "@react-pdf/renderer": "^4.3.1",
+    "@t3-oss/env-core": "catalog:",
     "@zenith-hr/auth": "workspace:*",
     "@zenith-hr/db": "workspace:*",
     "ai": "catalog:",
@@ -34,7 +35,9 @@
     "drizzle-orm": "catalog:",
     "elysia": "catalog:",
     "pdf-lib": "^1.17.1",
-    "uuid": "^13.0.0",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "pino-std-serializers": "catalog:",
     "xstate": "^5.24.0",
     "zod": "catalog:"
   }

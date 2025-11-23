@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./env";
 import { google } from "@ai-sdk/google";
 import { cors } from "@elysiajs/cors";
 import { opentelemetry } from "@elysiajs/opentelemetry";
@@ -76,16 +77,12 @@ export const app = new Elysia()
     return result.toUIMessageStreamResponse();
   })
   .post("/api/webhooks/docusign", async (context) => {
-    const { webhooksRouter } = await import("@zenith-hr/api/routers/webhooks");
-    const body = (await context.request.json()) as {
-      event: string;
-      data: { envelopeId: string; status: string };
-    };
-    const result = await webhooksRouter.docusign.handler({
-      input: body,
+    // For webhooks, we use the RPC handler which properly invokes procedures
+    const { response } = await rpcHandler.handle(context.request, {
+      prefix: "/webhooks",
       context: await createContext({ context }),
     });
-    return result;
+    return response ?? new Response("Not Found", { status: 404 });
   })
   .get("/", () => "OK")
   .listen(3000, () => {

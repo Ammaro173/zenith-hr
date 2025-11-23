@@ -12,6 +12,7 @@
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "^1.11.3",
+    "@t3-oss/env-nextjs": "catalog:",
     "@tanstack/react-form": "^1.25.0",
     "@tanstack/react-query": "^5.90.10",
     "@zenith-hr/api": "workspace:*",
