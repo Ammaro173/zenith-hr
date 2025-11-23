@@ -1,13 +1,7 @@
-import { HandleDocusignWebhookUseCase } from "@zenith-hr/application/webhooks/use-cases/handle-docusign";
-import { DrizzleContractRepository } from "@zenith-hr/infrastructure/contracts/drizzle-contract-repository";
+import { contract } from "@zenith-hr/db/schema/contracts";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { publicProcedure } from "../index";
-
-// Composition Root (Manual DI)
-const contractRepository = new DrizzleContractRepository();
-const handleDocusignWebhookUseCase = new HandleDocusignWebhookUseCase(
-  contractRepository
-);
 
 export const webhooksRouter = {
   docusign: publicProcedure
@@ -20,12 +14,43 @@ export const webhooksRouter = {
         }),
       })
     )
-    .handler(async ({ input }) => {
+    .handler(async ({ input, context }) => {
       // Mock DocuSign webhook handler
       // In production, validate webhook signature here
 
-      const result = await handleDocusignWebhookUseCase.execute(input);
+      const envelopeId = input.data.envelopeId;
+      const status = input.data.status;
 
-      return result;
+      // Find contract by envelope ID (using signingProviderId)
+      const [contractRecord] = await context.db
+        .select()
+        .from(contract)
+        .where(eq(contract.signingProviderId, envelopeId))
+        .limit(1);
+
+      if (!contractRecord) {
+        // Webhook received for unknown envelope, maybe log it but don't crash
+        return { success: false, message: "Contract not found" };
+      }
+
+      if (status === "completed") {
+        await context.db
+          .update(contract)
+          .set({
+            status: "SIGNED",
+            updatedAt: new Date(),
+          })
+          .where(eq(contract.id, contractRecord.id));
+      } else if (status === "voided" || status === "declined") {
+        await context.db
+          .update(contract)
+          .set({
+            status: "VOIDED",
+            updatedAt: new Date(),
+          })
+          .where(eq(contract.id, contractRecord.id));
+      }
+
+      return { success: true };
     }),
 };

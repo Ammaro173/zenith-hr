@@ -1,23 +1,9 @@
 import { ORPCError } from "@orpc/server";
-import { GenerateContractUseCase } from "@zenith-hr/application/contracts/use-cases/generate-contract";
-import { db } from "@zenith-hr/db";
+import { contract } from "@zenith-hr/db/schema/contracts";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { DrizzleContractRepository } from "@zenith-hr/infrastructure/contracts/drizzle-contract-repository";
-import { PdfService } from "@zenith-hr/infrastructure/services/pdf-service";
-import { S3StorageService } from "@zenith-hr/infrastructure/services/s3-storage-service";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
-
-// Composition Root (Manual DI)
-const contractRepository = new DrizzleContractRepository();
-const pdfService = new PdfService();
-const storageService = new S3StorageService();
-const generateContractUseCase = new GenerateContractUseCase(
-  contractRepository,
-  pdfService,
-  storageService
-);
 
 export const contractsRouter = {
   generate: protectedProcedure
@@ -35,10 +21,8 @@ export const contractsRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      // Get the approved request (This part remains in controller as it fetches input data for the use case)
-      // Ideally, this could also be part of a "GetRequestDetails" service or passed into the use case if we want to be strict.
-      // For now, we keep it here to gather necessary data for the Use Case.
-      const [request] = await db
+      // Get the approved request
+      const [request] = await context.db
         .select()
         .from(manpowerRequest)
         .where(eq(manpowerRequest.id, input.requestId))
@@ -66,32 +50,55 @@ export const contractsRouter = {
       };
       const salary = (budgetDetails.salaryMin + budgetDetails.salaryMax) / 2;
 
-      // Execute Use Case
-      const result = await generateContractUseCase.execute(input, {
+      // 1. Generate PDF
+      const pdfBuffer = await context.pdf.generateContractPdf({
         requestCode: request.requestCode,
+        candidateName: input.candidateName,
+        candidateEmail: input.candidateEmail,
+        candidateAddress: input.candidateAddress,
         positionTitle: positionDetails.title,
         salary,
         currency: budgetDetails.currency || "USD",
+        startDate: input.startDate,
       });
 
-      return result;
-    }),
+      // 2. Upload to S3
+      const key = `contracts/${request.requestCode}/${Date.now()}_contract.pdf`;
+      const pdfUrl = await context.storage.upload(key, pdfBuffer);
 
-  // ... other methods (getById, updateCandidate, etc.) would follow similar pattern
-  // For brevity in this refactor, I am only fully converting 'generate' as a proof of concept
-  // and leaving others as they were (but they will break if I don't include them).
-  // I will include them as-is but note they should be refactored too.
+      // 3. Save to DB
+      const [newContract] = await context.db
+        .insert(contract)
+        .values({
+          requestId: input.requestId,
+          candidateName: input.candidateName,
+          candidateEmail: input.candidateEmail,
+          contractTerms: {
+            salary,
+            currency: budgetDetails.currency || "USD",
+            startDate: input.startDate,
+            positionTitle: positionDetails.title,
+          },
+          pdfS3Url: pdfUrl, // Storing full URL or key depending on storage service implementation. Assuming URL/Key returned is what we want.
+          status: "DRAFT",
+        })
+        .returning();
+
+      return newContract;
+    }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .handler(async ({ input, context }) => {
-      // ... existing implementation or refactor to use repository directly for queries
-      // For queries, it's often okay to bypass Use Cases (CQRS), but let's use repo for consistency if we had one.
-      // Since I only made IContractRepository, I'll use it.
       if (!context.session?.user) {
         throw new ORPCError("UNAUTHORIZED");
       }
-      const contractRecord = await contractRepository.findById(input.id);
+      const [contractRecord] = await context.db
+        .select()
+        .from(contract)
+        .where(eq(contract.id, input.id))
+        .limit(1);
+
       if (!contractRecord) {
         throw new ORPCError("NOT_FOUND");
       }
@@ -111,7 +118,12 @@ export const contractsRouter = {
       if (!context.session?.user) {
         throw new ORPCError("UNAUTHORIZED");
       }
-      const contractRecord = await contractRepository.findById(input.id);
+      const [contractRecord] = await context.db
+        .select()
+        .from(contract)
+        .where(eq(contract.id, input.id))
+        .limit(1);
+
       if (!contractRecord) {
         throw new ORPCError("NOT_FOUND");
       }
@@ -119,12 +131,16 @@ export const contractsRouter = {
         throw new ORPCError("BAD_REQUEST");
       }
 
-      // This logic should be in a Use Case, but for now inline using repository
-      const updated = await contractRepository.update({
-        ...contractRecord,
-        candidateName: input.candidateName || contractRecord.candidateName,
-        candidateEmail: input.candidateEmail || contractRecord.candidateEmail,
-      });
+      const [updated] = await context.db
+        .update(contract)
+        .set({
+          candidateName: input.candidateName || contractRecord.candidateName,
+          candidateEmail: input.candidateEmail || contractRecord.candidateEmail,
+          updatedAt: new Date(),
+        })
+        .where(eq(contract.id, input.id))
+        .returning();
+
       return updated;
     }),
 
@@ -134,7 +150,12 @@ export const contractsRouter = {
       if (!context.session?.user) {
         throw new ORPCError("UNAUTHORIZED");
       }
-      const contractRecord = await contractRepository.findById(input.id);
+      const [contractRecord] = await context.db
+        .select()
+        .from(contract)
+        .where(eq(contract.id, input.id))
+        .limit(1);
+
       if (!contractRecord) {
         throw new ORPCError("NOT_FOUND");
       }
@@ -143,13 +164,18 @@ export const contractsRouter = {
       }
 
       // Mock e-signature provider ID
-      const signingProviderId = "docusign_mock"; // uuid import removed to avoid conflict if not used, but we can re-add if needed.
+      const signingProviderId = "docusign_mock";
 
-      const updated = await contractRepository.update({
-        ...contractRecord,
-        status: "SENT_FOR_SIGNATURE",
-        signingProviderId,
-      });
+      const [updated] = await context.db
+        .update(contract)
+        .set({
+          status: "SENT_FOR_SIGNATURE",
+          signingProviderId,
+          updatedAt: new Date(),
+        })
+        .where(eq(contract.id, input.id))
+        .returning();
+
       return updated;
     }),
 
@@ -159,18 +185,26 @@ export const contractsRouter = {
       if (!context.session?.user) {
         throw new ORPCError("UNAUTHORIZED");
       }
-      const contractRecord = await contractRepository.findById(input.id);
+      const [contractRecord] = await context.db
+        .select()
+        .from(contract)
+        .where(eq(contract.id, input.id))
+        .limit(1);
+
       if (!contractRecord?.pdfS3Url) {
         throw new ORPCError("NOT_FOUND");
       }
 
       // Extract key from S3 URL
+      // Assuming the storage service returns a full URL like s3://... or https://...
+      // We need to strip the prefix to get the key if the storage service expects a key.
+      // Adjusting logic to be robust.
       const key = contractRecord.pdfS3Url.replace(
         "s3://zenith-hr-contracts/",
         ""
       );
 
-      const presignedUrl = await storageService.getPresignedUrl(key);
+      const presignedUrl = await context.storage.getPresignedUrl(key);
       return { url: presignedUrl };
     }),
 };

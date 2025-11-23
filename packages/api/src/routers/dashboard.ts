@@ -1,14 +1,9 @@
 import { ORPCError } from "@orpc/server";
-import { GetDashboardStatsUseCase } from "@zenith-hr/application/dashboard/use-cases/get-stats";
-import { DrizzleDashboardRepository } from "@zenith-hr/infrastructure/dashboard/drizzle-dashboard-repository";
+import { contract } from "@zenith-hr/db/schema/contracts";
+import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
+import { eq, sql } from "drizzle-orm";
 import { protectedProcedure } from "../index";
 import { get, set } from "../services/cache";
-
-// Composition Root (Manual DI)
-const dashboardRepository = new DrizzleDashboardRepository();
-const getDashboardStatsUseCase = new GetDashboardStatsUseCase(
-  dashboardRepository
-);
 
 export const dashboardRouter = {
   getStats: protectedProcedure.handler(async ({ context }) => {
@@ -23,8 +18,50 @@ export const dashboardRouter = {
       return cached;
     }
 
-    // Calculate statistics using Use Case
-    const stats = await getDashboardStatsUseCase.execute();
+    // Calculate statistics
+    const [
+      [totalRequests],
+      [pendingRequests],
+      [approvedRequests],
+      [signedContracts],
+      completedContracts,
+    ] = await Promise.all([
+      context.db.select({ count: sql<number>`count(*)` }).from(manpowerRequest),
+      context.db
+        .select({ count: sql<number>`count(*)` })
+        .from(manpowerRequest)
+        .where(
+          sql`${manpowerRequest.status} IN ('PENDING_MANAGER', 'PENDING_HR', 'PENDING_FINANCE', 'PENDING_CEO')`
+        ),
+      context.db
+        .select({ count: sql<number>`count(*)` })
+        .from(manpowerRequest)
+        .where(eq(manpowerRequest.status, "APPROVED_OPEN")),
+      context.db
+        .select({ count: sql<number>`count(*)` })
+        .from(contract)
+        .where(eq(contract.status, "SIGNED")),
+      context.db.select().from(contract).where(eq(contract.status, "SIGNED")),
+    ]);
+
+    let averageTimeToHire = 0;
+    if (completedContracts.length > 0) {
+      const times = completedContracts.map((c) => {
+        const created = new Date(c.createdAt).getTime();
+        const updated = new Date(c.updatedAt).getTime();
+        return (updated - created) / (1000 * 60 * 60 * 24); // days
+      });
+      averageTimeToHire = times.reduce((a, b) => a + b, 0) / times.length;
+    }
+    averageTimeToHire = Math.round(averageTimeToHire * 10) / 10;
+
+    const stats = {
+      totalRequests: Number(totalRequests?.count || 0),
+      pendingRequests: Number(pendingRequests?.count || 0),
+      approvedRequests: Number(approvedRequests?.count || 0),
+      signedContracts: Number(signedContracts?.count || 0),
+      averageTimeToHire,
+    };
 
     // Cache for 1 hour
     await set(cacheKey, stats, 3600);
@@ -38,9 +75,14 @@ export const dashboardRouter = {
     }
 
     // Direct Repository access for specific query
-    const count = await dashboardRepository.getPendingRequestsCount();
+    const [pendingRequests] = await context.db
+      .select({ count: sql<number>`count(*)` })
+      .from(manpowerRequest)
+      .where(
+        sql`${manpowerRequest.status} IN ('PENDING_MANAGER', 'PENDING_HR', 'PENDING_FINANCE', 'PENDING_CEO')`
+      );
 
-    return { count };
+    return { count: Number(pendingRequests?.count || 0) };
   }),
 
   getAverageTimeToHire: protectedProcedure.handler(async ({ context }) => {
@@ -55,12 +97,25 @@ export const dashboardRouter = {
       return { averageDays: cached };
     }
 
-    // Direct Repository access
-    const averageDays = await dashboardRepository.getAverageTimeToHire();
+    const completedContracts = await context.db
+      .select()
+      .from(contract)
+      .where(eq(contract.status, "SIGNED"));
+
+    let averageTimeToHire = 0;
+    if (completedContracts.length > 0) {
+      const times = completedContracts.map((c) => {
+        const created = new Date(c.createdAt).getTime();
+        const updated = new Date(c.updatedAt).getTime();
+        return (updated - created) / (1000 * 60 * 60 * 24); // days
+      });
+      averageTimeToHire = times.reduce((a, b) => a + b, 0) / times.length;
+    }
+    averageTimeToHire = Math.round(averageTimeToHire * 10) / 10;
 
     // Cache for 1 hour
-    await set(cacheKey, averageDays, 3600);
+    await set(cacheKey, averageTimeToHire, 3600);
 
-    return { averageDays };
+    return { averageDays: averageTimeToHire };
   }),
 };

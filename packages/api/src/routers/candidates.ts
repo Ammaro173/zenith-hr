@@ -1,25 +1,9 @@
 import { ORPCError } from "@orpc/server";
-import { SelectCandidateUseCase } from "@zenith-hr/application/candidates/use-cases/select-candidate";
-import { UploadCVUseCase } from "@zenith-hr/application/candidates/use-cases/upload-cv";
-import { db } from "@zenith-hr/db";
+import { candidates } from "@zenith-hr/db/schema/candidates";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { InMemoryCandidateRepository } from "@zenith-hr/infrastructure/candidates/in-memory-candidate-repository";
-import { S3StorageService } from "@zenith-hr/infrastructure/services/s3-storage-service";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
-
-// Composition Root (Manual DI)
-// Note: In a real app, this repository should be a singleton or scoped properly.
-// Since it's in-memory, we MUST instantiate it once outside the handler to persist data across requests (in memory).
-const candidateRepository = new InMemoryCandidateRepository();
-const storageService = new S3StorageService();
-
-const uploadCVUseCase = new UploadCVUseCase(
-  candidateRepository,
-  storageService
-);
-const selectCandidateUseCase = new SelectCandidateUseCase(candidateRepository);
 
 export const candidatesRouter = {
   uploadCV: protectedProcedure
@@ -36,8 +20,8 @@ export const candidatesRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      // Verify request exists and is in approved state (Controller Logic / Authorization)
-      const [request] = await db
+      // Verify request exists and is in approved state
+      const [request] = await context.db
         .select()
         .from(manpowerRequest)
         .where(eq(manpowerRequest.id, input.requestId))
@@ -51,10 +35,26 @@ export const candidatesRouter = {
         throw new ORPCError("BAD_REQUEST");
       }
 
-      // Execute Use Case
-      const result = await uploadCVUseCase.execute(input);
+      // 1. Upload CV
+      const cvKey = `cvs/${input.requestId}/${Date.now()}.pdf`;
+      await context.storage.upload(cvKey, input.cvFile);
 
-      return result;
+      // 2. Create Candidate ID
+      const candidateId = `${input.requestId}_${input.candidateEmail}`;
+
+      // 3. Save Candidate
+      await context.db.insert(candidates).values({
+        id: candidateId,
+        requestId: input.requestId,
+        name: input.candidateName,
+        email: input.candidateEmail,
+        cvUrl: cvKey,
+      });
+
+      return {
+        candidateId,
+        cvUrl: cvKey,
+      };
     }),
 
   selectCandidate: protectedProcedure
@@ -70,7 +70,7 @@ export const candidatesRouter = {
       }
 
       // Get request
-      const [request] = await db
+      const [request] = await context.db
         .select()
         .from(manpowerRequest)
         .where(eq(manpowerRequest.id, input.requestId))
@@ -80,28 +80,41 @@ export const candidatesRouter = {
         throw new ORPCError("NOT_FOUND");
       }
 
-      try {
-        const result = await selectCandidateUseCase.execute(input);
+      // Check if candidate exists
+      const [candidate] = await context.db
+        .select()
+        .from(candidates)
+        .where(eq(candidates.id, input.candidateId))
+        .limit(1);
 
-        // Update request status to HIRING_IN_PROGRESS (This could be part of a separate Use Case or Domain Event)
-        // For now, keeping it here or moving it to a "HiringService" would be better.
-        // But strictly speaking, "Select Candidate" use case *should* probably handle this side effect if it's core domain logic.
-        // Given the scope, I'll keep the DB update here to mirror previous logic, but ideally this belongs in the Use Case too.
-        await db
-          .update(manpowerRequest)
-          .set({
-            status: "HIRING_IN_PROGRESS",
-            updatedAt: new Date(),
-          })
-          .where(eq(manpowerRequest.id, input.requestId));
-
-        return result;
-      } catch (error: unknown) {
-        if (error instanceof Error && error.message === "CANDIDATE_NOT_FOUND") {
-          throw new ORPCError("NOT_FOUND");
-        }
-        throw error;
+      if (!candidate) {
+        throw new ORPCError("NOT_FOUND", {
+          message: "Candidate not found",
+        });
       }
+
+      // Update request status to HIRING_IN_PROGRESS
+      await context.db
+        .update(manpowerRequest)
+        .set({
+          status: "HIRING_IN_PROGRESS",
+          updatedAt: new Date(),
+        })
+        .where(eq(manpowerRequest.id, input.requestId));
+
+      // Ideally update candidate status too
+      await context.db
+        .update(candidates)
+        .set({
+          status: "SELECTED",
+          updatedAt: new Date(),
+        })
+        .where(eq(candidates.id, input.candidateId));
+
+      return {
+        success: true,
+        candidateId: input.candidateId,
+      };
     }),
 
   getCandidates: protectedProcedure
@@ -111,12 +124,12 @@ export const candidatesRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      // Direct Repository access for query (CQRS-lite)
-      const candidates = await candidateRepository.findByRequestId(
-        input.requestId
-      );
+      const result = await context.db
+        .select()
+        .from(candidates)
+        .where(eq(candidates.requestId, input.requestId));
 
-      return candidates.map((c) => ({
+      return result.map((c) => ({
         candidateId: c.id,
         cvUrl: c.cvUrl,
         name: c.name,

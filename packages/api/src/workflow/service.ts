@@ -1,4 +1,4 @@
-import { db } from "@zenith-hr/db";
+import type { db as _db } from "@zenith-hr/db";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
@@ -6,9 +6,11 @@ import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import type { ApprovalAction, RequestStatus, UserRole } from "../types";
+
 // State machine logic implemented inline below
 
 export async function getNextApprover(
+  db: typeof _db,
   requesterId: string
 ): Promise<string | null> {
   // Recursive CTE to find manager hierarchy
@@ -59,6 +61,7 @@ export function shouldSkipStep(
 
 // biome-ignore lint/nursery/useMaxParams: TODO
 export async function createApprovalLog(
+  db: typeof _db,
   requestId: string,
   actorId: string,
   action: ApprovalAction,
@@ -78,6 +81,7 @@ export async function createApprovalLog(
 }
 
 export async function archiveVersion(
+  db: typeof _db,
   requestId: string,
   versionNumber: number,
   snapshotData: Record<string, unknown>
@@ -94,6 +98,7 @@ export async function archiveVersion(
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: TODO
 // biome-ignore lint/nursery/useMaxParams: TODO
 export async function transitionRequest(
+  db: typeof _db,
   requestId: string,
   actorId: string,
   action: ApprovalAction,
@@ -208,14 +213,14 @@ export async function transitionRequest(
   // Create approval log
   const stepName =
     action === "SUBMIT" ? "Submission" : getStepName(currentStatus);
-  await createApprovalLog(requestId, actorId, action, stepName, {
+  await createApprovalLog(db, requestId, actorId, action, stepName, {
     comment,
     ipAddress,
   });
 
   // Archive version if reverting to DRAFT
   if (newStatus === "DRAFT" && currentStatus !== "DRAFT") {
-    await archiveVersion(requestId, request.revisionVersion + 1, {
+    await archiveVersion(db, requestId, request.revisionVersion + 1, {
       status: currentStatus,
       positionDetails: request.positionDetails,
       budgetDetails: request.budgetDetails,

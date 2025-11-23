@@ -1,36 +1,11 @@
 import { ORPCError } from "@orpc/server";
-import { CreateRequestUseCase } from "@zenith-hr/application/requests/use-cases/create-request";
-import { UpdateRequestUseCase } from "@zenith-hr/application/requests/use-cases/update-request";
-import { db } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
+import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { DrizzleRequestRepository } from "@zenith-hr/infrastructure/requests/drizzle-request-repository";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { protectedProcedure } from "../index";
 import { createRequestSchema, updateRequestSchema } from "../schemas/request";
-
-// Composition Root (Manual DI)
-const requestRepository = new DrizzleRequestRepository();
-const createRequestUseCase = new CreateRequestUseCase(requestRepository);
-const updateRequestUseCase = new UpdateRequestUseCase(requestRepository);
-
-// Helper function to reduce cognitive complexity
-function handleUseCaseError(error: unknown): never {
-  if (error instanceof Error) {
-    const errorMap: Record<string, string> = {
-      REQUEST_NOT_FOUND: "NOT_FOUND",
-      FORBIDDEN: "FORBIDDEN",
-      BAD_REQUEST: "BAD_REQUEST",
-      CONFLICT: "CONFLICT",
-    };
-    const orpcError = errorMap[error.message];
-    if (orpcError) {
-      throw new ORPCError(orpcError as never);
-    }
-  }
-  throw error;
-}
 
 export const requestsRouter = {
   create: protectedProcedure
@@ -40,18 +15,20 @@ export const requestsRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      const result = await createRequestUseCase.execute({
-        requesterId: context.session.user.id,
-        positionDetails: input.positionDetails,
-        budgetDetails: input.budgetDetails,
-      });
+      // Generate request code
+      const requestCode = `REQ-${Date.now()}`;
 
-      // Return full object to match previous behavior if needed, or just the result
-      // The previous implementation returned the full inserted object.
-      // The use case returns { id, requestCode, status }.
-      // If the frontend needs more, we might need to fetch it or adjust the use case.
-      // For now, let's fetch it to be safe and match the return type expected by the frontend.
-      const newRequest = await requestRepository.findById(result.id);
+      const [newRequest] = await context.db
+        .insert(manpowerRequest)
+        .values({
+          requesterId: context.session.user.id,
+          requestCode,
+          positionDetails: input.positionDetails,
+          budgetDetails: input.budgetDetails,
+          status: "PENDING_MANAGER", // Initial status
+        })
+        .returning();
+
       if (!newRequest) {
         throw new ORPCError("INTERNAL_SERVER_ERROR");
       }
@@ -65,7 +42,11 @@ export const requestsRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      const request = await requestRepository.findById(input.id);
+      const [request] = await context.db
+        .select()
+        .from(manpowerRequest)
+        .where(eq(manpowerRequest.id, input.id))
+        .limit(1);
 
       if (!request) {
         throw new ORPCError("NOT_FOUND");
@@ -79,9 +60,10 @@ export const requestsRouter = {
       throw new ORPCError("UNAUTHORIZED");
     }
 
-    const requests = await requestRepository.findByRequesterId(
-      context.session.user.id
-    );
+    const requests = await context.db
+      .select()
+      .from(manpowerRequest)
+      .where(eq(manpowerRequest.requesterId, context.session.user.id));
 
     return requests;
   }),
@@ -92,8 +74,7 @@ export const requestsRouter = {
     }
 
     // Get requests pending approval based on user role
-    // Need to fetch user from DB to get role
-    const [userRecord] = await db
+    const [userRecord] = await context.db
       .select()
       .from(user)
       .where(eq(user.id, context.session.user.id))
@@ -114,7 +95,10 @@ export const requestsRouter = {
       return [];
     }
 
-    const requests = await requestRepository.findByStatus(statusFilter);
+    const requests = await context.db
+      .select()
+      .from(manpowerRequest)
+      .where(eq(manpowerRequest.status, statusFilter as "PENDING_MANAGER")); // Cast to specific enum member or let it infer if possible, but statusFilter is string.
 
     return requests;
   }),
@@ -132,23 +116,58 @@ export const requestsRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      try {
-        const result = await updateRequestUseCase.execute({
-          id: input.id,
-          requesterId: context.session.user.id,
-          version: input.version,
-          data: input.data,
-        });
+      // Check existence and version
+      const [existing] = await context.db
+        .select()
+        .from(manpowerRequest)
+        .where(eq(manpowerRequest.id, input.id))
+        .limit(1);
 
-        // Fetch full object to return
-        const updated = await requestRepository.findById(result.id);
-        if (!updated) {
-          throw new ORPCError("INTERNAL_SERVER_ERROR");
-        }
-        return updated;
-      } catch (error: unknown) {
-        handleUseCaseError(error);
+      if (!existing) {
+        throw new ORPCError("NOT_FOUND");
       }
+
+      if (existing.version !== input.version) {
+        throw new ORPCError("CONFLICT", {
+          message: "Version mismatch. Please refresh and try again.",
+        });
+      }
+
+      // Check permissions (simplified)
+      if (existing.requesterId !== context.session.user.id) {
+        throw new ORPCError("FORBIDDEN");
+      }
+
+      // Save version history
+      await context.db.insert(requestVersion).values({
+        requestId: existing.id,
+        versionNumber: existing.version,
+        snapshotData: {
+          positionDetails: existing.positionDetails,
+          budgetDetails: existing.budgetDetails,
+          status: existing.status,
+        },
+        createdAt: new Date(),
+      });
+
+      // Update
+      const [updated] = await context.db
+        .update(manpowerRequest)
+        .set({
+          ...input.data,
+          version: existing.version + 1,
+          updatedAt: new Date(),
+        })
+        .where(
+          eq(manpowerRequest.id, input.id)
+          // We could add version check here too for extra safety: and(eq(id, input.id), eq(version, input.version))
+        )
+        .returning();
+
+      if (!updated) {
+        throw new ORPCError("INTERNAL_SERVER_ERROR");
+      }
+      return updated;
     }),
 
   getVersions: protectedProcedure
@@ -158,11 +177,7 @@ export const requestsRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      // This is a specific query for versions, maybe not worth putting in the main repository
-      // unless we want a "RequestVersionRepository".
-      // For now, keeping direct DB access for this auxiliary data seems fine or we can add it to IRequestRepository.
-      // Let's keep it direct for now as it's read-only and specific.
-      const versions = await db
+      const versions = await context.db
         .select()
         .from(requestVersion)
         .where(eq(requestVersion.requestId, input.id))

@@ -1,6 +1,7 @@
 // biome-ignore lint/performance/noBarrelFile: Required for Drizzle schema organization
 export * from "./approval-logs";
 export * from "./auth";
+export * from "./candidates";
 export * from "./contracts";
 export * from "./manpower-requests";
 export * from "./request-versions";

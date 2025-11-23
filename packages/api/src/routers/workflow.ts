@@ -1,5 +1,4 @@
 import { ORPCError } from "@orpc/server";
-import { db } from "@zenith-hr/db";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq } from "drizzle-orm";
@@ -22,6 +21,7 @@ export const workflowRouter = {
 
       try {
         const newStatus = await transitionRequest(
+          context.db,
           input.requestId,
           actorId,
           input.action,
@@ -48,7 +48,7 @@ export const workflowRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      const [request] = await db
+      const [request] = await context.db
         .select()
         .from(manpowerRequest)
         .where(eq(manpowerRequest.id, input.id))
@@ -68,7 +68,7 @@ export const workflowRouter = {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      const logs = await db
+      const logs = await context.db
         .select()
         .from(approvalLog)
         .where(eq(approvalLog.requestId, input.id))
