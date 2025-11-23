@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { google } from "@ai-sdk/google";
 import { cors } from "@elysiajs/cors";
+import { opentelemetry } from "@elysiajs/opentelemetry";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
@@ -33,6 +34,7 @@ const apiHandler = new OpenAPIHandler(appRouter, {
 });
 
 export const app = new Elysia()
+  .use(opentelemetry())
   .use(
     cors({
       origin: process.env.CORS_ORIGIN || "",
