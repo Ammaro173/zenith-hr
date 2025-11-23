@@ -1,10 +1,17 @@
-import type {
-  GeneratePdfParams,
-  IPdfService,
-} from "@zenith-hr/domain/contracts";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
-export class PdfService implements IPdfService {
+export type GeneratePdfParams = {
+  requestCode: string;
+  positionTitle: string;
+  salary: number;
+  currency: string;
+  candidateName: string;
+  candidateEmail: string;
+  candidateAddress?: string;
+  startDate: string;
+};
+
+export class PdfService {
   async generateContractPdf(params: GeneratePdfParams): Promise<Buffer> {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();

@@ -1,47 +1,44 @@
-// Mock S3 storage service
-// In production, replace with actual S3 client
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const storage = new Map<string, { data: Buffer; expiresAt: number }>();
+export class S3StorageService {
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
 
-export function uploadPDF(key: string, buffer: Buffer): Promise<string> {
-  // Store in memory (mock)
-  storage.set(key, {
-    data: buffer,
-    expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
-  });
-
-  // Return mock S3 URL
-  return Promise.resolve(`s3://zenith-hr-contracts/${key}`);
-}
-
-export function generatePresignedURL(key: string): Promise<string> {
-  const entry = storage.get(key);
-  if (!entry) {
-    return Promise.reject(new Error("File not found"));
+  constructor() {
+    this.s3Client = new S3Client({
+      region: process.env.AWS_REGION || "us-east-1",
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+      },
+    });
+    this.bucketName = process.env.S3_BUCKET_NAME || "zenith-hr-contracts";
   }
 
-  if (Date.now() > entry.expiresAt) {
-    storage.delete(key);
-    return Promise.reject(new Error("File expired"));
+  async upload(key: string, data: Buffer): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      Body: data,
+      ContentType: "application/pdf",
+    });
+
+    await this.s3Client.send(command);
+
+    return `s3://${this.bucketName}/${key}`;
   }
 
-  // Return mock presigned URL (15 min expiry)
-  const expiresIn = Math.floor((entry.expiresAt - Date.now()) / 1000);
-  return Promise.resolve(
-    `https://storage.zenith-hr.com/contracts/${key}?expires=${expiresIn}`
-  );
-}
+  async getPresignedUrl(key: string): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+    });
 
-export function getPDF(key: string): Promise<Buffer | null> {
-  const entry = storage.get(key);
-  if (!entry) {
-    return Promise.resolve(null);
+    return await getSignedUrl(this.s3Client, command, { expiresIn: 3600 });
   }
-
-  if (Date.now() > entry.expiresAt) {
-    storage.delete(key);
-    return Promise.resolve(null);
-  }
-
-  return Promise.resolve(entry.data);
 }
