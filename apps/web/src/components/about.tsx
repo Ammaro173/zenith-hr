@@ -1,0 +1,38 @@
+export function About({ id }: { id?: string }) {
+  return (
+    <section
+      className="relative overflow-hidden bg-zinc-950 px-6 py-24 lg:px-12 lg:py-32"
+      id={id}
+    >
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <h2 className="mb-6 font-light font-serif text-4xl text-white tracking-tight md:text-5xl lg:text-6xl">
+              Who We Are
+            </h2>
+            <p className="mb-4 font-light text-xl text-zinc-400">
+              Driven by Passion. United by Audi.
+            </p>
+            <p className="text-zinc-300 leading-relaxed">
+              Founded in partnership with Q-Auto, Audi Club Qatar is your
+              gateway to unique automotive experiences, networking
+              opportunities, and lifestyle benefits.
+            </p>
+            <p className="mt-4 text-zinc-300 leading-relaxed">
+              We're more than a club, we're a community that celebrates
+              performance, design, and innovation.
+            </p>
+          </div>
+          <div className="relative h-[400px] overflow-hidden rounded-lg lg:h-auto">
+            <img
+              alt="Audi Club community"
+              className="h-full w-full object-cover"
+              src="/images/audi-club-members-gathering-luxury-event.jpg"
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-zinc-950/60 to-transparent" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
