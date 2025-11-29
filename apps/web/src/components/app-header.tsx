@@ -30,7 +30,9 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-20 border-border/60 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/75">
       <div className="flex h-20 items-center gap-4 px-6">
+        {/* <div className="invisible absolute start-4 top-3 z-20 lg:visible"> */}
         <SidebarTrigger className="cursor-pointer rounded-full border border-border/50 bg-background/80 p-2 shadow-sm transition-all duration-200 hover:bg-background hover:shadow-md" />
+        {/* </div> */}
 
         <div className="ml-auto flex items-center gap-3">
           <DropdownMenu>
