@@ -10,6 +10,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { Options } from "nuqs";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { queryClient } from "@/utils/orpc";
+import { CommandMenu } from "./command-menu";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
 
@@ -43,13 +44,15 @@ export default function Providers({
           disableTransitionOnChange
           enableSystem
         >
-          <QueryClientProvider client={queryClient}>
-            <HydrationBoundary state={dehydratedState}>
-              {children}
-            </HydrationBoundary>
-            <ReactQueryDevtools />
-          </QueryClientProvider>
-          <Toaster richColors />
+          <CommandMenu>
+            <QueryClientProvider client={queryClient}>
+              <HydrationBoundary state={dehydratedState}>
+                {children}
+              </HydrationBoundary>
+              <ReactQueryDevtools />
+            </QueryClientProvider>
+            <Toaster richColors />
+          </CommandMenu>
         </ThemeProvider>
       </ProgressProvider>
     </NuqsAdapter>
