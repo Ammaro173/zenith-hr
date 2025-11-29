@@ -10,7 +10,7 @@ const SIDEBAR_OPEN_VALUE = "true";
 async function getSidebarOpenState(): Promise<boolean> {
   const cookieStore = await cookies();
   const sidebarState = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value;
-  return sidebarState !== SIDEBAR_OPEN_VALUE;
+  return sidebarState === SIDEBAR_OPEN_VALUE;
 }
 
 export default async function ProtectedLayout({
@@ -21,6 +21,7 @@ export default async function ProtectedLayout({
   // const session = await auth();
   // const currentAdmin = await getCurrentAdmin();
   const isSidebarOpen = await getSidebarOpenState();
+  console.log("isSidebarOpen", isSidebarOpen);
 
   // if (isEmpty(session) || session?.error) {
   //   redirect("/login" as Route);

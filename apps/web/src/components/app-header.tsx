@@ -1,5 +1,6 @@
+"use client";
+
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
-import { headers } from "next/headers";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,18 +16,12 @@ import { authClient } from "@/lib/auth-client";
 import { Show } from "@/utils/Show";
 import { Skeleton } from "./ui/skeleton";
 
-export async function AppHeader() {
-  const session = await authClient.getSession({
-    fetchOptions: {
-      headers: await headers(),
-      throw: true,
-    },
-  });
-  // const { data: session, status } = useSession();
-  const userName = session?.user?.name;
-  const userEmail = session?.user?.email;
+export function AppHeader() {
+  const { data: session, isPending } = authClient.useSession();
+  const { user } = session ?? {};
+  const { name, email } = user ?? {};
   const userInitials =
-    session?.user?.name
+    name
       ?.split(" ")
       .map((n) => n.charAt(0))
       .join("")
@@ -42,13 +37,12 @@ export async function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button
                 className="group relative flex cursor-pointer items-center gap-3 rounded-full border border-border/60 bg-white/80 px-3 py-2 shadow-sm transition-all duration-300 hover:border-border hover:bg-white hover:shadow-lg focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                // disabled={status === "loading"}
+                disabled={isPending}
                 type="button"
                 variant="ghost"
               >
                 <Show>
-                  {/* <Show.When isTrue={status === "loading"}> */}
-                  <Show.When isTrue={true}>
+                  <Show.When isTrue={isPending}>
                     <div className="flex items-center gap-3">
                       <Skeleton className="size-6 rounded-full" />
                       <div className="hidden gap-1 sm:flex sm:flex-col">
@@ -69,10 +63,10 @@ export async function AppHeader() {
                     </div>
                     <div className="hidden gap-0.5 text-left sm:flex sm:flex-col">
                       <span className="font-medium text-sm leading-none transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground">
-                        {userName}
+                        {name}
                       </span>
                       <span className="text-muted-foreground text-xs transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/80">
-                        {userEmail}
+                        {email}
                       </span>
                     </div>
                     <ChevronDown className="size-4 text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-foreground group-data-[state=open]:rotate-180" />
@@ -93,9 +87,9 @@ export async function AppHeader() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold text-sm">{userName}</span>
+                    <span className="font-semibold text-sm">{name}</span>
                     <span className="text-muted-foreground text-xs">
-                      {userEmail}
+                      {email}
                     </span>
                   </div>
                 </div>
@@ -112,13 +106,8 @@ export async function AppHeader() {
               <DropdownMenuSeparator className="bg-border/60" />
               <DropdownMenuItem
                 className="cursor-pointer px-4 py-2.5 text-destructive transition-all duration-200 hover:translate-x-1 hover:bg-destructive/10 hover:text-destructive"
-                onClick={async () => {
-                  authClient.signOut({
-                    fetchOptions: {
-                      headers: await headers(),
-                      throw: true,
-                    },
-                  });
+                onClick={() => {
+                  authClient.signOut();
                 }}
               >
                 <LogOut className="mr-3 size-4 transition-all duration-200 group-hover:scale-110 group-hover:text-destructive" />
