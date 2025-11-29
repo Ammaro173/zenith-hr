@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
-import * as React from "react";
+import React from "react";
 
 import { DataTableRangeFilter } from "@/components/data-table/data-table-range-filter";
 import { Badge } from "@/components/ui/badge";
@@ -168,7 +168,7 @@ export function DataTableFilterList<TData>({
       const updatedFilters = filters.filter(
         (filter) => filter.filterId !== filterId
       );
-      void setFilters(updatedFilters);
+      setFilters(updatedFilters);
       requestAnimationFrame(() => {
         addButtonRef.current?.focus();
       });
@@ -177,8 +177,8 @@ export function DataTableFilterList<TData>({
   );
 
   const onFiltersReset = React.useCallback(() => {
-    void setFilters(null);
-    void setJoinOperator("and");
+    setFilters(null);
+    setJoinOperator("and");
   }, [setFilters, setJoinOperator]);
 
   React.useEffect(() => {
@@ -353,7 +353,7 @@ function DataTableFilterItem<TData>({
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
   const [showValueSelector, setShowValueSelector] = React.useState(false);
 
-  const column = columns.find((column) => column.id === filter.id);
+  const column = columns.find((col) => col.id === filter.id);
 
   const joinOperatorListboxId = `${filterItemId}-join-operator-listbox`;
   const fieldListboxId = `${filterItemId}-field-listbox`;
@@ -396,6 +396,7 @@ function DataTableFilterItem<TData>({
 
   return (
     <SortableItem asChild value={filter.filterId}>
+      {/** biome-ignore lint/a11y/noNoninteractiveElementInteractions: //TODO */}
       <li
         className="flex items-center gap-2"
         id={filterItemId}
@@ -405,6 +406,7 @@ function DataTableFilterItem<TData>({
         <div className="min-w-[72px] text-center">
           {index === 0 ? (
             <span className="text-muted-foreground text-sm">Where</span>
+            // biome-ignore lint/style/noNestedTernary: //TODO
           ) : index === 1 ? (
             <Select
               onValueChange={(value: JoinOperator) => setJoinOperator(value)}
@@ -413,7 +415,7 @@ function DataTableFilterItem<TData>({
               <SelectTrigger
                 aria-controls={joinOperatorListboxId}
                 aria-label="Select join operator"
-                className="h-8 rounded lowercase [&[data-size]]:h-8"
+                className="h-8 rounded lowercase data-size:h-8"
               >
                 <SelectValue placeholder={joinOperator} />
               </SelectTrigger>
@@ -422,9 +424,9 @@ function DataTableFilterItem<TData>({
                 id={joinOperatorListboxId}
                 position="popper"
               >
-                {dataTableConfig.joinOperators.map((joinOperator) => (
-                  <SelectItem key={joinOperator} value={joinOperator}>
-                    {joinOperator}
+                {dataTableConfig.joinOperators.map((operator) => (
+                  <SelectItem key={operator} value={operator}>
+                    {operator}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -444,15 +446,15 @@ function DataTableFilterItem<TData>({
               variant="outline"
             >
               <span className="truncate">
-                {columns.find((column) => column.id === filter.id)?.columnDef
-                  .meta?.label ?? "Select field"}
+                {columns.find((col) => col.id === filter.id)?.columnDef.meta
+                  ?.label ?? "Select field"}
               </span>
               <ChevronsUpDown className="opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-40 origin-[var(--radix-popover-content-transform-origin)] p-0"
+            className="w-40 origin-(--radix-popover-content-transform-origin) p-0"
             id={fieldListboxId}
           >
             <Command>
@@ -460,9 +462,9 @@ function DataTableFilterItem<TData>({
               <CommandList>
                 <CommandEmpty>No fields found.</CommandEmpty>
                 <CommandGroup>
-                  {columns.map((column) => (
+                  {columns.map((col) => (
                     <CommandItem
-                      key={column.id}
+                      key={col.id}
                       onSelect={(value) => {
                         onFilterUpdate(filter.filterId, {
                           id: value as Extract<keyof TData, string>,
@@ -509,14 +511,14 @@ function DataTableFilterItem<TData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
-            className="h-8 w-32 rounded lowercase [&[data-size]]:h-8"
+            className="h-8 w-32 rounded lowercase data-size:h-8"
           >
             <div className="truncate">
               <SelectValue placeholder={filter.operator} />
             </div>
           </SelectTrigger>
           <SelectContent
-            className="origin-[var(--radix-select-content-transform-origin)]"
+            className="origin-(--radix-select-content-transform-origin)"
             id={operatorListboxId}
           >
             {filterOperators.map((operator) => (
@@ -582,6 +584,7 @@ function onFilterInputRender<TData>({
 }) {
   if (filter.operator === "isEmpty" || filter.operator === "isNotEmpty") {
     return (
+      // biome-ignore lint/a11y/useSemanticElements: //TODO
       <div
         aria-label={`${columnMeta?.label} filter is ${
           filter.operator === "isEmpty" ? "empty" : "not empty"
@@ -657,7 +660,7 @@ function onFilterInputRender<TData>({
           <SelectTrigger
             aria-controls={inputListboxId}
             aria-label={`${columnMeta?.label} boolean filter`}
-            className="h-8 w-full rounded [&[data-size]]:h-8"
+            className="h-8 w-full rounded data-size:h-8"
             id={inputId}
           >
             <SelectValue placeholder={filter.value ? "True" : "False"} />
@@ -676,7 +679,8 @@ function onFilterInputRender<TData>({
 
       const multiple = filter.variant === "multiSelect";
       const selectedValues = multiple
-        ? Array.isArray(filter.value)
+        ? // biome-ignore lint/style/noNestedTernary: //TODO
+          Array.isArray(filter.value)
           ? filter.value
           : []
         : typeof filter.value === "string"
@@ -714,7 +718,7 @@ function onFilterInputRender<TData>({
             </Button>
           </FacetedTrigger>
           <FacetedContent
-            className="w-[200px] origin-[var(--radix-popover-content-transform-origin)]"
+            className="w-[200px] origin-(--radix-popover-content-transform-origin)"
             id={inputListboxId}
           >
             <FacetedInput
@@ -755,7 +759,8 @@ function onFilterInputRender<TData>({
           ? `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
               new Date(Number(dateValue[1]))
             )}`
-          : dateValue[0]
+          : // biome-ignore lint/style/noNestedTernary: //TODO
+            dateValue[0]
             ? formatDate(new Date(Number(dateValue[0])))
             : "Pick a date";
 
@@ -779,7 +784,7 @@ function onFilterInputRender<TData>({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-auto origin-[var(--radix-popover-content-transform-origin)] p-0"
+            className="w-auto origin-(--radix-popover-content-transform-origin) p-0"
             id={inputListboxId}
           >
             {filter.operator === "isBetween" ? (
@@ -787,7 +792,7 @@ function onFilterInputRender<TData>({
                 aria-label={`Select ${columnMeta?.label} date range`}
                 captionLayout="dropdown"
                 mode="range"
-                onSelect={(date) => {
+                onSelect={(date: { from?: Date; to?: Date } | undefined) => {
                   onFilterUpdate(filter.filterId, {
                     value: date
                       ? [
@@ -814,7 +819,7 @@ function onFilterInputRender<TData>({
                 aria-label={`Select ${columnMeta?.label} date`}
                 captionLayout="dropdown"
                 mode="single"
-                onSelect={(date) => {
+                onSelect={(date: Date | undefined) => {
                   onFilterUpdate(filter.filterId, {
                     value: (date?.getTime() ?? "").toString(),
                   });

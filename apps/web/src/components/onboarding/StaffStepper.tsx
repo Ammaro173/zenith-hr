@@ -463,7 +463,7 @@ export function StaffStepper({ id, member }: Props) {
                   maxFiles={1}
                   maxSize={MAX_FILE_SIZE}
                   multiple={false}
-                  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <//TODO simplify>
+                  //TODO simplify>
                   onAccept={async (acceptedFiles) => {
                     const file = acceptedFiles.at(0);
                     if (!file) {

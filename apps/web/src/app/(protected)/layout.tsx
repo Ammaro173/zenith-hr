@@ -4,6 +4,15 @@ import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
+const SIDEBAR_COOKIE_NAME = "sidebar_state";
+const SIDEBAR_OPEN_VALUE = "true";
+
+async function getSidebarOpenState(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const sidebarState = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value;
+  return sidebarState !== SIDEBAR_OPEN_VALUE;
+}
+
 export default async function ProtectedLayout({
   children,
 }: {
@@ -11,9 +20,7 @@ export default async function ProtectedLayout({
 }) {
   // const session = await auth();
   // const currentAdmin = await getCurrentAdmin();
-  const cookieStore = await cookies();
-  const sidebarState = cookieStore.get("sidebar_state")?.value;
-  const isSidebarOpen = sidebarState === "true";
+  const isSidebarOpen = await getSidebarOpenState();
 
   // if (isEmpty(session) || session?.error) {
   //   redirect("/login" as Route);

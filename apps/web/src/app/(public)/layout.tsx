@@ -1,5 +1,5 @@
 import type React from "react";
 
-export default function RootLayout({ children }: React.PropsWithChildren) {
+export default function PublicLayout({ children }: React.PropsWithChildren) {
   return <>{children}</>;
 }
