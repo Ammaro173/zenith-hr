@@ -26,10 +26,16 @@
 	},
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"editor.formatOnSave": true,
-	"editor.formatOnPaste": true,
+	// "editor.formatOnPaste": true,
 	"emmet.showExpandedAbbreviation": "never",
 	"editor.codeActionsOnSave": {
 		"source.fixAll.biome": "explicit",
 		"source.organizeImports.biome": "explicit"
-	}
+	},
+  "editor.quickSuggestions": {
+    "strings": "on",
+  },
+  "files.associations": {
+    "*.css": "tailwindcss",
+  }
 }

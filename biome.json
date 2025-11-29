@@ -29,6 +29,9 @@
         "noStaticOnlyClass": "off",
         "noExcessiveCognitiveComplexity": "off"
       },
+      "correctness": {
+        "noUnknownFunction": "off"
+      },
       "nursery": {
         "useMaxParams": "off"
       }
