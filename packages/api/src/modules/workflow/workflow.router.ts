@@ -1,11 +1,6 @@
 import { ORPCError } from "@orpc/server";
-import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
-import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { eq } from "drizzle-orm";
-import { z } from "zod";
-import { protectedProcedure } from "../index";
-import { transitionSchema } from "../schemas/request";
-import { WorkflowService } from "../services/workflow.service";
+import { protectedProcedure } from "../../shared/middleware";
+import { requestIdSchema, transitionSchema } from "./workflow.schema";
 
 export const workflowRouter = {
   transition: protectedProcedure
@@ -20,8 +15,7 @@ export const workflowRouter = {
       const ipAddress: string | undefined = undefined;
 
       try {
-        const newStatus = await WorkflowService.transitionRequest(
-          context.db,
+        const newStatus = await context.services.workflow.transitionRequest(
           input.requestId,
           actorId,
           input.action,
@@ -42,17 +36,13 @@ export const workflowRouter = {
     }),
 
   getRequest: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(requestIdSchema)
     .handler(async ({ input, context }) => {
       if (!context.session?.user) {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      const [request] = await context.db
-        .select()
-        .from(manpowerRequest)
-        .where(eq(manpowerRequest.id, input.id))
-        .limit(1);
+      const request = await context.services.workflow.getRequest(input.id);
 
       if (!request) {
         throw new ORPCError("NOT_FOUND");
@@ -62,18 +52,12 @@ export const workflowRouter = {
     }),
 
   getRequestHistory: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+    .input(requestIdSchema)
     .handler(async ({ input, context }) => {
       if (!context.session?.user) {
         throw new ORPCError("UNAUTHORIZED");
       }
 
-      const logs = await context.db
-        .select()
-        .from(approvalLog)
-        .where(eq(approvalLog.requestId, input.id))
-        .orderBy(approvalLog.performedAt);
-
-      return logs;
+      return context.services.workflow.getRequestHistory(input.id);
     }),
 };

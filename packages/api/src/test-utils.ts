@@ -17,6 +17,8 @@ export function createTestContext(overrides?: Partial<Context>): Context {
       generateContractPdf: async () => Buffer.from("test-pdf"),
       // biome-ignore lint/suspicious/noExplicitAny: Mock PDF service
     } as any,
+    // biome-ignore lint/suspicious/noExplicitAny: Mock services
+    services: {} as any,
     logger: {
       // biome-ignore lint/suspicious/noEmptyBlockStatements: Mock logger intentionally does nothing
       info: () => {},

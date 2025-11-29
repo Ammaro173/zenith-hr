@@ -1,7 +1,7 @@
 import { contract } from "@zenith-hr/db/schema/contracts";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { publicProcedure } from "../index";
+import { publicProcedure } from "../../shared/middleware";
 
 export const webhooksRouter = {
   docusign: publicProcedure

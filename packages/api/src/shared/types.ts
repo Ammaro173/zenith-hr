@@ -16,7 +16,8 @@ export type ApprovalAction =
   | "APPROVE"
   | "REJECT"
   | "REQUEST_CHANGE"
-  | "HOLD";
+  | "HOLD"
+  | "ARCHIVE";
 
 export type ContractStatus =
   | "DRAFT"

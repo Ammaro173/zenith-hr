@@ -9,6 +9,7 @@ export const approvalActionEnum = pgEnum("approval_action", [
   "REJECT",
   "REQUEST_CHANGE",
   "HOLD",
+  "ARCHIVE",
 ]);
 
 export const approvalLog = pgTable("approval_log", {

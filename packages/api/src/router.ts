@@ -1,11 +1,11 @@
 import type { RouterClient } from "@orpc/server";
-import { protectedProcedure, publicProcedure } from "../index";
-import { candidatesRouter } from "./candidates";
-import { contractsRouter } from "./contracts";
-import { dashboardRouter } from "./dashboard";
-import { requestsRouter } from "./requests";
-import { webhooksRouter } from "./webhooks";
-import { workflowRouter } from "./workflow";
+import { candidatesRouter } from "./modules/candidates";
+import { contractsRouter } from "./modules/contracts";
+import { dashboardRouter } from "./modules/dashboard";
+import { requestsRouter } from "./modules/requests";
+import { webhooksRouter } from "./modules/webhooks";
+import { workflowRouter } from "./modules/workflow";
+import { protectedProcedure, publicProcedure } from "./shared/middleware";
 
 export const appRouter = {
   healthCheck: publicProcedure.handler(() => "OK"),
@@ -20,5 +20,6 @@ export const appRouter = {
   webhooks: webhooksRouter,
   dashboard: dashboardRouter,
 };
+
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

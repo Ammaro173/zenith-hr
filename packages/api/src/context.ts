@@ -2,10 +2,15 @@ import { auth } from "@zenith-hr/auth";
 import { db } from "@zenith-hr/db";
 import type { Context as ElysiaContext } from "elysia";
 import pino from "pino";
-import { PdfService } from "./services/pdf-service";
-import { S3StorageService } from "./services/storage";
+import { PdfService } from "./infrastructure/pdf/pdf.service";
+import { S3StorageService } from "./infrastructure/storage/s3.service";
+import { createCandidatesService } from "./modules/candidates";
+import { createContractsService } from "./modules/contracts";
+import { createDashboardService } from "./modules/dashboard";
+import { createRequestsService } from "./modules/requests";
+import { createWorkflowService } from "./modules/workflow";
 
-// Initialize services (Singletons)
+// Initialize infrastructure (Singletons)
 const storage = new S3StorageService();
 const pdf = new PdfService();
 
@@ -36,12 +41,22 @@ export async function createContext({ context }: CreateContextOptions) {
 
   const requestId = crypto.randomUUID();
 
+  // Initialize services with dependencies
+  const services = {
+    requests: createRequestsService(db),
+    contracts: createContractsService(db, storage, pdf),
+    dashboard: createDashboardService(db),
+    candidates: createCandidatesService(db, storage),
+    workflow: createWorkflowService(db),
+  };
+
   return {
     session,
     request: context.request,
     db,
     storage,
     pdf,
+    services, // Expose services
     logger: logger.child({ requestId }),
     requestId,
   };
