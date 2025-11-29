@@ -49,7 +49,7 @@ export function OnboardingShell({
       </Show>
 
       {/* Dark overlay for text contrast */}
-      <div className="pointer-events-none fixed inset-0 bg-black/55" />
+      <div className="pointer-events-none fixed inset-0 bg-primary/55" />
 
       <div className="relative mx-auto flex h-full w-full max-w-md flex-col px-4 py-6 sm:max-w-lg sm:px-8 md:max-w-2xl lg:max-w-4xl lg:px-12">
         {children}

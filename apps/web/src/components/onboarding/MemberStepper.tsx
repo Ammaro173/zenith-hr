@@ -106,11 +106,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="firstName">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   First Name
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -125,11 +125,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="lastName">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Last Name
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -144,11 +144,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="email">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Email
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   disabled={!!member?.email}
                   id={field.name}
                   name={field.name}
@@ -168,11 +168,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="phone">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Phone Number
                 </Label>
                 <PhoneInput
-                  className="text-white"
+                  className="text-primary"
                   disabled={!!member?.phone}
                   id={field.name}
                   name={field.name}
@@ -188,7 +188,7 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="nationality">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Nationality
                 </Label>
                 <CountryDropdown
@@ -204,11 +204,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           {/* <form.Field name="qid">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-sm text-primary" htmlFor={field.name}>
                   QID Number
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -232,11 +232,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           {/* <form.Field name="make">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-sm text-primary" htmlFor={field.name}>
                   Car Model
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -251,11 +251,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="model">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Model
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -270,11 +270,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           <form.Field name="year">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Year
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -301,11 +301,11 @@ export function MemberStepper({ id, member, vehicle }: Props) {
           {/* <form.Field name="vinNumber">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-sm text-primary" htmlFor={field.name}>
                   VIN Number
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}

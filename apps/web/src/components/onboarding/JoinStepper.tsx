@@ -97,11 +97,11 @@ export function JoinStepper() {
           <form.Field name="firstName">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   First Name
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -116,11 +116,11 @@ export function JoinStepper() {
           <form.Field name="lastName">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Last Name
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -135,11 +135,11 @@ export function JoinStepper() {
           <form.Field name="email">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Email
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -158,11 +158,11 @@ export function JoinStepper() {
           <form.Field name="phone">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Phone Number
                 </Label>
                 <PhoneInput
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -177,11 +177,11 @@ export function JoinStepper() {
           <form.Field name="model">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Car Model
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}

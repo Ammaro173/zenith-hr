@@ -47,27 +47,27 @@ export default function ApprovalsPage() {
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">{request.requestCode}</h3>
-                <p className="text-gray-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   {(request.positionDetails as { title: string }).title}
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
-                  className="rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600"
+                  className="rounded bg-green-500 px-3 py-1 text-primary text-sm hover:bg-green-600"
                   onClick={() => handleAction(request.id, "APPROVE")}
                   type="button"
                 >
                   Approve
                 </button>
                 <button
-                  className="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600"
+                  className="rounded bg-red-500 px-3 py-1 text-primary text-sm hover:bg-red-600"
                   onClick={() => handleAction(request.id, "REJECT")}
                   type="button"
                 >
                   Reject
                 </button>
                 <button
-                  className="rounded bg-yellow-500 px-3 py-1 text-sm text-white hover:bg-yellow-600"
+                  className="rounded bg-yellow-500 px-3 py-1 text-primary text-sm hover:bg-yellow-600"
                   onClick={() => handleAction(request.id, "REQUEST_CHANGE")}
                   type="button"
                 >

@@ -18,7 +18,7 @@ export default function RequestsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-bold text-2xl">My Requests</h1>
         <Link
-          className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          className="rounded bg-blue-500 px-4 py-2 text-primary hover:bg-blue-600"
           href="/requests/new"
         >
           New Request
@@ -30,7 +30,7 @@ export default function RequestsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold">{request.requestCode}</h3>
-                <p className="text-gray-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   {(request.positionDetails as { title: string }).title}
                 </p>
               </div>

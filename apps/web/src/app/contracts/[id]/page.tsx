@@ -36,7 +36,9 @@ export default function ContractPage() {
         <div className="mb-4">
           <h3 className="font-semibold">Candidate</h3>
           <p>{contract.candidateName}</p>
-          <p className="text-gray-600 text-sm">{contract.candidateEmail}</p>
+          <p className="text-muted-foreground text-sm">
+            {contract.candidateEmail}
+          </p>
         </div>
         <div className="mb-4">
           <h3 className="font-semibold">Status</h3>
@@ -47,7 +49,7 @@ export default function ContractPage() {
                 : // biome-ignore lint/style/noNestedTernary: TODO
                   contract.status === "SENT_FOR_SIGNATURE"
                   ? "bg-yellow-100 text-yellow-800"
-                  : "bg-gray-100 text-gray-800"
+                  : "bg-muted-foreground text-muted-foreground-800"
             }`}
           >
             {contract.status}
@@ -55,7 +57,7 @@ export default function ContractPage() {
         </div>
         {contract.status === "DRAFT" && (
           <button
-            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+            className="rounded bg-blue-500 px-4 py-2 text-primary hover:bg-blue-600 disabled:opacity-50"
             disabled={sendMutation.isPending}
             onClick={() => sendMutation.mutate(contractId)}
             type="button"

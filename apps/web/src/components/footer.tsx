@@ -14,10 +14,10 @@ export function Footer({ id }: { id?: string }) {
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="mb-4 flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background">
                 <span className="font-bold text-xl text-zinc-950">A</span>
               </div>
-              <span className="font-semibold text-lg text-white tracking-tight">
+              <span className="font-semibold text-lg text-primary tracking-tight">
                 Audi Club Qatar
               </span>
             </div>
@@ -27,21 +27,21 @@ export function Footer({ id }: { id?: string }) {
             </p>
             <div className="flex gap-4">
               <Button
-                className="border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800"
+                className="border-zinc-800 bg-zinc-900 text-primary hover:bg-zinc-800"
                 size="icon"
                 variant="outline"
               >
                 <Instagram className="h-5 w-5" />
               </Button>
               <Button
-                className="border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800"
+                className="border-zinc-800 bg-zinc-900 text-primary hover:bg-zinc-800"
                 size="icon"
                 variant="outline"
               >
                 <Facebook className="h-5 w-5" />
               </Button>
               <Button
-                className="border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800"
+                className="border-zinc-800 bg-zinc-900 text-primary hover:bg-zinc-800"
                 size="icon"
                 variant="outline"
               >
@@ -52,13 +52,13 @@ export function Footer({ id }: { id?: string }) {
 
           {/* Quick Links */}
           <div>
-            <h3 className="mb-4 font-semibold text-sm text-white uppercase tracking-wider">
+            <h3 className="mb-4 font-semibold text-primary text-sm uppercase tracking-wider">
               Quick Links
             </h3>
             <ul className="space-y-3">
               <li>
                 <a
-                  className="text-zinc-400 transition-colors hover:text-white"
+                  className="text-zinc-400 transition-colors hover:text-primary"
                   href="#"
                 >
                   About Us
@@ -66,7 +66,7 @@ export function Footer({ id }: { id?: string }) {
               </li>
               <li>
                 <a
-                  className="text-zinc-400 transition-colors hover:text-white"
+                  className="text-zinc-400 transition-colors hover:text-primary"
                   href="#"
                 >
                   Membership
@@ -74,7 +74,7 @@ export function Footer({ id }: { id?: string }) {
               </li>
               <li>
                 <a
-                  className="text-zinc-400 transition-colors hover:text-white"
+                  className="text-zinc-400 transition-colors hover:text-primary"
                   href="#"
                 >
                   Events
@@ -82,7 +82,7 @@ export function Footer({ id }: { id?: string }) {
               </li>
               <li>
                 <a
-                  className="text-zinc-400 transition-colors hover:text-white"
+                  className="text-zinc-400 transition-colors hover:text-primary"
                   href="#"
                 >
                   Partners
@@ -93,14 +93,14 @@ export function Footer({ id }: { id?: string }) {
 
           {/* Contact */}
           <div>
-            <h3 className="mb-4 font-semibold text-sm text-white uppercase tracking-wider">
+            <h3 className="mb-4 font-semibold text-primary text-sm uppercase tracking-wider">
               Contact
             </h3>
             <ul className="mb-6 space-y-3">
               <li className="text-zinc-400">Doha, Qatar</li>
               <li>
                 <a
-                  className="text-zinc-400 transition-colors hover:text-white"
+                  className="text-zinc-400 transition-colors hover:text-primary"
                   href="mailto:info@audiclubqatar.com"
                 >
                   info@audiclubqatar.com
@@ -108,7 +108,7 @@ export function Footer({ id }: { id?: string }) {
               </li>
               <li>
                 <a
-                  className="text-zinc-400 transition-colors hover:text-white"
+                  className="text-zinc-400 transition-colors hover:text-primary"
                   href="tel:+97444455555"
                 >
                   +974 4445 5555

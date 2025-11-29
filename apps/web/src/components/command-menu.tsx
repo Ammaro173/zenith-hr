@@ -84,7 +84,7 @@ function CommandMenuInner() {
 
   return (
     <KBarPortal>
-      <KBarPositioner className="fixed inset-0 z-50 bg-black/80 p-4 backdrop-blur-sm">
+      <KBarPositioner className="fixed inset-0 z-50 bg-primary/80 p-4 backdrop-blur-sm">
         <KBarAnimator className="w-full max-w-xl overflow-hidden rounded-xl border bg-background shadow-2xl">
           <div className="flex items-center border-b px-4">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />

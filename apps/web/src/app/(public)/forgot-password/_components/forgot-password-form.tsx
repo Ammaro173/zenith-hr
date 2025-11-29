@@ -110,7 +110,7 @@ export function ForgotPasswordForm() {
             >
               {([canSubmit, isSubmitting]) => (
                 <Button
-                  className="h-13 rounded-none text-white shadow-xs hover:bg-primary/90 disabled:bg-muted"
+                  className="h-13 rounded-none text-primary shadow-xs hover:bg-primary/90 disabled:bg-muted"
                   disabled={!canSubmit || isSubmitting}
                   type="submit"
                 >

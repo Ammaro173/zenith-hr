@@ -7,7 +7,7 @@ export function About({ id }: { id?: string }) {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
-            <h2 className="mb-6 font-light font-serif text-4xl text-white tracking-tight md:text-5xl lg:text-6xl">
+            <h2 className="mb-6 font-light font-serif text-4xl text-primary tracking-tight md:text-5xl lg:text-6xl">
               Who We Are
             </h2>
             <p className="mb-4 font-light text-xl text-zinc-400">

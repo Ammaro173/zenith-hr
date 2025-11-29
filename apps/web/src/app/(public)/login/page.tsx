@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
+import z from "zod";
 import FieldInfo from "@/components/shared/field-info";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import { LoadingSwap } from "@/components/ui/loading-swap";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
 import { getErrorMessage } from "@/lib/handle-error";
+import { cn } from "@/lib/utils";
 import { tryCatch } from "@/utils";
 
 const mockLogin = async () => ({
@@ -35,9 +37,13 @@ export default function LoginPage() {
       email: "",
       password: "",
     },
-    // validators: {
-    //   onChange: loginBodySchema,
-    // },
+    //TODO
+    validators: {
+      onChange: z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+      }),
+    },
     onSubmit: async ({ value }) => {
       const { isSuccess, data, error } = await tryCatch(
         mockLogin()
@@ -109,7 +115,7 @@ export default function LoginPage() {
                     <span className="text-red-600">*</span>
                   </Label>
                   <Input
-                    className="h-13 rounded-none border-[#e0e0e0] bg-white text-[#1d1d1d] text-base placeholder:text-[#b0b0b0] focus-visible:border-[#2a2a2a] focus-visible:ring-0"
+                    className="h-13 rounded-none border-[#e0e0e0] bg-background text-[#1d1d1d] text-base placeholder:text-[#b0b0b0] focus-visible:border-[#2a2a2a] focus-visible:ring-0"
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
@@ -135,7 +141,7 @@ export default function LoginPage() {
                   </Label>
                   <div className="relative">
                     <PasswordInput
-                      className="h-13 rounded-none border-[#e0e0e0] bg-white pr-12 text-[#1d1d1d] text-base placeholder:text-[#b0b0b0] focus-visible:border-[#2a2a2a] focus-visible:ring-0"
+                      className="h-13 rounded-none border-[#e0e0e0] bg-background pr-12 text-[#1d1d1d] text-base placeholder:text-[#b0b0b0] focus-visible:border-[#2a2a2a] focus-visible:ring-0"
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
@@ -154,11 +160,16 @@ export default function LoginPage() {
             >
               {([canSubmit, isSubmitting]) => (
                 <Button
-                  className={`h-13 rounded-none text-white shadow-xs ${canSubmit ? "hover:bg-primary/90" : "bg-[#E5E5E5]"}`}
+                  className={`h-13 rounded-none text-primary shadow-xs ${canSubmit ? "hover:bg-primary/90" : "bg-muted"}`}
                   disabled={!canSubmit}
                   type="submit"
                 >
-                  <LoadingSwap isLoading={isSubmitting}>
+                  <LoadingSwap
+                    className={cn(
+                      canSubmit ? "text-secondary" : "text-primary"
+                    )}
+                    isLoading={isSubmitting}
+                  >
                     {isSubmitting ? "Signing In..." : "Sign In"}
                   </LoadingSwap>
                 </Button>

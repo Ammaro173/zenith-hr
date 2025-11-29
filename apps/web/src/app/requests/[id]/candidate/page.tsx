@@ -94,7 +94,7 @@ export default function CandidateSelectionPage() {
           />
         </div>
         <button
-          className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+          className="rounded bg-blue-500 px-4 py-2 text-primary hover:bg-blue-600 disabled:opacity-50"
           disabled={selectMutation.isPending}
           type="submit"
         >

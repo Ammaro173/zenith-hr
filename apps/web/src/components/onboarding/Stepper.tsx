@@ -140,20 +140,20 @@ export function Stepper({
               return (
                 <StepperItem key={step.id} value={step.id}>
                   <StepperTrigger
-                    className="flex size-20 flex-col items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 py-3 text-center text-white/70 transition data-[state=active]:border-white data-[state=completed]:border-white data-[state=active]:bg-white data-[state=completed]:bg-white data-[state=active]:text-black data-[state=completed]:text-black sm:size-30"
+                    className="data-[state=active]:background data-[state=completed]:background flex size-20 flex-col items-center gap-2 rounded-2xl border border-white/15 bg-background/5 px-3 py-3 text-center text-primary/70 transition data-[state=active]:border-white data-[state=completed]:border-white data-[state=active]:text-black data-[state=completed]:text-black sm:size-30"
                     disabled={disableTrigger}
                   >
-                    <StepperIndicator className="size-9 border-white/30 bg-transparent text-white data-[state=active]:border-transparent data-[state=completed]:border-transparent data-[state=active]:bg-white data-[state=completed]:bg-white data-[state=active]:text-black data-[state=completed]:text-black" />
+                    <StepperIndicator className="data-[state=active]:background data-[state=completed]:background size-9 border-white/30 bg-transparent text-primary data-[state=active]:border-transparent data-[state=completed]:border-transparent data-[state=active]:text-black data-[state=completed]:text-black" />
                     <StepperTitle className="font-semibold text-current text-xs uppercase tracking-wide">
                       {step.label ?? step.title}
                     </StepperTitle>
                     <If isTrue={!!step.subtitle}>
-                      <StepperDescription className="hidden text-[11px] text-white/60 data-[state=active]:text-black/70 data-[state=completed]:text-black/70 lg:block">
+                      <StepperDescription className="hidden text-[11px] text-primary/60 data-[state=active]:text-black/70 data-[state=completed]:text-black/70 lg:block">
                         <If isTrue={!step.hideSubtitle}>{step.subtitle}</If>
                       </StepperDescription>
                     </If>
                   </StepperTrigger>
-                  <StepperSeparator className="flex-1 bg-white/15 data-[state=active]:bg-white data-[state=completed]:bg-white" />
+                  <StepperSeparator className="background/15 data-[state=active]:background data-[state=completed]:background flex-1" />
                 </StepperItem>
               );
             }}
@@ -161,11 +161,11 @@ export function Stepper({
         </StepperList>
 
         <div className="flex flex-1 flex-col">
-          <div className="mb-4 text-white">
+          <div className="mb-4 text-primary">
             <h1 className="mb-2 font-semibold text-xl">{currentStep?.title}</h1>
             <Show>
               <Show.When isTrue={!!currentStep?.subtitle}>
-                <p className="text-base text-white/80 md:text-lg lg:text-xl">
+                <p className="text-base text-primary/80 md:text-lg lg:text-xl">
                   {currentStep.subtitle}
                 </p>
               </Show.When>
@@ -182,7 +182,7 @@ export function Stepper({
                   value={step.id}
                 >
                   <If isTrue={!step.hideContent}>
-                    <div className="min-h-0 flex-1 overflow-auto rounded-3xl bg-black/40 p-8 shadow-lg backdrop-blur-sm md:p-10 lg:p-12">
+                    <div className="min-h-0 flex-1 overflow-auto rounded-3xl bg-primary/40 p-8 shadow-lg backdrop-blur-sm md:p-10 lg:p-12">
                       {step.render()}
                     </div>
                   </If>
@@ -196,7 +196,7 @@ export function Stepper({
           <If isTrue={!isFirstStep}>
             <StepperPrevTrigger asChild>
               <Button
-                className="flex-1 rounded-none border-white/20 bg-transparent text-white hover:bg-white/10 md:px-8 md:py-3 lg:px-10 lg:py-4"
+                className="hover:background/10 flex-1 rounded-none border-white/20 bg-transparent text-primary md:px-8 md:py-3 lg:px-10 lg:py-4"
                 type="button"
                 variant="outline"
               >
@@ -208,7 +208,7 @@ export function Stepper({
           <Show>
             <Show.When isTrue={isLastStep}>
               <Button
-                className="flex-1 rounded-none bg-white text-black hover:bg-white/90 md:px-8 md:py-3 lg:px-10 lg:py-4"
+                className="background hover:background/90 flex-1 rounded-none text-black md:px-8 md:py-3 lg:px-10 lg:py-4"
                 disabled={isSubmitting}
                 onClick={handleSubmit}
                 type="button"
@@ -219,7 +219,7 @@ export function Stepper({
             <Show.Else>
               <StepperNextTrigger asChild>
                 <Button
-                  className={`rounded-none bg-white text-black hover:bg-white/90 md:px-8 md:py-3 lg:px-10 lg:py-4 ${isFirstStep ? "w-full" : "flex-1"}`}
+                  className={`background hover:background/90 rounded-none text-black md:px-8 md:py-3 lg:px-10 lg:py-4 ${isFirstStep ? "w-full" : "flex-1"}`}
                   type="button"
                 >
                   {isFirstStep ? startLabel : nextLabel}

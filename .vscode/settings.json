@@ -37,5 +37,8 @@
   },
   "files.associations": {
     "*.css": "tailwindcss",
+  },
+  "[tailwindcss]": {
+    "editor.defaultFormatter": "biomejs.biome"
   }
 }

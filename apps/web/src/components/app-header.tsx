@@ -30,13 +30,13 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-20 border-border/60 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/75">
       <div className="flex h-20 items-center gap-4 px-6">
-        <SidebarTrigger className="cursor-pointer rounded-full border border-border/50 bg-white/80 p-2 shadow-sm transition-all duration-200 hover:bg-white hover:shadow-md" />
+        <SidebarTrigger className="cursor-pointer rounded-full border border-border/50 bg-background/80 p-2 shadow-sm transition-all duration-200 hover:bg-background hover:shadow-md" />
 
         <div className="ml-auto flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                className="group relative flex cursor-pointer items-center gap-3 rounded-full border border-border/60 bg-white/80 px-3 py-2 shadow-sm transition-all duration-300 hover:border-border hover:bg-white hover:shadow-lg focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="group relative flex cursor-pointer items-center gap-3 rounded-full border border-border/60 bg-background/80 px-3 py-2 shadow-sm transition-all duration-300 hover:border-border hover:bg-background hover:shadow-lg focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 disabled={isPending}
                 type="button"
                 variant="ghost"
@@ -55,7 +55,7 @@ export function AppHeader() {
                   <Show.Else>
                     <div className="relative">
                       <Avatar className="size-6 border border-border/50 transition-all duration-300 group-hover:border-border group-hover:shadow-md group-hover:ring-2 group-hover:ring-primary/20">
-                        <AvatarFallback className="bg-linear-to-br from-primary via-primary to-primary/70 font-semibold text-white text-xs transition-all duration-300 group-hover:from-primary/90 group-hover:to-primary/80 group-hover:shadow-sm">
+                        <AvatarFallback className="bg-linear-to-br from-primary via-primary to-primary/70 font-semibold text-primary text-xs transition-all duration-300 group-hover:from-primary/90 group-hover:to-primary/80 group-hover:shadow-sm">
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
@@ -82,7 +82,7 @@ export function AppHeader() {
               <DropdownMenuLabel className="flex flex-col gap-1 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Avatar className="size-8 border border-border/50">
-                    <AvatarFallback className="bg-linear-to-br from-primary to-primary/80 font-semibold text-sm text-white">
+                    <AvatarFallback className="bg-linear-to-br from-primary to-primary/80 font-semibold text-primary text-sm">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>

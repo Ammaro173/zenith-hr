@@ -96,12 +96,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       >
                         <ItemIcon
                           className={`size-5! ${
-                            isActive ? "text-white" : "text-[#666666]"
+                            isActive
+                              ? "text-secondary"
+                              : "text-muted-foreground"
                           }`}
                         />
                         <span
                           className={`font-medium text-sm tracking-tight ${
-                            isActive ? "text-white" : "text-[#666666]"
+                            isActive
+                              ? "text-secondary"
+                              : "text-muted-foreground"
                           }`}
                         >
                           {item.title}
@@ -117,15 +121,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        <div className="rounded-xl bg-gray-50 p-4">
+        <div className="rounded-xl bg-muted p-4">
           <div className="mb-3 flex flex-col items-center text-center">
-            <span className="font-semibold text-gray-800 text-sm">Q-Auto</span>
-            <span className="text-gray-500 text-xs">
+            <span className="font-semibold text-muted-foreground text-sm">
+              Q-Auto
+            </span>
+            <span className="text-muted-foreground text-xs">
               Manage your Memberships
             </span>
           </div>
           <Button
-            className="w-full rounded-none bg-primary text-center text-white transition hover:bg-primary/90"
+            className="w-full rounded-none bg-primary text-center text-primary-foreground transition hover:bg-primary/90"
             onClick={async () => {
               await authClient.signOut();
             }}

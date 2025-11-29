@@ -31,7 +31,7 @@ export default async function ProtectedLayout({
     // <CurrentAdminProvider initialAdmin={currentAdmin}>
     <SidebarProvider defaultOpen={isSidebarOpen}>
       <AppSidebar />
-      <SidebarInset className="bg-[#F9FAFB]">
+      <SidebarInset className="bg-background">
         <AppHeader />
         <main className="@container/protected-layout container mx-auto flex w-full flex-1 flex-col gap-6 px-6 pt-6 pb-10">
           {children}

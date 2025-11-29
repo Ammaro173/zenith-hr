@@ -304,11 +304,11 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="firstName">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   First Name
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -323,11 +323,11 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="lastName">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Last Name
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -342,11 +342,11 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="email">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Email
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   disabled={!!member?.email}
                   id={field.name}
                   name={field.name}
@@ -363,11 +363,11 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="phone">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Phone Number
                 </Label>
                 <PhoneInput
-                  className="text-white"
+                  className="text-primary"
                   disabled={!!member?.phone}
                   id={field.name}
                   name={field.name}
@@ -383,7 +383,7 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="nationality">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Nationality
                 </Label>
                 <CountryDropdown
@@ -399,11 +399,11 @@ export function StaffStepper({ id, member }: Props) {
           {/* <form.Field name="qid">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-sm text-primary" htmlFor={field.name}>
                   QID Number
                 </Label>
                 <Input
-                  className="text-white"
+                  className="text-primary"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}
@@ -418,7 +418,7 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="department">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Department
                 </Label>
                 <Select
@@ -434,7 +434,7 @@ export function StaffStepper({ id, member }: Props) {
                   }
                   value={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-white">
+                  <SelectTrigger className="w-full text-primary">
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -453,7 +453,7 @@ export function StaffStepper({ id, member }: Props) {
           <form.Field name="imageUrl">
             {(field) => (
               <div className="flex flex-col gap-1.5">
-                <Label className="text-sm text-white" htmlFor={field.name}>
+                <Label className="text-primary text-sm" htmlFor={field.name}>
                   Upload Profile Image
                 </Label>
                 <FileUpload
@@ -529,7 +529,7 @@ export function StaffStepper({ id, member }: Props) {
                           <Upload className="size-6 text-muted-foreground" />
                         </div>
                         <div className="space-y-1">
-                          <p className="font-medium text-sm text-white">
+                          <p className="font-medium text-primary text-sm">
                             Drag & drop file here
                           </p>
                           <p className="text-muted-foreground text-xs">
@@ -547,11 +547,11 @@ export function StaffStepper({ id, member }: Props) {
                               src={uploadedUrl}
                             />
                           </div>
-                          <div className="space-y-1 text-white">
+                          <div className="space-y-1 text-primary">
                             <p className="font-semibold text-sm">
                               Profile photo added
                             </p>
-                            <p className="text-white/70 text-xs">
+                            <p className="text-primary/70 text-xs">
                               Drop another file or browse to replace it
                             </p>
                           </div>
@@ -576,14 +576,14 @@ export function StaffStepper({ id, member }: Props) {
                     {files.map((file) => (
                       <FileUploadItem key={file.name} value={file}>
                         <FileUploadItemPreview />
-                        <FileUploadItemMetadata className="max-w-52 text-white" />
+                        <FileUploadItemMetadata className="max-w-52 text-primary" />
                         <FileUploadItemDelete asChild>
                           <Button
                             className="size-7"
                             size="icon"
                             variant="ghost"
                           >
-                            <X className="text-white" />
+                            <X className="text-primary" />
                           </Button>
                         </FileUploadItemDelete>
                       </FileUploadItem>
@@ -605,7 +605,7 @@ export function StaffStepper({ id, member }: Props) {
                         />
                       </div>
                       <div className="space-y-0.5">
-                        <p className="font-medium text-sm text-white">
+                        <p className="font-medium text-primary text-sm">
                           Using uploaded image
                         </p>
                         <p className="text-muted-foreground text-xs">
@@ -614,7 +614,7 @@ export function StaffStepper({ id, member }: Props) {
                       </div>
                     </div>
                     <Button
-                      className="text-white"
+                      className="text-primary"
                       onClick={() => {
                         resetCropperState();
                         field.handleChange(undefined);
