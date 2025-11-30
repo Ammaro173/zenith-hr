@@ -34,6 +34,9 @@
       },
       "nursery": {
         "useMaxParams": "off"
+      },
+      "performance": {
+        "noBarrelFile": "off"
       }
     }
   }

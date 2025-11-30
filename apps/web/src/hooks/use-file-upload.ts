@@ -13,7 +13,7 @@ type UploadState = {
   isUploading: boolean;
 };
 
-export function useOnboardingFileUpload() {
+export function useFileUpload() {
   const [state, setState] = useState<UploadState>({
     files: [],
     isUploading: false,
@@ -30,7 +30,6 @@ export function useOnboardingFileUpload() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-
       const response = await fetch("/api/files/upload", {
         method: "POST",
         body: formData,
