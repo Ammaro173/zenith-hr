@@ -6,6 +6,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "../../env";
 import type {
   FileMetadata,
   StorageService,
@@ -21,6 +22,7 @@ export type S3StorageConfig = {
 
 /**
  * S3-based implementation of the StorageService interface
+ * Uses validated environment variables from the API package's env.ts
  */
 export class S3StorageService implements StorageService {
   private readonly s3Client: S3Client;
@@ -28,15 +30,13 @@ export class S3StorageService implements StorageService {
 
   constructor(config?: S3StorageConfig) {
     this.s3Client = new S3Client({
-      region: config?.region || process.env.AWS_REGION || "us-east-1",
+      region: config?.region ?? env.AWS_REGION,
       credentials: {
-        accessKeyId: config?.accessKeyId || process.env.AWS_ACCESS_KEY_ID || "",
-        secretAccessKey:
-          config?.secretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || "",
+        accessKeyId: config?.accessKeyId ?? env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: config?.secretAccessKey ?? env.AWS_SECRET_ACCESS_KEY,
       },
     });
-    this.bucketName =
-      config?.bucketName || process.env.S3_BUCKET_NAME || "zenith-hr-contracts";
+    this.bucketName = config?.bucketName ?? env.S3_BUCKET_NAME;
   }
 
   async upload(

@@ -13,15 +13,17 @@
   "devDependencies": {
     "@types/react": "^19.2.7",
     "@zenith-hr/config": "workspace:*",
+    "pino-pretty": "catalog:",
+    "pino-std-serializers": "catalog:",
     "react": "^19.2.0"
   },
   "peerDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^5"
   },
   "dependencies": {
     "@ai-sdk/google": "catalog:",
-    "@aws-sdk/client-s3": "^3.939.0",
-    "@aws-sdk/s3-request-presigner": "^3.939.0",
+    "@aws-sdk/client-s3": "^3.940.0",
+    "@aws-sdk/s3-request-presigner": "^3.940.0",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
@@ -31,13 +33,10 @@
     "@zenith-hr/auth": "workspace:*",
     "@zenith-hr/db": "workspace:*",
     "ai": "catalog:",
-    "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "elysia": "catalog:",
     "pdf-lib": "^1.17.1",
     "pino": "catalog:",
-    "pino-pretty": "catalog:",
-    "pino-std-serializers": "catalog:",
     "xstate": "^5.24.0",
     "zod": "catalog:"
   }

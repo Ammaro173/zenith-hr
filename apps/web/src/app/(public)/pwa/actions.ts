@@ -5,8 +5,8 @@ import { env } from "@/lib/env";
 
 webpush.setVapidDetails(
   "mailto:admin@q-auto.com", //!For example: 'https://my-site.com/contact' or 'mailto: contact@my-site.com'
-  env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  env.VAPID_PRIVATE_KEY
+  env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "",
+  env.VAPID_PRIVATE_KEY ?? ""
 );
 
 export async function subscribeUser(_sub: PushSubscription) {

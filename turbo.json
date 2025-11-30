@@ -17,6 +17,12 @@
       "cache": false,
       "persistent": true
     },
+    "start": {
+      "dependsOn": ["build", "^build"],
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["*"]
+    },
     "db:push": {
       "cache": false,
       "persistent": true

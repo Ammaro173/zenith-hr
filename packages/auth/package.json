@@ -19,7 +19,6 @@
   "dependencies": {
     "@zenith-hr/db": "workspace:*",
     "better-auth": "catalog:",
-    "dotenv": "catalog:",
     "zod": "catalog:"
   }
 }

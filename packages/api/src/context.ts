@@ -2,6 +2,7 @@ import { auth } from "@zenith-hr/auth";
 import { db } from "@zenith-hr/db";
 import type { Context as ElysiaContext } from "elysia";
 import pino from "pino";
+import { env } from "./env";
 import { MemoryCache } from "./infrastructure/cache";
 import type {
   CacheService,
@@ -22,18 +23,9 @@ const storage: IStorageService = new S3StorageService();
 const pdf: IPdfService = new PdfService();
 const cache: CacheService = new MemoryCache();
 
-// Initialize logger
+// Initialize logger - no transport in production (bundled output)
 const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? {
-          target: "pino-pretty",
-          options: {
-            colorize: true,
-          },
-        }
-      : undefined,
+  level: env.LOG_LEVEL,
 });
 
 export type CreateContextOptions = {

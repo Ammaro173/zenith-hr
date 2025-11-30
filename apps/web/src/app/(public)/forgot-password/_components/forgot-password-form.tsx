@@ -3,6 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { toast } from "sonner";
+import { z } from "zod";
 import FieldInfo from "@/components/shared/field-info";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,46 +17,46 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { requestResetPasswordBodySchema } from "@/contracts/auth/schema";
-import {
-  type ErrorResponseSchema,
-  getErrorMessage,
-} from "@/contracts/common/schema";
-import { tsr } from "@/lib/react-qeury-utils/tsr";
-import { tryCatch } from "@/utils";
+import { authClient } from "@/lib/auth-client";
+import { getErrorMessage } from "@/lib/handle-error";
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
 
 export function ForgotPasswordForm() {
-  const { mutateAsync: requestReset } =
-    tsr.auth.requestResetPassword.useMutation();
-
   const form = useForm({
     defaultValues: {
       email: "",
     },
     validators: {
-      onSubmit: requestResetPasswordBodySchema,
+      onSubmit: forgotPasswordSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      const { isSuccess, error } = await tryCatch(
-        requestReset({
-          body: {
-            email: value.email,
+      await authClient.requestPasswordReset(
+        {
+          email: value.email,
+          redirectTo: "/reset-password",
+        },
+        {
+          onSuccess: () => {
+            toast.success("Check your inbox", {
+              description:
+                "If that email is registered, a reset link is on its way.",
+            });
+            formApi.setFieldValue("email", "");
           },
-        })
+          onError: (error: unknown) => {
+            if (error instanceof Error) {
+              toast.error("Reset request failed", {
+                description: getErrorMessage(error),
+              });
+            } else {
+              toast.error("Reset request failed");
+            }
+          },
+        }
       );
-
-      if (!isSuccess) {
-        toast.error("Reset request failed", {
-          description: getErrorMessage(error as unknown as ErrorResponseSchema),
-        });
-        return;
-      }
-
-      toast.success("Check your inbox", {
-        description: "If that email is registered, a reset link is on its way.",
-      });
-
-      formApi.setFieldValue("email", "");
     },
   });
 

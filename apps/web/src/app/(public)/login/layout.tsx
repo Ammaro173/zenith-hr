@@ -4,6 +4,8 @@ import LoginBackground from "@/components/shared/login-background";
 import { authClient } from "@/lib/auth-client";
 import isEmpty from "@/utils/is-empty";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginLayout({
   children,
 }: React.PropsWithChildren) {

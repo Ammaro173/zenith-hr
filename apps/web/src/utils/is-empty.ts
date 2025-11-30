@@ -9,7 +9,7 @@
  */
 function isEmpty(val: any): boolean {
   // Null or Undefined...
-  if (val == null) return true;
+  if (val === null) return true;
 
   // Boolean...
   if (typeof val === "boolean") return false;

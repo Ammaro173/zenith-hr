@@ -5,6 +5,8 @@ import { QueryCache, QueryClient } from "@tanstack/react-query";
 import type { AppRouterClient } from "@zenith-hr/api/index";
 import { toast } from "sonner";
 
+import { env } from "../lib/env";
+
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
@@ -21,7 +23,7 @@ export const queryClient = new QueryClient({
 });
 
 export const link = new RPCLink({
-  url: `${process.env.NEXT_PUBLIC_SERVER_URL}/rpc`,
+  url: `${env.NEXT_PUBLIC_SERVER_URL}/rpc`,
   fetch(_url, options) {
     return fetch(_url, {
       ...options,

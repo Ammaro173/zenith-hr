@@ -25,10 +25,11 @@ export function useCurrentAdmin() {
   // const isSessionLoading = status === "loading";
   // const isQueryLoading = Boolean(adminId) && query.isPending && !query.data;
   // const isLoading = isSessionLoading || !initialAdmin;
+  const isLoading = false;
 
   return {
     admin,
     role,
-    // isLoading,
+    isLoading,
   };
 }

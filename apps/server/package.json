@@ -7,7 +7,7 @@
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
-    "start": "bun run dist/index.js"
+    "start": "bun run dist/index.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "catalog:",
@@ -26,12 +26,13 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "elysia": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "pino-pretty": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "^1.3.3",
     "@zenith-hr/config": "workspace:*",
-    "tsdown": "^0.16.6",
+    "tsdown": "^0.16.8",
     "typescript": "catalog:"
   }
 }

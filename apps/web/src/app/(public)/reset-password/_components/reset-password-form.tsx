@@ -18,32 +18,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSwap } from "@/components/ui/loading-swap";
-import { resetPasswordBodySchema } from "@/contracts/auth/schema";
-import {
-  type ErrorResponseSchema,
-  getErrorMessage,
-} from "@/contracts/common/schema";
+import { authClient } from "@/lib/auth-client";
 import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
-import { tsr } from "@/lib/react-qeury-utils/tsr";
-import { tryCatch } from "@/utils";
 
-const resetPasswordFormSchema = resetPasswordBodySchema
-  .extend({
+const resetPasswordFormSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(
+        MIN_PASSWORD_LENGTH,
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+      ),
     confirmPassword: z
       .string()
       .min(
         MIN_PASSWORD_LENGTH,
-        `You must have a length of at least ${MIN_PASSWORD_LENGTH}`
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
       ),
   })
-  .superRefine(({ newPassword, confirmPassword }, ctx) => {
-    if (newPassword !== confirmPassword) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["confirmPassword"],
-        message: "Passwords do not match",
-      });
-    }
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
   });
 
 export function ResetPasswordForm() {
@@ -51,11 +46,8 @@ export function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
-  const { mutateAsync: resetPassword } = tsr.auth.resetPassword.useMutation();
-
   const form = useForm({
     defaultValues: {
-      token,
       newPassword: "",
       confirmPassword: "",
     },
@@ -63,28 +55,44 @@ export function ResetPasswordForm() {
       onSubmit: resetPasswordFormSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      const { isSuccess, error } = await tryCatch(
-        resetPassword({
-          body: {
-            token,
-            newPassword: value.newPassword,
+      await authClient.resetPassword(
+        {
+          newPassword: value.newPassword,
+          token,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Password updated", {
+              description: "You can now sign in with your new password.",
+            });
+            formApi.reset();
+            router.push("/login");
           },
-        })
+          onError: (error: unknown) => {
+            // Handle specific error cases
+            if (error instanceof Error && error.message) {
+              const errorMessage = error.message.toLowerCase();
+              if (
+                errorMessage.includes("token") ||
+                errorMessage.includes("expired") ||
+                errorMessage.includes("invalid")
+              ) {
+                toast.error("Reset link expired", {
+                  description:
+                    "This reset link has expired or is invalid. Please request a new one.",
+                });
+                return;
+              }
+            }
+            toast.error("Password reset failed", {
+              description:
+                error instanceof Error
+                  ? error.message
+                  : "An unknown error occurred",
+            });
+          },
+        }
       );
-
-      if (!isSuccess) {
-        toast.error("Password reset failed", {
-          description: getErrorMessage(error as unknown as ErrorResponseSchema),
-        });
-        return;
-      }
-
-      toast.success("Password updated", {
-        description: "You can now sign in with your new password.",
-      });
-
-      formApi.reset();
-      router.push("/login");
     },
   });
 
@@ -122,7 +130,7 @@ export function ResetPasswordForm() {
             Reset Password
           </CardTitle>
           <CardDescription className="text-muted-foreground text-sm">
-            Choose a strong password to secure your Audi Club admin account.
+            Choose a strong password to secure your account.
           </CardDescription>
         </CardHeader>
 

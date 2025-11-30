@@ -365,7 +365,7 @@ function createStore(
   let raf: number | null = null;
 
   function notifyCropAreaChange() {
-    if (raf != null) {
+    if (raf !== null) {
       return;
     }
     raf = requestAnimationFrame(() => {

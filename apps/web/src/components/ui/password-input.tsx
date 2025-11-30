@@ -167,7 +167,7 @@ export function PasswordInputStrengthChecker() {
         })}
       </div>
       <div className="flex justify-end text-muted-foreground text-sm">
-        {strengthResult.feedback.warning == null ? (
+        {strengthResult.feedback.warning === null ? (
           label
         ) : (
           <Tooltip>
@@ -186,7 +186,7 @@ export function PasswordInputStrengthChecker() {
 
 const usePasswordInput = () => {
   const context = useContext(PasswordInputContext);
-  if (context == null) {
+  if (context === null) {
     throw new Error(
       "usePasswordInput must be used within a PasswordInputContext"
     );

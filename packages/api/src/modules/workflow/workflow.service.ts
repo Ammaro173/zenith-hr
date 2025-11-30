@@ -7,7 +7,6 @@ import type { ExtractTablesWithRelations } from "drizzle-orm";
 import { eq, sql } from "drizzle-orm";
 import type { NeonHttpQueryResultHKT } from "drizzle-orm/neon-http";
 import type { PgTransaction } from "drizzle-orm/pg-core";
-import { v4 as uuidv4 } from "uuid";
 import type {
   ApprovalAction,
   RequestStatus,
@@ -47,7 +46,6 @@ export const createWorkflowService = (db: typeof _db) => {
     options?: { comment?: string; ipAddress?: string }
   ): Promise<void> => {
     await tx.insert(approvalLog).values({
-      id: uuidv4(),
       requestId,
       actorId,
       action,
@@ -65,7 +63,6 @@ export const createWorkflowService = (db: typeof _db) => {
     snapshotData: Record<string, unknown>
   ): Promise<void> => {
     await tx.insert(requestVersion).values({
-      id: uuidv4(),
       requestId,
       versionNumber,
       snapshotData,
