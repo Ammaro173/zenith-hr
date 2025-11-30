@@ -10,10 +10,6 @@ export const contractsRouter = {
   generate: protectedProcedure
     .input(generateContractSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
       try {
         return await context.services.contracts.generate(input);
       } catch (error: any) {
@@ -30,9 +26,6 @@ export const contractsRouter = {
   getById: protectedProcedure
     .input(contractIdSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
       const contractRecord = await context.services.contracts.getById(input.id);
 
       if (!contractRecord) {
@@ -44,9 +37,6 @@ export const contractsRouter = {
   updateCandidate: protectedProcedure
     .input(updateContractSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
       try {
         return await context.services.contracts.updateCandidate(input);
       } catch (error: any) {
@@ -63,9 +53,6 @@ export const contractsRouter = {
   sendForSignature: protectedProcedure
     .input(contractIdSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
       try {
         return await context.services.contracts.sendForSignature(input.id);
       } catch (error: any) {
@@ -82,9 +69,6 @@ export const contractsRouter = {
   getPresignedUrl: protectedProcedure
     .input(contractIdSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
       try {
         return await context.services.contracts.getPresignedUrl(input.id);
       } catch (error: any) {

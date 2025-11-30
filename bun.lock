@@ -172,12 +172,16 @@
     "packages/config": {
       "name": "@zenith-hr/config",
       "version": "0.0.0",
+      "dependencies": {
+        "@t3-oss/env-core": "catalog:",
+        "zod": "catalog:",
+      },
     },
     "packages/db": {
       "name": "@zenith-hr/db",
       "dependencies": {
         "@neondatabase/serverless": "^1.0.2",
-        "dotenv": "catalog:",
+        "@t3-oss/env-core": "catalog:",
         "drizzle-orm": "catalog:",
         "ws": "^8.18.3",
         "zod": "catalog:",

@@ -1,19 +1,15 @@
-import dotenv from "dotenv";
-
-dotenv.config({
-  path: "../../apps/server/.env",
-});
-
 import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import ws from "ws";
+import { env } from "./env";
 
+// Configure WebSocket for non-edge environments
 neonConfig.webSocketConstructor = ws;
 
-// To work in edge environments (Cloudflare Workers, Vercel Edge, etc.), enable querying over fetch
+// Enable fetch-based queries for edge environments (Cloudflare Workers, Vercel Edge, etc.)
 // neonConfig.poolQueryViaFetch = true
 
-const sql = neon(process.env.DATABASE_URL || "");
+const sql = neon(env.DATABASE_URL);
 export const db = drizzle(sql);
 
 // Export all schemas (barrel file needed for Drizzle schema exports)

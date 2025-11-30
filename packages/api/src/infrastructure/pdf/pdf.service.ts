@@ -1,18 +1,17 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import type {
+  GenerateContractParams,
+  PdfService as IPdfService,
+} from "../interfaces/pdf.interface";
 
-export type GeneratePdfParams = {
-  requestCode: string;
-  positionTitle: string;
-  salary: number;
-  currency: string;
-  candidateName: string;
-  candidateEmail: string;
-  candidateAddress?: string;
-  startDate: string;
-};
+// Re-export the type for backward compatibility
+export type { GenerateContractParams as GeneratePdfParams } from "../interfaces/pdf.interface";
 
-export class PdfService {
-  async generateContractPdf(params: GeneratePdfParams): Promise<Buffer> {
+/**
+ * PDF-lib based implementation of the PdfService interface
+ */
+export class PdfService implements IPdfService {
+  async generateContractPdf(params: GenerateContractParams): Promise<Buffer> {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     const { height } = page.getSize();

@@ -3,12 +3,8 @@ import { candidates } from "@zenith-hr/db/schema/candidates";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
+import type { StorageService } from "../../infrastructure/interfaces";
 import type { uploadCvSchema } from "./candidates.schema";
-
-// Placeholder type for storage service
-type StorageService = {
-  upload(key: string, body: Buffer): Promise<string>;
-};
 
 type UploadCvInput = z.infer<typeof uploadCvSchema>;
 

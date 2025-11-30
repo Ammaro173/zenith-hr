@@ -5,6 +5,9 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./env": {
+      "default": "./src/env.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }
@@ -25,7 +28,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "dotenv": "catalog:",
+    "@t3-oss/env-core": "catalog:",
     "drizzle-orm": "catalog:",
     "ws": "^8.18.3",
     "zod": "catalog:"

@@ -1,26 +1,42 @@
 import { createEnv } from "@t3-oss/env-core";
-import { z } from "zod";
+import {
+  aiEnvSchema,
+  authEnvSchema,
+  awsEnvSchema,
+  cacheEnvSchema,
+  dbEnvSchema,
+  serverEnvSchema,
+} from "@zenith-hr/config/env";
 
+/**
+ * Server environment configuration
+ * Combines schemas from the shared config package
+ */
 export const env = createEnv({
   server: {
     // Database
-    DATABASE_URL: z.string().url(),
+    ...dbEnvSchema,
 
     // AWS / S3
-    AWS_REGION: z.string().min(1),
-    AWS_ACCESS_KEY_ID: z.string().min(1),
-    AWS_SECRET_ACCESS_KEY: z.string().min(1),
-    S3_BUCKET_NAME: z.string().min(1),
+    ...awsEnvSchema,
 
-    // CORS
-    CORS_ORIGIN: z.string().url(),
+    // Server
+    ...serverEnvSchema,
 
-    // Optional
-    LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-    NODE_ENV: z
-      .enum(["development", "production", "test"])
-      .default("development"),
+    // Auth
+    ...authEnvSchema,
+
+    // AI
+    ...aiEnvSchema,
+
+    // Cache (optional)
+    ...cacheEnvSchema,
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
+  skipValidation:
+    process.env.SKIP_ENV_VALIDATION === "true" ||
+    process.env.BUILDING === "true",
 });
+
+export type Env = typeof env;

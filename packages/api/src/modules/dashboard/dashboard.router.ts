@@ -1,16 +1,16 @@
-import { ORPCError } from "@orpc/server";
-import { get, set } from "../../shared/cache";
 import { protectedProcedure } from "../../shared/middleware";
 
 export const dashboardRouter = {
   getStats: protectedProcedure.handler(async ({ context }) => {
-    if (!context.session?.user) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
+    const { cache } = context;
 
     // Check cache first (1 hour TTL)
     const cacheKey = "dashboard:stats";
-    const cached = await get(cacheKey);
+    const cached = await cache.get<{
+      requestsCount: number;
+      candidatesCount: number;
+      averageTimeToHire: number;
+    }>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -26,28 +26,22 @@ export const dashboardRouter = {
     };
 
     // Cache for 1 hour
-    await set(cacheKey, result, 3600);
+    await cache.set(cacheKey, result, 3600);
 
     return result;
   }),
 
   getPendingCount: protectedProcedure.handler(async ({ context }) => {
-    if (!context.session?.user) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
-
     const count = await context.services.dashboard.getPendingRequests();
     return { count };
   }),
 
   getAverageTimeToHire: protectedProcedure.handler(async ({ context }) => {
-    if (!context.session?.user) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
+    const { cache } = context;
 
     // Check cache
     const cacheKey = "dashboard:avg_time_to_hire";
-    const cached = await get<number>(cacheKey);
+    const cached = await cache.get<number>(cacheKey);
     if (cached !== null) {
       return { averageDays: cached };
     }
@@ -56,7 +50,7 @@ export const dashboardRouter = {
       await context.services.dashboard.getAverageTimeToHire();
 
     // Cache for 1 hour
-    await set(cacheKey, averageTimeToHire, 3600);
+    await cache.set(cacheKey, averageTimeToHire, 3600);
 
     return { averageDays: averageTimeToHire };
   }),

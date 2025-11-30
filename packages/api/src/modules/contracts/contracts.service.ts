@@ -4,19 +4,13 @@ import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import type {
+  PdfService,
+  StorageService,
+} from "../../infrastructure/interfaces";
+import type {
   generateContractSchema,
   updateContractSchema,
 } from "./contracts.schema";
-
-// Placeholder types for services until they are migrated
-type PdfService = {
-  generateContractPdf(data: any): Promise<Buffer>;
-};
-
-type StorageService = {
-  upload(key: string, body: Buffer): Promise<string>;
-  getPresignedUrl(key: string): Promise<string>;
-};
 
 type GenerateContractInput = z.infer<typeof generateContractSchema>;
 type UpdateContractInput = z.infer<typeof updateContractSchema>;

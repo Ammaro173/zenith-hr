@@ -6,10 +6,7 @@ export const workflowRouter = {
   transition: protectedProcedure
     .input(transitionSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
+      // Auth is already handled by protectedProcedure middleware
       const actorId = context.session.user.id;
       // Get IP from request headers (skip for now, can be added later)
       const ipAddress: string | undefined = undefined;
@@ -38,10 +35,6 @@ export const workflowRouter = {
   getRequest: protectedProcedure
     .input(requestIdSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
       const request = await context.services.workflow.getRequest(input.id);
 
       if (!request) {
@@ -53,11 +46,7 @@ export const workflowRouter = {
 
   getRequestHistory: protectedProcedure
     .input(requestIdSchema)
-    .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
-      return context.services.workflow.getRequestHistory(input.id);
-    }),
+    .handler(async ({ input, context }) =>
+      context.services.workflow.getRequestHistory(input.id)
+    ),
 };

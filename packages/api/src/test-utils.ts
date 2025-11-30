@@ -17,6 +17,20 @@ export function createTestContext(overrides?: Partial<Context>): Context {
       generateContractPdf: async () => Buffer.from("test-pdf"),
       // biome-ignore lint/suspicious/noExplicitAny: Mock PDF service
     } as any,
+    cache: {
+      get: async () => null,
+      // biome-ignore lint/suspicious/noEmptyBlockStatements: Mock void function
+      set: async () => {},
+      // biome-ignore lint/suspicious/noEmptyBlockStatements: Mock void function
+      delete: async () => {},
+      // biome-ignore lint/suspicious/noEmptyBlockStatements: Mock void function
+      deletePattern: async () => {},
+      exists: async () => false,
+      getMany: async () => [],
+      // biome-ignore lint/suspicious/noEmptyBlockStatements: Mock void function
+      setMany: async () => {},
+      // biome-ignore lint/suspicious/noExplicitAny: Mock cache service
+    } as any,
     // biome-ignore lint/suspicious/noExplicitAny: Mock services
     services: {} as any,
     logger: {

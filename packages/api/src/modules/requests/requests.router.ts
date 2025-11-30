@@ -7,10 +7,6 @@ export const requestsRouter = {
   create: protectedProcedure
     .input(createRequestSchema)
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
       const newRequest = await context.services.requests.create(
         input,
         context.session.user.id
@@ -25,10 +21,6 @@ export const requestsRouter = {
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
       const request = await context.services.requests.getById(input.id);
 
       if (!request) {
@@ -38,23 +30,13 @@ export const requestsRouter = {
       return request;
     }),
 
-  getMyRequests: protectedProcedure.handler(async ({ context }) => {
-    if (!context.session?.user) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
+  getMyRequests: protectedProcedure.handler(async ({ context }) =>
+    context.services.requests.getByRequester(context.session.user.id)
+  ),
 
-    return context.services.requests.getByRequester(context.session.user.id);
-  }),
-
-  getPendingApprovals: protectedProcedure.handler(async ({ context }) => {
-    if (!context.session?.user) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
-
-    return context.services.requests.getPendingApprovals(
-      context.session.user.id
-    );
-  }),
+  getPendingApprovals: protectedProcedure.handler(async ({ context }) =>
+    context.services.requests.getPendingApprovals(context.session.user.id)
+  ),
 
   update: protectedProcedure
     .input(
@@ -65,10 +47,6 @@ export const requestsRouter = {
       })
     )
     .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
       try {
         const updated = await context.services.requests.update(
           input.id,
@@ -99,11 +77,7 @@ export const requestsRouter = {
 
   getVersions: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .handler(async ({ input, context }) => {
-      if (!context.session?.user) {
-        throw new ORPCError("UNAUTHORIZED");
-      }
-
-      return context.services.requests.getRequestVersions(input.id);
-    }),
+    .handler(async ({ input, context }) =>
+      context.services.requests.getRequestVersions(input.id)
+    ),
 };

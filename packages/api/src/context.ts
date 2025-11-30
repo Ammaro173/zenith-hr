@@ -2,6 +2,12 @@ import { auth } from "@zenith-hr/auth";
 import { db } from "@zenith-hr/db";
 import type { Context as ElysiaContext } from "elysia";
 import pino from "pino";
+import { MemoryCache } from "./infrastructure/cache";
+import type {
+  CacheService,
+  PdfService as IPdfService,
+  StorageService as IStorageService,
+} from "./infrastructure/interfaces";
 import { PdfService } from "./infrastructure/pdf/pdf.service";
 import { S3StorageService } from "./infrastructure/storage/s3.service";
 import { createCandidatesService } from "./modules/candidates";
@@ -11,8 +17,10 @@ import { createRequestsService } from "./modules/requests";
 import { createWorkflowService } from "./modules/workflow";
 
 // Initialize infrastructure (Singletons)
-const storage = new S3StorageService();
-const pdf = new PdfService();
+// Using interface types allows for easy swapping of implementations
+const storage: IStorageService = new S3StorageService();
+const pdf: IPdfService = new PdfService();
+const cache: CacheService = new MemoryCache();
 
 // Initialize logger
 const logger = pino({
@@ -56,6 +64,7 @@ export async function createContext({ context }: CreateContextOptions) {
     db,
     storage,
     pdf,
+    cache,
     services, // Expose services
     logger: logger.child({ requestId }),
     requestId,
