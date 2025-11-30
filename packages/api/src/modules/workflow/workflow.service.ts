@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { db as _db, schema } from "@zenith-hr/db";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
@@ -16,8 +16,8 @@ import type {
 // Type for transaction context - must match what Drizzle returns from db.transaction()
 type TransactionDB = PgTransaction<
   NeonHttpQueryResultHKT,
-  Record<string, never>,
-  ExtractTablesWithRelations<Record<string, never>>
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
 >;
 
 export const createWorkflowService = (db: typeof _db) => {

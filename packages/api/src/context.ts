@@ -11,10 +11,13 @@ import type {
 } from "./infrastructure/interfaces";
 import { PdfService } from "./infrastructure/pdf/pdf.service";
 import { S3StorageService } from "./infrastructure/storage/s3.service";
+import { createBusinessTripsService } from "./modules/business-trips";
 import { createCandidatesService } from "./modules/candidates";
 import { createContractsService } from "./modules/contracts";
 import { createDashboardService } from "./modules/dashboard";
+import { createPerformanceService } from "./modules/performance";
 import { createRequestsService } from "./modules/requests";
+import { createSeparationsService } from "./modules/separations";
 import { createWorkflowService } from "./modules/workflow";
 
 // Initialize infrastructure (Singletons)
@@ -48,6 +51,9 @@ export async function createContext({ context }: CreateContextOptions) {
     dashboard: createDashboardService(db),
     candidates: createCandidatesService(db, storage),
     workflow: createWorkflowService(db),
+    businessTrips: createBusinessTripsService(db),
+    performance: createPerformanceService(db),
+    separations: createSeparationsService(db),
   };
 
   return {

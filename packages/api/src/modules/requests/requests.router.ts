@@ -1,7 +1,11 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 import { protectedProcedure } from "../../shared/middleware";
-import { createRequestSchema, updateRequestSchema } from "./requests.schema";
+import {
+  createRequestSchema,
+  transitionSchema,
+  updateRequestSchema,
+} from "./requests.schema";
 
 export const requestsRouter = {
   create: protectedProcedure
@@ -80,4 +84,27 @@ export const requestsRouter = {
     .handler(async ({ input, context }) =>
       context.services.requests.getRequestVersions(input.id)
     ),
+
+  transition: protectedProcedure
+    .input(transitionSchema)
+    .handler(async ({ input, context }) => {
+      try {
+        return await context.services.requests.transitionRequest(
+          input.requestId,
+          context.session.user.id,
+          input.action,
+          input.comment
+        );
+      } catch (error: any) {
+        if (error.message === "NOT_FOUND") {
+          throw new ORPCError("NOT_FOUND");
+        }
+        if (error.message === "INVALID_TRANSITION") {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Invalid status transition for current state",
+          });
+        }
+        throw error;
+      }
+    }),
 };

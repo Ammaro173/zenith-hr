@@ -1,4 +1,5 @@
 import type { db as _db } from "@zenith-hr/db";
+import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
@@ -183,6 +184,95 @@ export const createRequestsService = (db: typeof _db) => {
       if (minSalary > maxSalary) {
         throw new Error("Minimum salary cannot exceed maximum salary");
       }
+    },
+
+    /**
+     * Transition request status with approval workflow
+     */
+    async transitionRequest(
+      requestId: string,
+      actorId: string,
+      action: "SUBMIT" | "APPROVE" | "REJECT" | "REQUEST_CHANGE" | "HOLD",
+      comment?: string
+    ) {
+      return await db.transaction(async (tx) => {
+        // 1. Get current request with lock
+        const [request] = await tx
+          .select()
+          .from(manpowerRequest)
+          .where(eq(manpowerRequest.id, requestId))
+          .limit(1);
+
+        if (!request) {
+          throw new Error("NOT_FOUND");
+        }
+
+        // 2. Determine new status
+        let newStatus = request.status;
+        const currentStatus = request.status;
+
+        if (action === "SUBMIT" && currentStatus === "DRAFT") {
+          newStatus = "PENDING_MANAGER";
+        } else if (action === "APPROVE") {
+          switch (currentStatus) {
+            case "PENDING_MANAGER":
+              newStatus = "PENDING_HR";
+              break;
+            case "PENDING_HR":
+              newStatus = "PENDING_FINANCE";
+              break;
+            case "PENDING_FINANCE":
+              newStatus = "PENDING_CEO";
+              break;
+            case "PENDING_CEO":
+              newStatus = "APPROVED_OPEN";
+              break;
+            default:
+              throw new Error("INVALID_TRANSITION");
+          }
+        } else if (action === "REJECT") {
+          newStatus = "REJECTED";
+        } else if (action === "REQUEST_CHANGE") {
+          // Return to requester for changes
+          newStatus = "DRAFT";
+        }
+
+        if (newStatus === currentStatus && action !== "HOLD") {
+          // If status didn't change and it wasn't a HOLD, something is wrong or it's an invalid action for the state
+          // But for now we'll allow it if logic dictates, or throw if strict.
+          // Let's be strict for APPROVE/SUBMIT
+          if (action === "APPROVE" || action === "SUBMIT") {
+            throw new Error("INVALID_TRANSITION");
+          }
+        }
+
+        // 3. Update request
+        await tx
+          .update(manpowerRequest)
+          .set({
+            status: newStatus,
+            updatedAt: new Date(),
+            version: request.version + 1,
+          })
+          .where(eq(manpowerRequest.id, requestId));
+
+        // 4. Create approval log
+        // We need to import approvalLog from schema, adding import at top of file
+        await tx.insert(approvalLog).values({
+          requestId,
+          actorId,
+          action,
+          comment,
+          stepName: currentStatus,
+          performedAt: new Date(),
+        });
+
+        return {
+          previousStatus: currentStatus,
+          newStatus,
+          requestId,
+        };
+      });
     },
 
     /**

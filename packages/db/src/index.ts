@@ -2,6 +2,7 @@ import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import ws from "ws";
 import { env } from "./env";
+import * as schema from "./schema";
 
 // Configure WebSocket for non-edge environments
 neonConfig.webSocketConstructor = ws;
@@ -10,7 +11,8 @@ neonConfig.webSocketConstructor = ws;
 // neonConfig.poolQueryViaFetch = true
 
 const sql = neon(env.DATABASE_URL);
-export const db = drizzle(sql);
+export const db = drizzle(sql, { schema });
+export { schema };
 
 // Export all schemas (barrel file needed for Drizzle schema exports)
 // biome-ignore lint/performance/noBarrelFile: Required for Drizzle schema organization
