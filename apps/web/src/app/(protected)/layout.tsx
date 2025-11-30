@@ -18,17 +18,13 @@ export default async function ProtectedLayout({
 }: {
   children: ReactNode;
 }) {
+  // TODO: Re-enable server-side auth check when auth setup is complete
   // const session = await auth();
-  // const currentAdmin = await getCurrentAdmin();
-  const isSidebarOpen = await getSidebarOpenState();
-  console.log("isSidebarOpen", isSidebarOpen);
+  // if (!session) redirect("/login");
 
-  // if (isEmpty(session) || session?.error) {
-  //   redirect("/login" as Route);
-  // }
+  const isSidebarOpen = await getSidebarOpenState();
 
   return (
-    // <CurrentAdminProvider initialAdmin={currentAdmin}>
     <SidebarProvider defaultOpen={isSidebarOpen}>
       <AppSidebar />
       <SidebarInset className="bg-background">
@@ -38,6 +34,5 @@ export default async function ProtectedLayout({
         </main>
       </SidebarInset>
     </SidebarProvider>
-    // </CurrentAdminProvider>
   );
 }

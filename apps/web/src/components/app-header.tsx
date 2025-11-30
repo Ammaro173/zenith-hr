@@ -14,6 +14,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 import { Show } from "@/utils/Show";
+import { RoleSwitcher } from "./role-switcher";
 import { Skeleton } from "./ui/skeleton";
 
 export function AppHeader() {
@@ -35,6 +36,7 @@ export function AppHeader() {
         {/* </div> */}
 
         <div className="ml-auto flex items-center gap-3">
+          <RoleSwitcher />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

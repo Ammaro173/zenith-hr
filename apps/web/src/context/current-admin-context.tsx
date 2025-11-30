@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import type { Admin } from "@/contracts/admin/schema";
 
 type CurrentAdminContextValue = {
   initialAdmin: Admin | null;
+  setRole: (role: Admin["role"]) => void;
 };
 
 const CurrentAdminContext = createContext<CurrentAdminContextValue | null>(
@@ -18,11 +19,18 @@ export function CurrentAdminProvider({
   children: React.ReactNode;
   initialAdmin: Admin | null;
 }) {
+  const [admin, setAdmin] = useState<Admin | null>(initialAdmin);
+
   const value = useMemo(
     () => ({
-      initialAdmin,
+      initialAdmin: admin,
+      setRole: (role: Admin["role"]) => {
+        if (admin) {
+          setAdmin({ ...admin, role });
+        }
+      },
     }),
-    [initialAdmin]
+    [admin]
   );
 
   return (

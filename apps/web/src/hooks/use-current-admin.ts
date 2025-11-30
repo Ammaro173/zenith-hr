@@ -31,5 +31,6 @@ export function useCurrentAdmin() {
     admin,
     role,
     isLoading,
+    setRole: context?.setRole,
   };
 }
