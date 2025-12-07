@@ -1,8 +1,6 @@
-import "dotenv/config";
-import "./env";
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { Elysia } from "elysia";
-
+import { env } from "./env";
 // Plugins
 import { corsPlugin } from "./plugins/cors.plugin";
 
@@ -12,7 +10,6 @@ import { authHandler } from "./routes/auth.route";
 import { openApiRouteHandler } from "./routes/openapi.route";
 import { rpcRouteHandler } from "./routes/rpc.route";
 import { docuSignWebhookHandler } from "./routes/webhooks.route";
-
 /**
  * Zenith HR API Server
  *
@@ -51,6 +48,6 @@ export const app = new Elysia()
   .post("/api/webhooks/docusign", docuSignWebhookHandler)
 
   // Start server
-  .listen(3000, () => {
-    console.log("Server is running on http://localhost:3000");
+  .listen(env.PORT, () => {
+    console.log(`Server is running on http://localhost:${env.PORT}`);
   });

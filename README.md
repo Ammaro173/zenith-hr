@@ -41,20 +41,20 @@ Zenith HR is an enterprise-grade Human Resources platform designed to streamline
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Runtime** | [Bun](https://bun.sh) (v1.3+) |
-| **Backend** | [Elysia](https://elysiajs.com) server + [oRPC](https://orpc.dev) (type-safe RPC) |
-| **Frontend** | [Next.js 16](https://nextjs.org) with App Router |
-| **Database** | [Drizzle ORM](https://orm.drizzle.team) + [Neon](https://neon.tech) (serverless PostgreSQL) |
-| **Authentication** | [better-auth](https://www.better-auth.com) |
-| **Linting** | [Biome](https://biomejs.dev) |
-| **Build System** | [Turborepo](https://turbo.build) |
-| **UI Components** | [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://www.radix-ui.com) |
-| **State Management** | [TanStack Query](https://tanstack.com/query) + [Zustand](https://zustand.docs.pmnd.rs) |
-| **PDF Generation** | [@react-pdf/renderer](https://react-pdf.org) + [pdf-lib](https://pdf-lib.js.org) |
-| **File Storage** | AWS S3 |
-| **AI Integration** | [Vercel AI SDK](https://sdk.vercel.ai) + Google Generative AI |
+| Layer                | Technology                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| **Runtime**          | [Bun](https://bun.sh) (v1.3+)                                                               |
+| **Backend**          | [Elysia](https://elysiajs.com) server + [oRPC](https://orpc.dev) (type-safe RPC)            |
+| **Frontend**         | [Next.js 16](https://nextjs.org) with App Router                                            |
+| **Database**         | [Drizzle ORM](https://orm.drizzle.team) + [Neon](https://neon.tech) (serverless PostgreSQL) |
+| **Authentication**   | [better-auth](https://www.better-auth.com)                                                  |
+| **Linting**          | [Biome](https://biomejs.dev)                                                                |
+| **Build System**     | [Turborepo](https://turbo.build)                                                            |
+| **UI Components**    | [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://www.radix-ui.com)                   |
+| **State Management** | [TanStack Query](https://tanstack.com/query) + [Zustand](https://zustand.docs.pmnd.rs)      |
+| **PDF Generation**   | [@react-pdf/renderer](https://react-pdf.org) + [pdf-lib](https://pdf-lib.js.org)            |
+| **File Storage**     | AWS S3                                                                                      |
+| **AI Integration**   | [Vercel AI SDK](https://sdk.vercel.ai) + Google Generative AI                               |
 
 ---
 
@@ -138,17 +138,13 @@ bun install
 
 ### 3. Configure Environment Variables
 
-Copy the example environment files:
+Copy the example environment file from the monorepo root:
 
 ```bash
-# Server environment
-cp apps/server/.env.example apps/server/.env
-
-# Web environment
-cp apps/web/.env.example apps/web/.env
+cp .env.example .env
 ```
 
-Edit the `.env` files with your configuration (see [Environment Variables](#environment-variables) section).
+Edit the `.env` file with your configuration (see [Environment Variables](#environment-variables) section).
 
 ### 4. Setup Database
 
@@ -167,6 +163,7 @@ bun run dev
 ```
 
 This starts:
+
 - **API Server**: http://localhost:3000
 - **Web Application**: http://localhost:3001
 
@@ -174,17 +171,19 @@ This starts:
 
 ## Environment Variables
 
-### Server Environment (`apps/server/.env`)
+All environment variables are configured in a single `.env` file at the monorepo root. This file is loaded automatically by all apps and packages.
+
+### Root Environment (`/.env`)
 
 ```bash
 # Database (Required)
 DATABASE_URL=postgresql://user:password@host:5432/database?sslmode=require
 
-# Authentication (Required)
+# Authentication (Required for production)
 BETTER_AUTH_SECRET=your-32-character-secret-key-here
 BETTER_AUTH_URL=http://localhost:3000
 
-# CORS (Required)
+# CORS
 CORS_ORIGIN=http://localhost:3001
 
 # AWS S3 (Optional - for file uploads)
@@ -204,18 +203,15 @@ LOG_LEVEL=info
 # Cache (Optional - for Redis caching)
 UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your-token
-```
 
-### Web Environment (`apps/web/.env`)
-
-```bash
-# API URL (Required)
+# Web App - Client-side (exposed to browser)
 NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+NEXT_PUBLIC_WEB_URL=http://localhost:3001
 ```
 
-### Database Package (`packages/db`)
+### Environment Schema Validation
 
-The database package reads `DATABASE_URL` from the environment. Ensure this is set in `apps/server/.env` before running database commands.
+Environment variables are validated using Zod schemas defined in `packages/config/env.ts`. Each package imports only the schemas it needs, ensuring type safety and early error detection.
 
 ---
 
@@ -223,33 +219,33 @@ The database package reads `DATABASE_URL` from the environment. Ensure this is s
 
 ### Development
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start all dev servers (web + API) |
-| `bun run dev:web` | Start only the web application |
-| `bun run dev:server` | Start only the API server |
+| Command              | Description                       |
+| -------------------- | --------------------------------- |
+| `bun run dev`        | Start all dev servers (web + API) |
+| `bun run dev:web`    | Start only the web application    |
+| `bun run dev:server` | Start only the API server         |
 
 ### Build & Deploy
 
-| Command | Description |
-|---------|-------------|
-| `bun run build` | Build all packages and applications |
-| `bun run start` | Start production servers |
+| Command               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `bun run build`       | Build all packages and applications          |
+| `bun run start`       | Start production servers                     |
 | `bun run check-types` | TypeScript type checking across all packages |
 
 ### Database
 
-| Command | Description |
-|---------|-------------|
+| Command               | Description                                     |
+| --------------------- | ----------------------------------------------- |
 | `bun run db:generate` | Generate Drizzle migrations from schema changes |
-| `bun run db:push` | Push schema directly to database (dev) |
-| `bun run db:migrate` | Run pending migrations (production) |
-| `bun run db:studio` | Open Drizzle Studio GUI |
+| `bun run db:push`     | Push schema directly to database (dev)          |
+| `bun run db:migrate`  | Run pending migrations (production)             |
+| `bun run db:studio`   | Open Drizzle Studio GUI                         |
 
 ### Code Quality
 
-| Command | Description |
-|---------|-------------|
+| Command         | Description                     |
+| --------------- | ------------------------------- |
 | `bun run check` | Run Biome linting with auto-fix |
 
 ---
@@ -273,9 +269,9 @@ Router → Service → Drizzle ORM → PostgreSQL
 
 ```typescript
 // packages/api/src/modules/candidates/candidates.router.ts
-import { ORPCError } from "@orpc/server";
-import { protectedProcedure } from "../../shared/middleware";
-import { uploadCvSchema } from "./candidates.schema";
+import { ORPCError } from '@orpc/server';
+import { protectedProcedure } from '../../shared/middleware';
+import { uploadCvSchema } from './candidates.schema';
 
 export const candidatesRouter = {
   uploadCV: protectedProcedure
@@ -337,7 +333,7 @@ The [`protectedProcedure`](packages/api/src/shared/middleware.ts:19) middleware 
 // packages/api/src/shared/middleware.ts
 const requireAuth = o.middleware(({ context, next }) => {
   if (!context.session?.user) {
-    throw new ORPCError("UNAUTHORIZED");
+    throw new ORPCError('UNAUTHORIZED');
   }
   return next({
     context: { session: context.session },
@@ -360,8 +356,9 @@ protectedProcedure.handler(async ({ context }) => {
 
 // ❌ Wrong - redundant check
 protectedProcedure.handler(async ({ context }) => {
-  if (!context.session?.user) { // Don't do this!
-    throw new ORPCError("UNAUTHORIZED");
+  if (!context.session?.user) {
+    // Don't do this!
+    throw new ORPCError('UNAUTHORIZED');
   }
 });
 ```
@@ -377,7 +374,11 @@ The API uses interface-based abstractions for infrastructure services, enabling 
 ```typescript
 // packages/api/src/infrastructure/interfaces/storage.interface.ts
 export type StorageService = {
-  upload: (key: string, data: Buffer, options?: UploadOptions) => Promise<string>;
+  upload: (
+    key: string,
+    data: Buffer,
+    options?: UploadOptions
+  ) => Promise<string>;
   getPresignedUrl: (key: string, expiresIn?: number) => Promise<string>;
   delete?: (key: string) => Promise<void>;
 };

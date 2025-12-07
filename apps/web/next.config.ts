@@ -1,3 +1,9 @@
+import { resolve } from "node:path";
+import { config } from "dotenv";
+
+// Load .env from monorepo root
+config({ path: resolve(import.meta.dirname, "../../.env") });
+
 import "./src/lib/env";
 import type { NextConfig } from "next";
 

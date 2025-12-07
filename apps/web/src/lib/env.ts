@@ -10,7 +10,7 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
-    SERVER_URL: z.string().url().default("http://localhost:3001"),
+    SERVER_URL: z.string().url().default("http://localhost:3000"),
     VAPID_PRIVATE_KEY: z.string().optional(),
   },
 
@@ -19,7 +19,7 @@ export const env = createEnv({
    * Must be prefixed with NEXT_PUBLIC_
    */
   client: {
-    NEXT_PUBLIC_SERVER_URL: z.string().url().default("http://localhost:3001"),
+    NEXT_PUBLIC_SERVER_URL: z.string().url().default("http://localhost:3000"),
     NEXT_PUBLIC_WEB_URL: z.string().url().default("http://localhost:3001"),
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   },
