@@ -13,31 +13,31 @@
   "devDependencies": {
     "@types/react": "^19.2.7",
     "@zenith-hr/config": "workspace:*",
-    "pino-pretty": "catalog:",
-    "pino-std-serializers": "catalog:",
-    "react": "^19.2.0"
+    "pino-pretty": "^13.1.3",
+    "pino-std-serializers": "^7.0.0",
+    "react": "^19.2.1"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@ai-sdk/google": "catalog:",
-    "@aws-sdk/client-s3": "^3.940.0",
-    "@aws-sdk/s3-request-presigner": "^3.940.0",
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
-    "@orpc/server": "catalog:",
-    "@orpc/zod": "catalog:",
+    "@ai-sdk/google": "^2.0.44",
+    "@aws-sdk/client-s3": "^3.946.0",
+    "@aws-sdk/s3-request-presigner": "^3.946.0",
+    "@orpc/client": "^1.12.2",
+    "@orpc/openapi": "^1.12.2",
+    "@orpc/server": "^1.12.2",
+    "@orpc/zod": "^1.12.2",
     "@react-pdf/renderer": "^4.3.1",
-    "@t3-oss/env-core": "catalog:",
+    "@t3-oss/env-core": "^0.13.8",
     "@zenith-hr/auth": "workspace:*",
     "@zenith-hr/db": "workspace:*",
-    "ai": "catalog:",
-    "drizzle-orm": "catalog:",
-    "elysia": "catalog:",
+    "ai": "^5.0.108",
+    "drizzle-orm": "^0.44.7",
+    "elysia": "^1.4.18",
     "pdf-lib": "^1.17.1",
-    "pino": "catalog:",
+    "pino": "^10.1.0",
     "xstate": "^5.24.0",
-    "zod": "catalog:"
+    "zod": "^4.1.13"
   }
 }

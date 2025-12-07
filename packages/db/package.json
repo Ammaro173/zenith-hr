@@ -21,16 +21,16 @@
   "devDependencies": {
     "@types/ws": "^8.18.1",
     "@zenith-hr/config": "workspace:*",
-    "drizzle-kit": "^0.31.7"
+    "drizzle-kit": "^0.31.8"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@t3-oss/env-core": "catalog:",
-    "drizzle-orm": "catalog:",
+    "@t3-oss/env-core": "^0.13.8",
+    "drizzle-orm": "^0.44.7",
     "ws": "^8.18.3",
-    "zod": "catalog:"
+    "zod": "^4.1.13"
   }
 }
