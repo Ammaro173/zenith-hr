@@ -18,6 +18,7 @@ import { createDashboardService } from "./modules/dashboard";
 import { createPerformanceService } from "./modules/performance";
 import { createRequestsService } from "./modules/requests";
 import { createSeparationsService } from "./modules/separations";
+import { createWebhooksService } from "./modules/webhooks";
 import { createWorkflowService } from "./modules/workflow";
 
 // Initialize infrastructure (Singletons)
@@ -54,6 +55,7 @@ export async function createContext({ context }: CreateContextOptions) {
     businessTrips: createBusinessTripsService(db),
     performance: createPerformanceService(db),
     separations: createSeparationsService(db),
+    webhooks: createWebhooksService(db),
   };
 
   return {

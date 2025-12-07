@@ -43,11 +43,12 @@ export const businessTripsRouter = {
           input,
           context.session.user.id
         );
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
-        if (error.message === "INVALID_TRANSITION") {
+        if (message === "INVALID_TRANSITION") {
           throw new ORPCError("BAD_REQUEST", {
             message: "Invalid status transition",
           });

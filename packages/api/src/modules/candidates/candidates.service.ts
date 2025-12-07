@@ -52,50 +52,52 @@ export const createCandidatesService = (
     },
 
     async selectCandidate(requestId: string, candidateId: string) {
-      // Get request
-      const [request] = await db
-        .select()
-        .from(manpowerRequest)
-        .where(eq(manpowerRequest.id, requestId))
-        .limit(1);
+      return await db.transaction(async (tx) => {
+        // Get request
+        const [request] = await tx
+          .select()
+          .from(manpowerRequest)
+          .where(eq(manpowerRequest.id, requestId))
+          .limit(1);
 
-      if (!request) {
-        throw new Error("NOT_FOUND");
-      }
+        if (!request) {
+          throw new Error("NOT_FOUND");
+        }
 
-      // Check if candidate exists
-      const [candidate] = await db
-        .select()
-        .from(candidates)
-        .where(eq(candidates.id, candidateId))
-        .limit(1);
+        // Check if candidate exists
+        const [candidate] = await tx
+          .select()
+          .from(candidates)
+          .where(eq(candidates.id, candidateId))
+          .limit(1);
 
-      if (!candidate) {
-        throw new Error("CANDIDATE_NOT_FOUND");
-      }
+        if (!candidate) {
+          throw new Error("CANDIDATE_NOT_FOUND");
+        }
 
-      // Update request status to HIRING_IN_PROGRESS
-      await db
-        .update(manpowerRequest)
-        .set({
-          status: "HIRING_IN_PROGRESS",
-          updatedAt: new Date(),
-        })
-        .where(eq(manpowerRequest.id, requestId));
+        // Update request status to HIRING_IN_PROGRESS
+        await tx
+          .update(manpowerRequest)
+          .set({
+            status: "HIRING_IN_PROGRESS",
+            updatedAt: new Date(),
+          })
+          .where(eq(manpowerRequest.id, requestId));
 
-      // Ideally update candidate status too
-      await db
-        .update(candidates)
-        .set({
-          status: "SELECTED",
-          updatedAt: new Date(),
-        })
-        .where(eq(candidates.id, candidateId));
+        // Update candidate status in the same transaction
+        await tx
+          .update(candidates)
+          .set({
+            status: "SELECTED",
+            updatedAt: new Date(),
+          })
+          .where(eq(candidates.id, candidateId));
 
-      return {
-        success: true,
-        candidateId,
-      };
+        return {
+          success: true,
+          candidateId,
+        };
+      });
     },
 
     async getCandidates(requestId: string) {

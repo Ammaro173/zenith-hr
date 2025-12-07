@@ -7,6 +7,13 @@ import {
   updateRequestSchema,
 } from "./requests.schema";
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+};
+
 export const requestsRouter = {
   create: protectedProcedure
     .input(createRequestSchema)
@@ -63,16 +70,17 @@ export const requestsRouter = {
           throw new ORPCError("INTERNAL_SERVER_ERROR");
         }
         return updated;
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
+        if (message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
-        if (error.message === "CONFLICT") {
+        if (message === "CONFLICT") {
           throw new ORPCError("CONFLICT", {
             message: "Version mismatch. Please refresh and try again.",
           });
         }
-        if (error.message === "FORBIDDEN") {
+        if (message === "FORBIDDEN") {
           throw new ORPCError("FORBIDDEN");
         }
         throw error;
@@ -89,17 +97,22 @@ export const requestsRouter = {
     .input(transitionSchema)
     .handler(async ({ input, context }) => {
       try {
-        return await context.services.requests.transitionRequest(
+        const result = await context.services.workflow.transitionRequest(
           input.requestId,
           context.session.user.id,
           input.action,
           input.comment
         );
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+        return {
+          requestId: input.requestId,
+          ...result,
+        };
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
+        if (message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
-        if (error.message === "INVALID_TRANSITION") {
+        if (message === "INVALID_TRANSITION") {
           throw new ORPCError("BAD_REQUEST", {
             message: "Invalid status transition for current state",
           });

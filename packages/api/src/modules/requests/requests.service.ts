@@ -109,50 +109,52 @@ export const createRequestsService = (db: typeof _db) => {
       version: number,
       userId: string
     ) {
-      // Check existence and version
-      const [existing] = await db
-        .select()
-        .from(manpowerRequest)
-        .where(eq(manpowerRequest.id, id))
-        .limit(1);
+      return await db.transaction(async (tx) => {
+        // Check existence and version
+        const [existing] = await tx
+          .select()
+          .from(manpowerRequest)
+          .where(eq(manpowerRequest.id, id))
+          .limit(1);
 
-      if (!existing) {
-        throw new Error("NOT_FOUND");
-      }
+        if (!existing) {
+          throw new Error("NOT_FOUND");
+        }
 
-      if (existing.version !== version) {
-        throw new Error("CONFLICT");
-      }
+        if (existing.version !== version) {
+          throw new Error("CONFLICT");
+        }
 
-      // Check permissions (simplified)
-      if (existing.requesterId !== userId) {
-        throw new Error("FORBIDDEN");
-      }
+        // Check permissions (simplified)
+        if (existing.requesterId !== userId) {
+          throw new Error("FORBIDDEN");
+        }
 
-      // Save version history
-      await db.insert(requestVersion).values({
-        requestId: existing.id,
-        versionNumber: existing.version,
-        snapshotData: {
-          positionDetails: existing.positionDetails,
-          budgetDetails: existing.budgetDetails,
-          status: existing.status,
-        },
-        createdAt: new Date(),
+        // Save version history
+        await tx.insert(requestVersion).values({
+          requestId: existing.id,
+          versionNumber: existing.version,
+          snapshotData: {
+            positionDetails: existing.positionDetails,
+            budgetDetails: existing.budgetDetails,
+            status: existing.status,
+          },
+          createdAt: new Date(),
+        });
+
+        // Update
+        const [updated] = await tx
+          .update(manpowerRequest)
+          .set({
+            ...data,
+            version: existing.version + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(manpowerRequest.id, id))
+          .returning();
+
+        return updated;
       });
-
-      // Update
-      const [updated] = await db
-        .update(manpowerRequest)
-        .set({
-          ...data,
-          version: existing.version + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(manpowerRequest.id, id))
-        .returning();
-
-      return updated;
     },
 
     /**
@@ -237,13 +239,13 @@ export const createRequestsService = (db: typeof _db) => {
           newStatus = "DRAFT";
         }
 
-        if (newStatus === currentStatus && action !== "HOLD") {
-          // If status didn't change and it wasn't a HOLD, something is wrong or it's an invalid action for the state
-          // But for now we'll allow it if logic dictates, or throw if strict.
-          // Let's be strict for APPROVE/SUBMIT
-          if (action === "APPROVE" || action === "SUBMIT") {
-            throw new Error("INVALID_TRANSITION");
-          }
+        if (
+          newStatus === currentStatus &&
+          action !== "HOLD" &&
+          (action === "APPROVE" || action === "SUBMIT")
+        ) {
+          // If status didn't change and it wasn't a HOLD, block invalid approve/submit transitions
+          throw new Error("INVALID_TRANSITION");
         }
 
         // 3. Update request

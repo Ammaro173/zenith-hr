@@ -1,6 +1,14 @@
 import { relations } from "drizzle-orm";
-import type { PgTableWithColumns } from "drizzle-orm/pg-core";
-import { boolean, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  foreignKey,
+  pgEnum,
+  pgTableCreator,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+
+const pgTable = pgTableCreator((name) => name);
 
 export const userRoleEnum = pgEnum("user_role", [
   "REQUESTER",
@@ -10,25 +18,28 @@ export const userRoleEnum = pgEnum("user_role", [
   "CEO",
 ]);
 
-// biome-ignore lint/suspicious/noExplicitAny: TODO
-export const user: PgTableWithColumns<any> = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").notNull(),
-  image: text("image"),
-  role: userRoleEnum("role").notNull().default("REQUESTER"),
-  reportsToManagerId: text("reports_to_manager_id").references(
-    // biome-ignore lint/suspicious/noExplicitAny: TODO
-    (): any => user.id,
-    {
-      onDelete: "set null",
-    }
-  ),
-  passwordHash: text("password_hash"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").notNull(),
+    image: text("image"),
+    role: userRoleEnum("role").notNull().default("REQUESTER"),
+    reportsToManagerId: text("reports_to_manager_id"),
+    passwordHash: text("password_hash"),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => ({
+    reportsToManagerFk: foreignKey({
+      columns: [table.reportsToManagerId],
+      foreignColumns: [table.id],
+      name: "user_reports_to_manager_id_fkey",
+    }).onDelete("set null"),
+  })
+);
 
 export const userRelations = relations(user, ({ one, many }) => ({
   manager: one(user, {

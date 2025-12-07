@@ -12,7 +12,7 @@ export const workflowRouter = {
       const ipAddress: string | undefined = undefined;
 
       try {
-        const newStatus = await context.services.workflow.transitionRequest(
+        const result = await context.services.workflow.transitionRequest(
           input.requestId,
           actorId,
           input.action,
@@ -22,7 +22,7 @@ export const workflowRouter = {
 
         return {
           success: true,
-          newStatus,
+          ...result,
         };
       } catch (error) {
         if (error instanceof Error) {

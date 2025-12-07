@@ -122,7 +122,10 @@ export const createWorkflowService = (db: typeof _db) => {
       action: ApprovalAction,
       comment?: string,
       ipAddress?: string
-    ): Promise<RequestStatus> {
+    ): Promise<{
+      previousStatus: RequestStatus;
+      newStatus: RequestStatus;
+    }> {
       // Execute the entire transition within a database transaction
       // This ensures atomicity - all changes succeed or all fail together
       return await db.transaction(async (tx) => {
@@ -246,7 +249,10 @@ export const createWorkflowService = (db: typeof _db) => {
           });
         }
 
-        return newStatus;
+        return {
+          previousStatus: currentStatus,
+          newStatus,
+        };
       });
     },
 
