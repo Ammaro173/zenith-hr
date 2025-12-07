@@ -1,13 +1,14 @@
 "use client";
 
 import type { Column } from "@tanstack/react-table";
-import * as React from "react";
+import type { ComponentProps } from "react";
+import { useCallback, useMemo } from "react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ExtendedColumnFilter } from "@/types/data-table";
 
-interface DataTableRangeFilterProps<TData> extends React.ComponentProps<"div"> {
+interface DataTableRangeFilterProps<TData> extends ComponentProps<"div"> {
   filter: ExtendedColumnFilter<TData>;
   column: Column<TData>;
   inputId: string;
@@ -27,7 +28,7 @@ export function DataTableRangeFilter<TData>({
 }: DataTableRangeFilterProps<TData>) {
   const meta = column.columnDef.meta;
 
-  const [min, max] = React.useMemo(() => {
+  const [min, max] = useMemo(() => {
     const range = column.columnDef.meta?.range;
     if (range) {
       return range;
@@ -41,29 +42,26 @@ export function DataTableRangeFilter<TData>({
     return [values[0], values[1]];
   }, [column]);
 
-  const formatValue = React.useCallback(
-    (value: string | number | undefined) => {
-      if (value === undefined || value === "") {
-        return "";
-      }
-      const numValue = Number(value);
-      return Number.isNaN(numValue)
-        ? ""
-        : numValue.toLocaleString(undefined, {
-            maximumFractionDigits: 0,
-          });
-    },
-    []
-  );
+  const formatValue = useCallback((value: string | number | undefined) => {
+    if (value === undefined || value === "") {
+      return "";
+    }
+    const numValue = Number(value);
+    return Number.isNaN(numValue)
+      ? ""
+      : numValue.toLocaleString(undefined, {
+          maximumFractionDigits: 0,
+        });
+  }, []);
 
-  const value = React.useMemo(() => {
+  const value = useMemo(() => {
     if (Array.isArray(filter.value)) {
       return filter.value.map(formatValue);
     }
     return [formatValue(filter.value), ""];
   }, [filter.value, formatValue]);
 
-  const onRangeValueChange = React.useCallback(
+  const onRangeValueChange = useCallback(
     (value: string, isMin?: boolean) => {
       const numValue = Number(value);
       const currentValues = Array.isArray(filter.value)

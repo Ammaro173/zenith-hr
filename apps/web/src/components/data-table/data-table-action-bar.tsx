@@ -3,7 +3,9 @@
 import type { Table } from "@tanstack/react-table";
 import { Loader, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used for portals
 import * as ReactDom from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

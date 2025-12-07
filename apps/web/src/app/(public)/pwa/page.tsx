@@ -116,7 +116,7 @@ function PushNotificationManager() {
         ),
       });
       setSubscription(sub);
-      const serializedSub = JSON.parse(JSON.stringify(sub));
+      const serializedSub = sub.toJSON();
       await subscribeUser(serializedSub);
     } catch {
       setError("Failed to subscribe to push notifications");
@@ -154,23 +154,14 @@ function PushNotificationManager() {
 
     try {
       // Serialize the PushSubscription to a plain object
+      const encodeKey = (key: ArrayBuffer | null) =>
+        key ? btoa(String.fromCharCode(...new Uint8Array(key))) : undefined;
+
       const serializedSubscription = {
         endpoint: subscription.endpoint,
         keys: {
-          p256dh: subscription.getKey("p256dh")
-            ? btoa(
-                String.fromCharCode(
-                  ...new Uint8Array(subscription.getKey("p256dh")!)
-                )
-              )
-            : undefined,
-          auth: subscription.getKey("auth")
-            ? btoa(
-                String.fromCharCode(
-                  ...new Uint8Array(subscription.getKey("auth")!)
-                )
-              )
-            : undefined,
+          p256dh: encodeKey(subscription.getKey("p256dh")),
+          auth: encodeKey(subscription.getKey("auth")),
         },
       };
 
@@ -253,7 +244,7 @@ function PushNotificationManager() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {error && (
+        {Boolean(error) && (
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
             <AlertDescription>{error}</AlertDescription>
@@ -486,7 +477,7 @@ function InstallPrompt() {
               </div>
             </div>
 
-            {isIos && (
+            {isIos ? (
               <>
                 <Separator />
                 <div className="space-y-3">
@@ -512,7 +503,7 @@ function InstallPrompt() {
                   </div>
                 </div>
               </>
-            )}
+            ) : null}
           </div>
         )}
       </CardContent>

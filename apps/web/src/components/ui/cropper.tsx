@@ -2,6 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot as SlotPrimitive } from "radix-ui";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
@@ -391,7 +392,9 @@ function createStore(
         listenersRef.current.add(cb);
         return () => listenersRef.current?.delete(cb);
       }
-      return () => {};
+      return () => {
+        /* no-op when no listeners */
+      };
     },
     getState: () =>
       stateRef.current ?? {
@@ -680,9 +683,9 @@ function CropperRoot(props: CropperRootProps) {
 
     if (hasUpdates) {
       store.batch(() => {
-        Object.entries(updates).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(updates)) {
           store.setState(key as keyof StoreState, value);
-        });
+        }
       });
 
       if (shouldRecompute && rootRef.current) {
@@ -1435,17 +1438,19 @@ function useMediaComputation<T extends HTMLImageElement | HTMLVideoElement>({
       } as const;
 
       const callback = objectFitCallbacks[context.objectFit];
-      renderedMediaSize = callback
-        ? callback()
-        : containerAspect > mediaAspect
-          ? {
-              width: contentRect.height * mediaAspect,
-              height: contentRect.height,
-            }
-          : {
-              width: contentRect.width,
-              height: contentRect.width / mediaAspect,
-            };
+      if (callback) {
+        renderedMediaSize = callback();
+      } else if (containerAspect > mediaAspect) {
+        renderedMediaSize = {
+          width: contentRect.height * mediaAspect,
+          height: contentRect.height,
+        };
+      } else {
+        renderedMediaSize = {
+          width: contentRect.width,
+          height: contentRect.width / mediaAspect,
+        };
+      }
     } else {
       renderedMediaSize = {
         width: media.offsetWidth,

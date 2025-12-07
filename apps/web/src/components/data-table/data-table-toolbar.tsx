@@ -2,7 +2,7 @@
 
 import type { Column, Table } from "@tanstack/react-table";
 import { Search, X } from "lucide-react";
-import * as React from "react";
+import { type ComponentProps, useCallback, useMemo } from "react";
 
 import { DataTableDateFilter } from "@/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-interface DataTableToolbarProps<TData> extends React.ComponentProps<"div"> {
+interface DataTableToolbarProps<TData> extends ComponentProps<"div"> {
   table: Table<TData>;
 }
 
@@ -24,12 +24,12 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
 
-  const columns = React.useMemo(
+  const columns = useMemo(
     () => table.getAllColumns().filter((column) => column.getCanFilter()),
     [table]
   );
 
-  const onReset = React.useCallback(() => {
+  const onReset = useCallback(() => {
     table.resetColumnFilters();
   }, [table]);
 
@@ -77,7 +77,7 @@ function DataTableToolbarFilter<TData>({
   {
     const columnMeta = column.columnDef.meta;
 
-    const onFilterRender = React.useCallback(() => {
+    const onFilterRender = useCallback(() => {
       if (!columnMeta?.variant) {
         return null;
       }

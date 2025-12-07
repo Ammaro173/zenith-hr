@@ -12,11 +12,11 @@ export const contractsRouter = {
     .handler(async ({ input, context }) => {
       try {
         return await context.services.contracts.generate(input);
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
-        if (error.message === "BAD_REQUEST") {
+        if (error instanceof Error && error.message === "BAD_REQUEST") {
           throw new ORPCError("BAD_REQUEST");
         }
         throw error;
@@ -39,11 +39,11 @@ export const contractsRouter = {
     .handler(async ({ input, context }) => {
       try {
         return await context.services.contracts.updateCandidate(input);
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
-        if (error.message === "BAD_REQUEST") {
+        if (error instanceof Error && error.message === "BAD_REQUEST") {
           throw new ORPCError("BAD_REQUEST");
         }
         throw error;
@@ -55,11 +55,11 @@ export const contractsRouter = {
     .handler(async ({ input, context }) => {
       try {
         return await context.services.contracts.sendForSignature(input.id);
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
-        if (error.message === "BAD_REQUEST") {
+        if (error instanceof Error && error.message === "BAD_REQUEST") {
           throw new ORPCError("BAD_REQUEST");
         }
         throw error;
@@ -71,8 +71,8 @@ export const contractsRouter = {
     .handler(async ({ input, context }) => {
       try {
         return await context.services.contracts.getPresignedUrl(input.id);
-      } catch (error: any) {
-        if (error.message === "NOT_FOUND") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
         }
         throw error;

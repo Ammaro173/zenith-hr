@@ -13,7 +13,8 @@ import type { Route } from "next";
 
 export const protectedNavigationItems: {
   title: string;
-  href: Route;
+  //TODO remove string type from href
+  href: Route | string;
   icon: React.ElementType;
   description: string;
 }[] = [

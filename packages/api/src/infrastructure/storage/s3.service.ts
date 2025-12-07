@@ -29,14 +29,24 @@ export class S3StorageService implements StorageService {
   private readonly bucketName: string;
 
   constructor(config?: S3StorageConfig) {
+    const region = config?.region ?? env.AWS_REGION;
+    const accessKeyId = config?.accessKeyId ?? env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey =
+      config?.secretAccessKey ?? env.AWS_SECRET_ACCESS_KEY;
+    const bucketName = config?.bucketName ?? env.S3_BUCKET_NAME;
+
+    if (!(region && accessKeyId && secretAccessKey && bucketName)) {
+      throw new Error("Missing AWS S3 configuration");
+    }
+
     this.s3Client = new S3Client({
-      region: config?.region ?? env.AWS_REGION,
+      region,
       credentials: {
-        accessKeyId: config?.accessKeyId ?? env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: config?.secretAccessKey ?? env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId,
+        secretAccessKey,
       },
     });
-    this.bucketName = config?.bucketName ?? env.S3_BUCKET_NAME;
+    this.bucketName = bucketName;
   }
 
   async upload(

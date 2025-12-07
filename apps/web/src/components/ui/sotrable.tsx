@@ -37,7 +37,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Slot as SlotPrimitive } from "radix-ui";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used for portals
 import * as ReactDom from "react-dom";
 
 import { useComposedRefs } from "@/lib/compose-refs";
@@ -253,16 +255,23 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
     [value]
   );
 
-  const screenReaderInstructions: ScreenReaderInstructions = React.useMemo(
-    () => ({
-      draggable: `
+  const screenReaderInstructions: ScreenReaderInstructions =
+    React.useMemo(() => {
+      let arrowKeys = "arrow";
+      if (orientation === "vertical") {
+        arrowKeys = "up and down";
+      } else if (orientation === "horizontal") {
+        arrowKeys = "left and right";
+      }
+
+      return {
+        draggable: `
         To pick up a sortable item, press space or enter.
-        While dragging, use the ${orientation === "vertical" ? "up and down" : orientation === "horizontal" ? "left and right" : "arrow"} keys to move the item.
+        While dragging, use the ${arrowKeys} keys to move the item.
         Press space or enter again to drop the item in its new position, or press escape to cancel.
       `,
-    }),
-    [orientation]
-  );
+      };
+    }, [orientation]);
 
   const contextValue = React.useMemo(
     () => ({
@@ -573,6 +582,14 @@ function SortableOverlay(props: SortableOverlayProps) {
     return null;
   }
 
+  let overlayContent: React.ReactNode = null;
+  if (context.activeId) {
+    overlayContent =
+      typeof children === "function"
+        ? children({ value: context.activeId })
+        : children;
+  }
+
   return ReactDom.createPortal(
     <DragOverlay
       className={cn(!context.flatCursor && "cursor-grabbing")}
@@ -581,11 +598,7 @@ function SortableOverlay(props: SortableOverlayProps) {
       {...overlayProps}
     >
       <SortableOverlayContext.Provider value={true}>
-        {context.activeId
-          ? typeof children === "function"
-            ? children({ value: context.activeId })
-            : children
-          : null}
+        {overlayContent}
       </SortableOverlayContext.Provider>
     </DragOverlay>,
     container

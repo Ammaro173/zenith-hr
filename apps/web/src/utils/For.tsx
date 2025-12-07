@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useFilenamingConvention: legacy utility name
 import { Children, type ReactNode } from "react";
 
 type RenderFn<T> = (item: T, index: number) => ReactNode;

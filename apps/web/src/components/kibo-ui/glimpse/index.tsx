@@ -50,12 +50,15 @@ export const GlimpseImage = ({
   ...props
 }: GlimpseImageProps) => (
   // biome-ignore lint/performance/noImgElement: "Kibo UI is framework agnostic"
+  // biome-ignore lint/correctness/useImageSize: //? we are using aspect?
   <img
     alt={alt ?? ""}
     className={cn(
-      "mb-4 aspect-[120/63] w-full rounded-md border object-cover",
+      "mb-4 aspect-120/63 w-full rounded-md border object-cover",
       className
     )}
+    // height={63}
+    // width={120}
     {...props}
   />
 );

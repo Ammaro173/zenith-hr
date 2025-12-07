@@ -1,7 +1,11 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import type { Admin } from "@/contracts/admin/schema";
+
+type Admin = {
+  role: string | null;
+  [key: string]: unknown;
+};
 
 type CurrentAdminContextValue = {
   initialAdmin: Admin | null;

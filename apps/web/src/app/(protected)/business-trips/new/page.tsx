@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createTripSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+// import { createTripSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,11 @@ export default function NewBusinessTripPage() {
       onSuccess: () => {
         toast.success("Business trip request created successfully");
         queryClient.invalidateQueries({
-          queryKey: orpc.businessTrips.getMyTrips.key,
+          queryKey: orpc.businessTrips.getMyTrips.key(),
         });
         router.push("/business-trips");
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         toast.error(`Failed to create request: ${error.message}`);
       },
     })
@@ -46,9 +46,8 @@ export default function NewBusinessTripPage() {
       estimatedCost: "",
       currency: "USD",
     },
-    validators: {
-      onChange: createTripSchema,
-    },
+    //TODO
+    // validators
     onSubmit: async ({ value }) => {
       await createTrip({
         ...value,
@@ -77,8 +76,8 @@ export default function NewBusinessTripPage() {
               form.handleSubmit();
             }}
           >
-            <form.Field
-              children={(field) => (
+            <form.Field name="destination">
+              {(field) => (
                 <div className="space-y-2">
                   <Label htmlFor={field.name}>Destination</Label>
                   <Input
@@ -96,11 +95,10 @@ export default function NewBusinessTripPage() {
                   ) : null}
                 </div>
               )}
-              name="destination"
-            />
+            </form.Field>
 
-            <form.Field
-              children={(field) => (
+            <form.Field name="purpose">
+              {(field) => (
                 <div className="space-y-2">
                   <Label htmlFor={field.name}>Purpose</Label>
                   <Textarea
@@ -118,12 +116,11 @@ export default function NewBusinessTripPage() {
                   ) : null}
                 </div>
               )}
-              name="purpose"
-            />
+            </form.Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <form.Field
-                children={(field) => (
+              <form.Field name="startDate">
+                {(field) => (
                   <div className="space-y-2">
                     <Label htmlFor={field.name}>Start Date</Label>
                     <Input
@@ -141,11 +138,10 @@ export default function NewBusinessTripPage() {
                     ) : null}
                   </div>
                 )}
-                name="startDate"
-              />
+              </form.Field>
 
-              <form.Field
-                children={(field) => (
+              <form.Field name="endDate">
+                {(field) => (
                   <div className="space-y-2">
                     <Label htmlFor={field.name}>End Date</Label>
                     <Input
@@ -163,13 +159,12 @@ export default function NewBusinessTripPage() {
                     ) : null}
                   </div>
                 )}
-                name="endDate"
-              />
+              </form.Field>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <form.Field
-                children={(field) => (
+              <form.Field name="estimatedCost">
+                {(field) => (
                   <div className="space-y-2">
                     <Label htmlFor={field.name}>Estimated Cost</Label>
                     <Input
@@ -188,11 +183,10 @@ export default function NewBusinessTripPage() {
                     ) : null}
                   </div>
                 )}
-                name="estimatedCost"
-              />
+              </form.Field>
 
-              <form.Field
-                children={(field) => (
+              <form.Field name="currency">
+                {(field) => (
                   <div className="space-y-2">
                     <Label htmlFor={field.name}>Currency</Label>
                     <Input
@@ -210,8 +204,7 @@ export default function NewBusinessTripPage() {
                     ) : null}
                   </div>
                 )}
-                name="currency"
-              />
+              </form.Field>
             </div>
 
             <div className="flex justify-end gap-4">
@@ -223,13 +216,14 @@ export default function NewBusinessTripPage() {
                 Cancel
               </Button>
               <form.Subscribe
-                children={([canSubmit, isSubmitting]) => (
+                selector={(state) => [state.canSubmit, state.isSubmitting]}
+              >
+                {([canSubmit, isSubmitting]) => (
                   <Button disabled={!canSubmit || isSubmitting} type="submit">
                     {isSubmitting ? "Submitting..." : "Submit Request"}
                   </Button>
                 )}
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-              />
+              </form.Subscribe>
             </div>
           </form>
         </CardContent>

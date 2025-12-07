@@ -1,4 +1,5 @@
-import type { db as _db, schema } from "@zenith-hr/db";
+import type { db as _db } from "@zenith-hr/db";
+import type * as schema from "@zenith-hr/db/schema";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";

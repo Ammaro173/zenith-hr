@@ -7,6 +7,10 @@
     "outDir": "dist",
     "composite": true,
     "strictNullChecks": true,
-    "jsx": "react-jsx"
-  }
+    "jsx": "react-jsx",
+    "paths": {
+      "@upstash/redis": ["./src/types/upstash-redis.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
 }

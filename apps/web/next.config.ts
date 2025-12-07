@@ -12,10 +12,9 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   // output: "standalone",
   transpilePackages: ["shiki"],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  // biome-ignore lint/suspicious/useAwait: biome is dumb
+  // typescript: {
+  //   ignoreBuildErrors: true,
+  // },
   async headers() {
     return [
       {

@@ -145,33 +145,43 @@ function DataGridTableDndRows<TData>({
           )}
 
           <DataGridTableBody>
-            {props.loadingMode === "skeleton" &&
-            isLoading &&
-            pagination?.pageSize ? (
-              Array.from({ length: pagination.pageSize }).map((_, rowIndex) => (
-                <DataGridTableBodyRowSkeleton key={rowIndex}>
-                  {table.getVisibleFlatColumns().map((column, colIndex) => (
-                    <DataGridTableBodyRowSkeletonCell
-                      column={column}
-                      key={colIndex}
-                    >
-                      {column.columnDef.meta?.skeleton}
-                    </DataGridTableBodyRowSkeletonCell>
-                  ))}
-                </DataGridTableBodyRowSkeleton>
-              ))
-            ) : table.getRowModel().rows.length ? (
-              <SortableContext
-                items={dataIds}
-                strategy={verticalListSortingStrategy}
-              >
-                {table.getRowModel().rows.map((row: Row<TData>) => (
-                  <DataGridTableDndRow key={row.id} row={row} />
-                ))}
-              </SortableContext>
-            ) : (
-              <DataGridTableEmpty />
-            )}
+            {(() => {
+              if (
+                props.loadingMode === "skeleton" &&
+                isLoading &&
+                pagination?.pageSize
+              ) {
+                return Array.from({ length: pagination.pageSize }).map(
+                  (_, rowIndex) => (
+                    <DataGridTableBodyRowSkeleton key={rowIndex}>
+                      {table.getVisibleFlatColumns().map((column, colIndex) => (
+                        <DataGridTableBodyRowSkeletonCell
+                          column={column}
+                          key={colIndex}
+                        >
+                          {column.columnDef.meta?.skeleton}
+                        </DataGridTableBodyRowSkeletonCell>
+                      ))}
+                    </DataGridTableBodyRowSkeleton>
+                  )
+                );
+              }
+
+              if (table.getRowModel().rows.length) {
+                return (
+                  <SortableContext
+                    items={dataIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {table.getRowModel().rows.map((row: Row<TData>) => (
+                      <DataGridTableDndRow key={row.id} row={row} />
+                    ))}
+                  </SortableContext>
+                );
+              }
+
+              return <DataGridTableEmpty />;
+            })()}
           </DataGridTableBody>
         </DataGridTableBase>
       </div>

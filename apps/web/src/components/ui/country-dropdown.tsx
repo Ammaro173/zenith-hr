@@ -288,5 +288,4 @@ const CountryDropdownComponent = (
 
 CountryDropdownComponent.displayName = "CountryDropdownComponent";
 
-// biome-ignore lint/nursery/noReactForwardRef: <TODO>
 export const CountryDropdown = forwardRef(CountryDropdownComponent);

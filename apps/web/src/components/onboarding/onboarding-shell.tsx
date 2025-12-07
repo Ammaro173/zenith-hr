@@ -2,7 +2,7 @@
 
 import LoginBackground from "@/components/shared/login-background";
 import { cn } from "@/lib/utils";
-import { Image } from "@/utils/Image";
+import { Image } from "@/utils/image";
 import { Show } from "@/utils/Show";
 
 type OnboardingShellProps = {

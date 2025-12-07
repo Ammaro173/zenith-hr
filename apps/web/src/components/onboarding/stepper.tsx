@@ -16,7 +16,8 @@ import {
   StepperTitle,
   StepperTrigger,
 } from "@/components/ui/stepper";
-import { For, If, Image, Show } from "@/utils";
+import { For, If, Show } from "@/utils";
+import { Image } from "@/utils/image";
 
 export type Step = {
   id: string;
@@ -117,8 +118,8 @@ export function Stepper({
           <Image
             alt="Logo"
             className="mx-auto h-10 w-auto object-contain md:h-12 lg:h-14"
-            fallback={logo!}
-            src={logo!}
+            fallback={logo ?? ""}
+            src={logo ?? ""}
           />
         </div>
       </If>

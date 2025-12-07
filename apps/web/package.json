@@ -53,6 +53,8 @@
     "pwa-asset-generator": "^8.1.2",
     "radix-ui": "^1.4.3",
     "react": "^19.2.1",
+    "react-circle-flags": "^0.0.25",
+    "react-day-picker": "^9.12.0",
     "react-dom": "^19.2.1",
     "recharts": "^3.5.1",
     "server-only": "^0.0.1",

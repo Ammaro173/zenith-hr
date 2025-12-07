@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useFilenamingConvention: legacy utility name
 import { Children, type ReactElement, type ReactNode } from "react";
 
 import { If } from "./If";

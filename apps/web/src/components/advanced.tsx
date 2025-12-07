@@ -1,3 +1,5 @@
+import type { DragEndEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   createColumnHelper,
   getCoreRowModel,
@@ -89,14 +91,15 @@ export default function AdvancedTable() {
     pageSize: 10,
   });
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
-      setColumnOrder((columnOrder) => {
-        const oldIndex = columnOrder.indexOf(active.id as string);
-        const newIndex = columnOrder.indexOf(over.id as string);
-        return arrayMove(columnOrder, oldIndex, newIndex);
+      setColumnOrder((order) => {
+        const oldIndex = order.indexOf(active.id as string);
+        const newIndex = order.indexOf(over.id as string);
+        return arrayMove(order, oldIndex, newIndex);
       });
     }
   }, []);
@@ -192,11 +195,13 @@ export default function AdvancedTable() {
     data: advancedData,
     pageCount: Math.ceil((advancedData?.length || 0) / pagination.pageSize),
     state: {
+      columnOrder,
       pagination,
       sorting,
     },
     enableSorting: true,
     enableSortingRemoval: false,
+    onColumnOrderChange: setColumnOrder,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),

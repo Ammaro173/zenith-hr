@@ -27,6 +27,7 @@ export default function BusinessTripsPage() {
   const { data: trips, isLoading } = useQuery(
     orpc.businessTrips.getMyTrips.queryOptions()
   );
+  const hasTrips = (trips?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -70,39 +71,43 @@ export default function BusinessTripsPage() {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : trips?.length === 0 ? (
+              ) : null}
+
+              {isLoading || hasTrips ? null : (
                 <TableRow>
                   <TableCell className="text-center" colSpan={5}>
                     No trips found.
                   </TableCell>
                 </TableRow>
-              ) : (
-                trips?.map((trip) => (
-                  <TableRow key={trip.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        className="hover:underline"
-                        href={`/business-trips/${trip.id}`}
-                      >
-                        {trip.destination}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{trip.purpose}</TableCell>
-                    <TableCell>
-                      {format(new Date(trip.startDate), "MMM d")} -{" "}
-                      {format(new Date(trip.endDate), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{trip.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {trip.estimatedCost
-                        ? `${trip.currency} ${trip.estimatedCost}`
-                        : "-"}
-                    </TableCell>
-                  </TableRow>
-                ))
               )}
+
+              {!isLoading && hasTrips
+                ? (trips?.map((trip) => (
+                    <TableRow key={trip.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          className="hover:underline"
+                          href={`/business-trips/${trip.id}`}
+                        >
+                          {trip.destination}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{trip.purpose}</TableCell>
+                      <TableCell>
+                        {format(new Date(trip.startDate), "MMM d")} -{" "}
+                        {format(new Date(trip.endDate), "MMM d, yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{trip.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {trip.estimatedCost
+                          ? `${trip.currency} ${trip.estimatedCost}`
+                          : "-"}
+                      </TableCell>
+                    </TableRow>
+                  )) ?? null)
+                : null}
             </TableBody>
           </Table>
         </CardContent>

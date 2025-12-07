@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export function About({ id }: { id?: string }) {
   return (
     <section
@@ -24,9 +26,12 @@ export function About({ id }: { id?: string }) {
             </p>
           </div>
           <div className="relative h-[400px] overflow-hidden rounded-lg lg:h-auto">
-            <img
+            <Image
               alt="Audi Club community"
-              className="h-full w-full object-cover"
+              className="object-cover"
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 100vw"
               src="/images/audi-club-members-gathering-luxury-event.jpg"
             />
             <div className="absolute inset-0 bg-linear-to-t from-zinc-950/60 to-transparent" />

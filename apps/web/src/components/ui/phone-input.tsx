@@ -18,7 +18,6 @@ type PhoneInputProps = Omit<
   onChange?: (value: string) => void;
 };
 
-// biome-ignore lint/nursery/noReactForwardRef: forwardRef is needed for ref forwarding
 const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
   ({ className, value = "", onChange, ...props }, ref) => {
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {

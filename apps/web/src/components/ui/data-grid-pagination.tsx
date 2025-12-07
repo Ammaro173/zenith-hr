@@ -1,5 +1,5 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { useDataGrid } from "@/components/ui/data-grid";
 import {
@@ -78,7 +78,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
 
   // Render page buttons based on the current group
   const renderPageButtons = () => {
-    const buttons = [];
+    const buttons: JSX.Element[] = [];
     for (let i = currentGroupStart; i < currentGroupEnd; i++) {
       buttons.push(
         <Button

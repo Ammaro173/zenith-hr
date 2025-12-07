@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useQueryState } from "nuqs";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 
 import { DataTableRangeFilter } from "@/components/data-table/data-table-range-filter";
@@ -271,7 +272,7 @@ export function DataTableFilterMenu<TData>({
         </PopoverTrigger>
         <PopoverContent
           align={align}
-          className="w-full max-w-[var(--radix-popover-content-available-width)] origin-[var(--radix-popover-content-transform-origin)] p-0"
+          className="w-full max-w-(--radix-popover-content-available-width) origin-(--radix-popover-content-transform-origin) p-0"
           {...props}
         >
           <Command className="[&_[cmdk-input-wrapper]_svg]:hidden" loop>
@@ -397,6 +398,8 @@ function DataTableFilterItem<TData>({
     }
 
     return (
+      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: //TODO
+      // biome-ignore lint/a11y/useSemanticElements: //TODO
       <div
         className="flex h-8 items-center rounded-md bg-background"
         id={filterItemId}
@@ -419,7 +422,7 @@ function DataTableFilterItem<TData>({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-48 origin-[var(--radix-popover-content-transform-origin)] p-0"
+            className="w-48 origin-(--radix-popover-content-transform-origin) p-0"
           >
             <Command loop>
               <CommandInput placeholder="Search fields..." />
@@ -478,12 +481,12 @@ function DataTableFilterItem<TData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
-            className="h-8 rounded-none border-r-0 px-2.5 lowercase [&[data-size]]:h-8 [&_svg]:hidden"
+            className="h-8 rounded-none border-r-0 px-2.5 lowercase data-size:h-8 [&_svg]:hidden"
           >
             <SelectValue placeholder={filter.operator} />
           </SelectTrigger>
           <SelectContent
-            className="origin-[var(--radix-select-content-transform-origin)]"
+            className="origin-(--radix-select-content-transform-origin)"
             id={operatorListboxId}
           >
             {filterOperators.map((operator) => (
@@ -626,14 +629,13 @@ function onFilterInputRender<TData>({
 }) {
   if (filter.operator === "isEmpty" || filter.operator === "isNotEmpty") {
     return (
-      <div
+      <output
         aria-label={`${column.columnDef.meta?.label} filter is ${
           filter.operator === "isEmpty" ? "empty" : "not empty"
         }`}
         aria-live="polite"
         className="h-full w-16 rounded-none border bg-transparent px-1.5 py-0.5 text-muted-foreground dark:bg-input/30"
         id={inputId}
-        role="status"
       />
     );
   }
@@ -648,7 +650,7 @@ function onFilterInputRender<TData>({
       ) {
         return (
           <DataTableRangeFilter
-            className="size-full max-w-28 gap-0 [&_[data-slot='range-min']]:border-r-0 [&_input]:rounded-none [&_input]:px-1.5"
+            className="size-full max-w-28 gap-0 **:data-[slot='range-min']:border-r-0 [&_input]:rounded-none [&_input]:px-1.5"
             column={column}
             filter={filter}
             inputId={inputId}
@@ -714,6 +716,10 @@ function onFilterInputRender<TData>({
       const selectedOptions = options.filter((option) =>
         selectedValues.includes(option.value)
       );
+      const placeholder =
+        filter.variant === "multiSelect"
+          ? "Select options..."
+          : "Select option...";
 
       return (
         <Popover onOpenChange={setShowValueSelector} open={showValueSelector}>
@@ -726,11 +732,7 @@ function onFilterInputRender<TData>({
               variant="ghost"
             >
               {selectedOptions.length === 0 ? (
-                filter.variant === "multiSelect" ? (
-                  "Select options..."
-                ) : (
-                  "Select option..."
-                )
+                placeholder
               ) : (
                 <>
                   <div className="-space-x-2 flex items-center rtl:space-x-reverse">
@@ -756,7 +758,7 @@ function onFilterInputRender<TData>({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-48 origin-[var(--radix-popover-content-transform-origin)] p-0"
+            className="w-48 origin-(--radix-popover-content-transform-origin) p-0"
             id={inputListboxId}
           >
             <Command>
@@ -768,12 +770,14 @@ function onFilterInputRender<TData>({
                     <CommandItem
                       key={option.value}
                       onSelect={() => {
-                        const value =
-                          filter.variant === "multiSelect"
-                            ? selectedValues.includes(option.value)
-                              ? selectedValues.filter((v) => v !== option.value)
-                              : [...selectedValues, option.value]
-                            : option.value;
+                        let value: string | string[];
+                        if (filter.variant === "multiSelect") {
+                          value = selectedValues.includes(option.value)
+                            ? selectedValues.filter((v) => v !== option.value)
+                            : [...selectedValues, option.value];
+                        } else {
+                          value = option.value;
+                        }
                         onFilterUpdate(filter.filterId, { value });
                       }}
                       value={option.value}
@@ -808,14 +812,14 @@ function onFilterInputRender<TData>({
         ? filter.value.filter(Boolean)
         : [filter.value, filter.value].filter(Boolean);
 
-      const displayValue =
-        filter.operator === "isBetween" && dateValue.length === 2
-          ? `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
-              new Date(Number(dateValue[1]))
-            )}`
-          : dateValue[0]
-            ? formatDate(new Date(Number(dateValue[0])))
-            : "Pick date...";
+      let displayValue = "Pick date...";
+      if (filter.operator === "isBetween" && dateValue.length === 2) {
+        displayValue = `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
+          new Date(Number(dateValue[1]))
+        )}`;
+      } else if (dateValue[0]) {
+        displayValue = formatDate(new Date(Number(dateValue[0])));
+      }
 
       return (
         <Popover onOpenChange={setShowValueSelector} open={showValueSelector}>
@@ -836,7 +840,7 @@ function onFilterInputRender<TData>({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-auto origin-[var(--radix-popover-content-transform-origin)] p-0"
+            className="w-auto origin-(--radix-popover-content-transform-origin) p-0"
             id={inputListboxId}
           >
             {filter.operator === "isBetween" ? (

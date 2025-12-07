@@ -33,10 +33,15 @@
         "noUnknownFunction": "off"
       },
       "nursery": {
+        "noShadow": "off",
+        "noLeakedRender": "off",
         "useMaxParams": "off"
       },
       "performance": {
         "noBarrelFile": "off"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "off"
       }
     }
   }

@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useFilenamingConvention: legacy utility name
 import type { ComponentType, FC, ReactNode } from "react";
 
 type CaseComponent = ReactNode | ComponentType;

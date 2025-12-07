@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useFilenamingConvention: legacy utility name
 import { type ReactNode, useEffect, useState } from "react";
 
 type Props = {

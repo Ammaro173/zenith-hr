@@ -97,7 +97,7 @@ function DataGridTableHeadRow<TData>({
       className={cn(
         "bg-muted/40",
         props.tableLayout?.headerBorder && "[&>th]:border-b",
-        props.tableLayout?.cellBorder && "[&_>:last-child]:border-e-0",
+        props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "bg-transparent",
         props.tableLayout?.headerBackground === false && "bg-transparent",
         props.tableClassNames?.headerRow
@@ -128,6 +128,14 @@ function DataGridTableHeadRowCell<TData>({
     isPinned === "left" && column.getIsLastColumn("left");
   const isFirstRightPinned =
     isPinned === "right" && column.getIsFirstColumn("right");
+  let lastPinnedSide: "left" | "right" | undefined;
+  if (isLastLeftPinned) {
+    lastPinnedSide = "left";
+  } else if (isFirstRightPinned) {
+    lastPinnedSide = "right";
+  } else {
+    lastPinnedSide = undefined;
+  }
   const headerCellSpacing = headerCellSpacingVariants({
     size: props.tableLayout?.dense ? "dense" : "default",
   });
@@ -150,9 +158,7 @@ function DataGridTableHeadRowCell<TData>({
           ? props.tableClassNames?.edgeCell
           : ""
       )}
-      data-last-col={
-        isLastLeftPinned ? "left" : isFirstRightPinned ? "right" : undefined
-      }
+      data-last-col={lastPinnedSide}
       data-pinned={isPinned || undefined}
       key={header.id}
       ref={dndRef}
@@ -350,6 +356,14 @@ function DataGridTableBodyRowCell<TData>({
     isPinned === "left" && column.getIsLastColumn("left");
   const isFirstRightPinned =
     isPinned === "right" && column.getIsFirstColumn("right");
+  let lastPinnedSide: "left" | "right" | undefined;
+  if (isLastLeftPinned) {
+    lastPinnedSide = "left";
+  } else if (isFirstRightPinned) {
+    lastPinnedSide = "right";
+  } else {
+    lastPinnedSide = undefined;
+  }
   const bodyCellSpacing = bodyCellSpacingVariants({
     size: props.tableLayout?.dense ? "dense" : "default",
   });
@@ -375,9 +389,7 @@ function DataGridTableBodyRowCell<TData>({
           ? props.tableClassNames?.edgeCell
           : ""
       )}
-      data-last-col={
-        isLastLeftPinned ? "left" : isFirstRightPinned ? "right" : undefined
-      }
+      data-last-col={lastPinnedSide}
       data-pinned={isPinned || undefined}
       style={{
         ...(props.tableLayout?.columnsPinnable &&
@@ -419,6 +431,7 @@ function DataGridTableLoader() {
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <title>Loading</title>
           <circle
             className="opacity-25"
             cx="12"
@@ -521,56 +534,66 @@ function DataGridTable<TData>() {
       )}
 
       <DataGridTableBody>
-        {isLoading &&
-        props.loadingMode === "skeleton" &&
-        pagination?.pageSize ? (
-          // Show skeleton loading immediately
-          Array.from({ length: pagination.pageSize }).map((_, rowIndex) => (
-            <DataGridTableBodyRowSkeleton key={rowIndex}>
-              {table.getVisibleFlatColumns().map((column, colIndex) => (
-                <DataGridTableBodyRowSkeletonCell
-                  column={column}
-                  key={colIndex}
+        {(() => {
+          if (
+            isLoading &&
+            props.loadingMode === "skeleton" &&
+            pagination?.pageSize
+          ) {
+            return Array.from({ length: pagination.pageSize }).map(
+              (_, rowIndex) => (
+                <DataGridTableBodyRowSkeleton key={rowIndex}>
+                  {table.getVisibleFlatColumns().map((column, colIndex) => (
+                    <DataGridTableBodyRowSkeletonCell
+                      column={column}
+                      key={colIndex}
+                    >
+                      {column.columnDef.meta?.skeleton}
+                    </DataGridTableBodyRowSkeletonCell>
+                  ))}
+                </DataGridTableBodyRowSkeleton>
+              )
+            );
+          }
+
+          if (isLoading && props.loadingMode === "spinner") {
+            return (
+              <tr>
+                <td
+                  className="p-8"
+                  colSpan={table.getVisibleFlatColumns().length}
                 >
-                  {column.columnDef.meta?.skeleton}
-                </DataGridTableBodyRowSkeletonCell>
-              ))}
-            </DataGridTableBodyRowSkeleton>
-          ))
-        ) : isLoading && props.loadingMode === "spinner" ? (
-          // Show spinner loading immediately
-          <tr>
-            <td className="p-8" colSpan={table.getVisibleFlatColumns().length}>
-              <div className="flex items-center justify-center">
-                <svg
-                  className="-ml-1 mr-3 h-5 w-5 animate-spin text-muted-foreground"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    fill="currentColor"
-                  />
-                </svg>
-                {props.loadingMessage || "Loading..."}
-              </div>
-            </td>
-          </tr>
-        ) : table.getRowModel().rows.length ? (
-          // Show actual data when not loading
-          table
-            .getRowModel()
-            .rows.map((row: Row<TData>, index) => (
+                  <div className="flex items-center justify-center">
+                    <svg
+                      className="-ml-1 mr-3 h-5 w-5 animate-spin text-muted-foreground"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <title>Loading</title>
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    {props.loadingMessage || "Loading..."}
+                  </div>
+                </td>
+              </tr>
+            );
+          }
+
+          if (table.getRowModel().rows.length) {
+            return table.getRowModel().rows.map((row: Row<TData>, index) => (
               <Fragment key={row.id}>
                 <DataGridTableBodyRow key={index} row={row}>
                   {row
@@ -588,10 +611,11 @@ function DataGridTable<TData>() {
                   <DataGridTableBodyRowExpandded row={row} />
                 )}
               </Fragment>
-            ))
-        ) : (
-          <DataGridTableEmpty />
-        )}
+            ));
+          }
+
+          return <DataGridTableEmpty />;
+        })()}
       </DataGridTableBody>
     </DataGridTableBase>
   );

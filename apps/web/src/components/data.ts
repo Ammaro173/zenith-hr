@@ -1,4 +1,4 @@
-import type { AdvancedData } from "./Advanced";
+import type { AdvancedData } from "./advanced";
 
 export const advancedData: AdvancedData[] = [
   {

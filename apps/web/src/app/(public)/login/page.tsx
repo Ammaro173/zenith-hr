@@ -45,7 +45,7 @@ export default function LoginPage() {
       }),
     },
     onSubmit: async ({ value }) => {
-      const { isSuccess, data, error } = await tryCatch(
+      const { isSuccess, error } = await tryCatch(
         mockLogin()
         // login({
         //   body: {

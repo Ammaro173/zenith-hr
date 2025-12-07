@@ -10,6 +10,7 @@ import {
   FileVideoIcon,
 } from "lucide-react";
 import { Slot as SlotPrimitive } from "radix-ui";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -780,8 +781,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       }
 
       const files: File[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+      for (const item of Array.from(items)) {
         if (item?.kind === "file") {
           const file = item.getAsFile();
           if (file) {
@@ -994,13 +994,14 @@ function FileUploadItem(props: FileUploadItemProps) {
     return null;
   }
 
-  const statusText = fileState.error
-    ? `Error: ${fileState.error}`
-    : fileState.status === "uploading"
-      ? `Uploading: ${fileState.progress}% complete`
-      : fileState.status === "success"
-        ? "Upload complete"
-        : "Ready to upload";
+  let statusText = "Ready to upload";
+  if (fileState.error) {
+    statusText = `Error: ${fileState.error}`;
+  } else if (fileState.status === "uploading") {
+    statusText = `Uploading: ${fileState.progress}% complete`;
+  } else if (fileState.status === "success") {
+    statusText = "Upload complete";
+  }
 
   const ItemPrimitive = asChild ? SlotPrimitive.Slot : "div";
 
@@ -1118,6 +1119,7 @@ function FileUploadItemPreview(props: FileUploadItemPreviewProps) {
 
         return (
           // biome-ignore lint/performance/noImgElement: dynamic file URLs from user uploads don't work well with Next.js Image optimization
+          // biome-ignore lint/correctness/useImageSize: //TODO
           <img alt={file.name} className="size-full object-cover" src={url} />
         );
       }
@@ -1283,6 +1285,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
             viewBox={`0 0 ${size} ${size}`}
             width={size}
           >
+            <title>Upload progress</title>
             <circle
               className="text-primary/20"
               cx={size / 2}

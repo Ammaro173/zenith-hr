@@ -1,4 +1,5 @@
 import { Facebook, Instagram, Twitter } from "lucide-react";
+import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ export function Footer({ id }: { id?: string }) {
               <li>
                 <a
                   className="text-zinc-400 transition-colors hover:text-primary"
-                  href="#"
+                  href="/about"
                 >
                   About Us
                 </a>
@@ -67,7 +68,7 @@ export function Footer({ id }: { id?: string }) {
               <li>
                 <a
                   className="text-zinc-400 transition-colors hover:text-primary"
-                  href="#"
+                  href="/membership"
                 >
                   Membership
                 </a>
@@ -75,7 +76,7 @@ export function Footer({ id }: { id?: string }) {
               <li>
                 <a
                   className="text-zinc-400 transition-colors hover:text-primary"
-                  href="#"
+                  href="/events"
                 >
                   Events
                 </a>
@@ -83,7 +84,7 @@ export function Footer({ id }: { id?: string }) {
               <li>
                 <a
                   className="text-zinc-400 transition-colors hover:text-primary"
-                  href="#"
+                  href="/partners"
                 >
                   Partners
                 </a>
@@ -119,7 +120,7 @@ export function Footer({ id }: { id?: string }) {
               <p className="text-xs text-zinc-500 uppercase tracking-wider">
                 Scan to Join
               </p>
-              <Link href="/join">
+              <Link href={"/join" as Route}>
                 <Image
                   alt="Scan QR code to join Audi Club Qatar"
                   className="transition-opacity hover:opacity-80"

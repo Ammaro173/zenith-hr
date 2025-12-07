@@ -12,6 +12,7 @@ import {
   useRegisterActions,
 } from "kbar";
 import { Laptop, Moon, Search, Sun } from "lucide-react";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { type ReactNode, useMemo } from "react";
@@ -37,7 +38,7 @@ function CommandMenuInner() {
         name: item.title,
         keywords: item.description,
         section: "Navigation",
-        perform: () => router.push(item.href),
+        perform: () => router.push(item.href as Route),
         icon: <item.icon className="h-4 w-4" />,
         subtitle: item.description,
       })

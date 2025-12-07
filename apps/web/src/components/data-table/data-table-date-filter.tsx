@@ -2,7 +2,8 @@
 
 import type { Column } from "@tanstack/react-table";
 import { CalendarIcon, XCircle } from "lucide-react";
-import * as React from "react";
+import type { MouseEvent } from "react";
+import { useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -37,12 +38,12 @@ function parseColumnFilterValue(value: unknown) {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => {
+    return value.reduce<(string | number)[]>((acc, item) => {
       if (typeof item === "number" || typeof item === "string") {
-        return item;
+        acc.push(item);
       }
-      return;
-    });
+      return acc;
+    }, []);
   }
 
   if (typeof value === "string" || typeof value === "number") {
@@ -65,7 +66,7 @@ export function DataTableDateFilter<TData>({
 }: DataTableDateFilterProps<TData>) {
   const columnFilterValue = column.getFilterValue();
 
-  const selectedDates = React.useMemo<DateSelection>(() => {
+  const selectedDates = useMemo<DateSelection>(() => {
     if (!columnFilterValue) {
       return multiple ? { from: undefined, to: undefined } : [];
     }
@@ -83,7 +84,7 @@ export function DataTableDateFilter<TData>({
     return date ? [date] : [];
   }, [columnFilterValue, multiple]);
 
-  const onSelect = React.useCallback(
+  const onSelect = useCallback(
     (date: Date | DateRange | undefined) => {
       if (!date) {
         column.setFilterValue(undefined);
@@ -101,15 +102,15 @@ export function DataTableDateFilter<TData>({
     [column, multiple]
   );
 
-  const onReset = React.useCallback(
-    (event: React.MouseEvent) => {
+  const onReset = useCallback(
+    (event: MouseEvent) => {
       event.stopPropagation();
       column.setFilterValue(undefined);
     },
     [column]
   );
 
-  const hasValue = React.useMemo(() => {
+  const hasValue = useMemo(() => {
     if (multiple) {
       if (!getIsDateRange(selectedDates)) {
         return false;
@@ -122,7 +123,7 @@ export function DataTableDateFilter<TData>({
     return selectedDates.length > 0;
   }, [multiple, selectedDates]);
 
-  const formatDateRange = React.useCallback((range: DateRange) => {
+  const formatDateRange = useCallback((range: DateRange) => {
     if (!(range.from || range.to)) {
       return "";
     }
@@ -132,7 +133,7 @@ export function DataTableDateFilter<TData>({
     return formatDate(range.from ?? range.to);
   }, []);
 
-  const label = React.useMemo(() => {
+  const label = useMemo(() => {
     if (multiple) {
       if (!getIsDateRange(selectedDates)) {
         return null;
@@ -189,15 +190,14 @@ export function DataTableDateFilter<TData>({
       <PopoverTrigger asChild>
         <Button className="border-dashed" size="sm" variant="outline">
           {hasValue ? (
-            <div
+            <button
               aria-label={`Clear ${title} filter`}
               className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={onReset}
-              role="button"
-              tabIndex={0}
+              type="button"
             >
               <XCircle />
-            </div>
+            </button>
           ) : (
             <CalendarIcon />
           )}

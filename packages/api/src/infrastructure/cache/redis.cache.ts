@@ -43,16 +43,15 @@ export async function createRedisCache(
     // Dynamic import to avoid requiring @upstash/redis as a hard dependency
     // Using variable to prevent TypeScript from statically analyzing the import
     const moduleName = "@upstash/redis";
-    // biome-ignore lint/suspicious/noExplicitAny: Dynamic import of optional dependency
     const upstashModule = (await import(
       /* webpackIgnore: true */ moduleName
-    )) as any;
+    )) as typeof import("@upstash/redis");
     const Redis = upstashModule.Redis;
 
-    const redis: UpstashRedisClient = new Redis({
+    const redis = new Redis({
       url: config.url,
       token: config.token,
-    });
+    }) as unknown as UpstashRedisClient;
 
     return {
       async get<T>(key: string): Promise<T | null> {

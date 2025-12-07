@@ -2,6 +2,7 @@
  * @see https://github.com/mantinedev/mantine/blob/master/packages/@mantine/hooks/src/use-debounced-callback/use-debounced-callback.ts
  */
 
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 
 import { useCallbackRef } from "@/hooks/use-callback-ref";

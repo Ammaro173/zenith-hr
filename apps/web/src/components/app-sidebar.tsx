@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -92,7 +93,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     >
                       <Link
                         className="flex w-full items-center gap-3 text-left transition-all"
-                        href={item.href}
+                        href={item.href as Route}
                       >
                         <ItemIcon
                           className={`size-5! ${

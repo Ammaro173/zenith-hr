@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { Slot as SlotPrimitive } from "radix-ui";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
@@ -47,11 +48,13 @@ function getDirectionAwareKey(key: string, dir?: Direction) {
   if (dir !== "rtl") {
     return key;
   }
-  return key === "ArrowLeft"
-    ? "ArrowRight"
-    : key === "ArrowRight"
-      ? "ArrowLeft"
-      : key;
+  if (key === "ArrowLeft") {
+    return "ArrowRight";
+  }
+  if (key === "ArrowRight") {
+    return "ArrowLeft";
+  }
+  return key;
 }
 
 type TriggerElement = React.ComponentRef<typeof StepperTrigger>;
@@ -204,7 +207,9 @@ function createStore(
         listenersRef.current.add(cb);
         return () => listenersRef.current?.delete(cb);
       }
-      return () => {};
+      return () => {
+        // No-op cleanup when listenersRef.current is null
+      };
     },
     getState: () =>
       stateRef.current ?? {
@@ -541,9 +546,11 @@ function StepperList(props: StepperListProps) {
             return 0;
           }
           const position = elementA.compareDocumentPosition(elementB);
+          // biome-ignore lint/suspicious/noBitwiseOperators: compareDocumentPosition returns bitmask flags
           if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
             return -1;
           }
+          // biome-ignore lint/suspicious/noBitwiseOperators: compareDocumentPosition returns bitmask flags
           if (position & Node.DOCUMENT_POSITION_PRECEDING) {
             return 1;
           }
@@ -1079,6 +1086,17 @@ function StepperIndicator(props: StepperIndicatorProps) {
   const dataState = getDataState(value, itemValue, stepState, steps);
 
   const IndicatorPrimitive = asChild ? SlotPrimitive.Slot : "div";
+  let content: React.ReactNode;
+
+  if (typeof children === "function") {
+    content = children(dataState);
+  } else if (children) {
+    content = children;
+  } else if (dataState === "completed") {
+    content = <Check className="size-4" />;
+  } else {
+    content = stepPosition;
+  }
 
   return (
     <IndicatorPrimitive
@@ -1092,15 +1110,7 @@ function StepperIndicator(props: StepperIndicatorProps) {
       )}
       ref={ref}
     >
-      {typeof children === "function" ? (
-        children(dataState)
-      ) : children ? (
-        children
-      ) : dataState === "completed" ? (
-        <Check className="size-4" />
-      ) : (
-        stepPosition
-      )}
+      {content}
     </IndicatorPrimitive>
   );
 }
@@ -1266,7 +1276,7 @@ function StepperPrevTrigger(props: ButtonProps) {
   const isDisabled = disabled || currentIndex <= 0;
 
   const onClick = React.useCallback(
-    async (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLButtonElement>) => {
       prevTriggerProps.onClick?.(event);
       if (event.defaultPrevented || isDisabled) {
         return;

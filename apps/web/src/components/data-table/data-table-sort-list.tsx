@@ -7,6 +7,7 @@ import {
   GripVertical,
   Trash2,
 } from "lucide-react";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -196,7 +197,7 @@ export function DataTableSortList<TData>({
         <PopoverContent
           aria-describedby={descriptionId}
           aria-labelledby={labelId}
-          className="flex w-full max-w-[var(--radix-popover-content-available-width)] origin-[var(--radix-popover-content-transform-origin)] flex-col gap-3.5 p-4 sm:min-w-[380px]"
+          className="flex w-full max-w-(--radix-popover-content-available-width) origin-(--radix-popover-content-transform-origin) flex-col gap-3.5 p-4 sm:min-w-[380px]"
           {...props}
         >
           <div className="flex flex-col gap-1">
@@ -315,6 +316,7 @@ function DataTableSortItem({
 
   return (
     <SortableItem asChild value={sort.id}>
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: sortable item handles keyboard events */}
       <li
         className="flex items-center gap-2"
         id={sortItemId}
@@ -335,7 +337,7 @@ function DataTableSortItem({
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] origin-[var(--radix-popover-content-transform-origin)] p-0"
+            className="w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) p-0"
             id={fieldListboxId}
           >
             <Command>
@@ -367,12 +369,12 @@ function DataTableSortItem({
         >
           <SelectTrigger
             aria-controls={directionListboxId}
-            className="h-8 w-24 rounded [&[data-size]]:h-8"
+            className="h-8 w-24 rounded data-size:h-8"
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent
-            className="min-w-[var(--radix-select-trigger-width)] origin-[var(--radix-select-content-transform-origin)]"
+            className="min-w-(--radix-select-trigger-width) origin-(--radix-select-content-transform-origin)"
             id={directionListboxId}
           >
             {dataTableConfig.sortOrders.map((order) => (

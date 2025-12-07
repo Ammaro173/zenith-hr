@@ -66,7 +66,6 @@ export function RoleSwitcher() {
                 <CommandItem
                   key={r.value}
                   onSelect={(currentValue) => {
-                    // @ts-expect-error - role types match
                     setRole?.(currentValue === role ? null : currentValue);
                     setOpen(false);
                   }}

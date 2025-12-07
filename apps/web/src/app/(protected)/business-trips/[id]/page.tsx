@@ -2,13 +2,14 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addExpenseSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+import type { addExpenseSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCurrentAdmin } from "@/hooks/use-current-admin";
 import { orpc } from "@/utils/orpc";
 
+type AddExpenseInput = z.input<typeof addExpenseSchema>;
+
 export default function BusinessTripDetailPage() {
   const params = useParams<{ id: string }>();
   const _router = useRouter();
@@ -56,7 +59,9 @@ export default function BusinessTripDetailPage() {
       onSuccess: () => {
         toast.success("Trip status updated");
         queryClient.invalidateQueries({
-          queryKey: orpc.businessTrips.getById.key,
+          queryKey: orpc.businessTrips.getById.key({
+            input: { id: params.id },
+          }),
         });
       },
       onError: (error) => {
@@ -70,7 +75,9 @@ export default function BusinessTripDetailPage() {
       onSuccess: () => {
         toast.success("Expense added successfully");
         queryClient.invalidateQueries({
-          queryKey: orpc.businessTrips.getExpenses.key,
+          queryKey: orpc.businessTrips.getExpenses.key({
+            input: { tripId: params.id },
+          }),
         });
         setIsExpenseDialogOpen(false);
       },
@@ -80,25 +87,22 @@ export default function BusinessTripDetailPage() {
     })
   );
 
+  const expenseDefaults: AddExpenseInput = {
+    tripId: params.id,
+    category: "MEAL",
+    amount: 1,
+    currency: "USD",
+    date: new Date(),
+    description: "",
+    receiptUrl: "",
+  };
+
   const expenseForm = useForm({
-    defaultValues: {
-      tripId: params.id,
-      category: "MEAL" as const,
-      amount: "",
-      currency: "USD",
-      date: new Date().toISOString().split("T")[0],
-      description: "",
-      receiptUrl: "",
-    },
-    validators: {
-      onChange: addExpenseSchema,
-    },
+    defaultValues: expenseDefaults,
+    //TODO
+    // validators
     onSubmit: async ({ value }) => {
-      await addExpense({
-        ...value,
-        amount: Number(value.amount),
-        date: new Date(value.date),
-      });
+      await addExpense(value);
     },
   });
 
@@ -114,6 +118,7 @@ export default function BusinessTripDetailPage() {
     (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
     (role === "HR" && trip.status === "PENDING_HR") ||
     role === "SUPER_ADMIN"; // Simplified for demo
+  const hasExpenses = (expenses?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -214,8 +219,8 @@ export default function BusinessTripDetailPage() {
                       expenseForm.handleSubmit();
                     }}
                   >
-                    <expenseForm.Field
-                      children={(field) => (
+                    <expenseForm.Field name="category">
+                      {(field) => (
                         <div className="space-y-2">
                           <Label htmlFor={field.name}>Category</Label>
                           <Input
@@ -223,18 +228,19 @@ export default function BusinessTripDetailPage() {
                             name={field.name}
                             onBlur={field.handleBlur}
                             onChange={(e) =>
-                              field.handleChange(e.target.value as any)
+                              field.handleChange(
+                                e.target.value as AddExpenseInput["category"]
+                              )
                             }
                             placeholder="e.g. MEAL, TRANSPORT"
                             value={field.state.value}
                           />
                         </div>
                       )}
-                      name="category"
-                    />
+                    </expenseForm.Field>
                     <div className="grid grid-cols-2 gap-4">
-                      <expenseForm.Field
-                        children={(field) => (
+                      <expenseForm.Field name="amount">
+                        {(field) => (
                           <div className="space-y-2">
                             <Label htmlFor={field.name}>Amount</Label>
                             <Input
@@ -242,17 +248,18 @@ export default function BusinessTripDetailPage() {
                               name={field.name}
                               onBlur={field.handleBlur}
                               onChange={(e) =>
-                                field.handleChange(e.target.value)
+                                field.handleChange(
+                                  Number.parseFloat(e.target.value) || 0
+                                )
                               }
                               type="number"
-                              value={field.state.value}
+                              value={String(field.state.value ?? 0)}
                             />
                           </div>
                         )}
-                        name="amount"
-                      />
-                      <expenseForm.Field
-                        children={(field) => (
+                      </expenseForm.Field>
+                      <expenseForm.Field name="currency">
+                        {(field) => (
                           <div className="space-y-2">
                             <Label htmlFor={field.name}>Currency</Label>
                             <Input
@@ -266,27 +273,35 @@ export default function BusinessTripDetailPage() {
                             />
                           </div>
                         )}
-                        name="currency"
-                      />
+                      </expenseForm.Field>
                     </div>
-                    <expenseForm.Field
-                      children={(field) => (
+                    <expenseForm.Field name="date">
+                      {(field) => (
                         <div className="space-y-2">
                           <Label htmlFor={field.name}>Date</Label>
                           <Input
                             id={field.name}
                             name={field.name}
                             onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
+                            onChange={(e) =>
+                              field.handleChange(
+                                e.target.value
+                                  ? new Date(e.target.value)
+                                  : new Date()
+                              )
+                            }
                             type="date"
-                            value={field.state.value}
+                            value={
+                              field.state.value instanceof Date
+                                ? field.state.value.toISOString().split("T")[0]
+                                : ""
+                            }
                           />
                         </div>
                       )}
-                      name="date"
-                    />
-                    <expenseForm.Field
-                      children={(field) => (
+                    </expenseForm.Field>
+                    <expenseForm.Field name="description">
+                      {(field) => (
                         <div className="space-y-2">
                           <Label htmlFor={field.name}>Description</Label>
                           <Textarea
@@ -298,11 +313,15 @@ export default function BusinessTripDetailPage() {
                           />
                         </div>
                       )}
-                      name="description"
-                    />
+                    </expenseForm.Field>
                     <div className="flex justify-end">
                       <expenseForm.Subscribe
-                        children={([canSubmit, isSubmitting]) => (
+                        selector={(state) => [
+                          state.canSubmit,
+                          state.isSubmitting,
+                        ]}
+                      >
+                        {([canSubmit, isSubmitting]) => (
                           <Button
                             disabled={!canSubmit || isSubmitting}
                             type="submit"
@@ -310,11 +329,7 @@ export default function BusinessTripDetailPage() {
                             {isSubmitting ? "Saving..." : "Save Expense"}
                           </Button>
                         )}
-                        selector={(state) => [
-                          state.canSubmit,
-                          state.isSubmitting,
-                        ]}
-                      />
+                      </expenseForm.Subscribe>
                     </div>
                   </form>
                 </DialogContent>
@@ -338,26 +353,30 @@ export default function BusinessTripDetailPage() {
                       Loading...
                     </TableCell>
                   </TableRow>
-                ) : expenses?.length === 0 ? (
+                ) : null}
+
+                {isExpensesLoading || hasExpenses ? null : (
                   <TableRow>
                     <TableCell className="text-center" colSpan={4}>
                       No expenses recorded.
                     </TableCell>
                   </TableRow>
-                ) : (
-                  expenses?.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell>
-                        {format(new Date(expense.date), "MMM d")}
-                      </TableCell>
-                      <TableCell>{expense.category}</TableCell>
-                      <TableCell>{expense.description}</TableCell>
-                      <TableCell className="text-right">
-                        {expense.currency} {expense.amount}
-                      </TableCell>
-                    </TableRow>
-                  ))
                 )}
+
+                {!isExpensesLoading && hasExpenses
+                  ? (expenses?.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell>
+                          {format(new Date(expense.date), "MMM d")}
+                        </TableCell>
+                        <TableCell>{expense.category}</TableCell>
+                        <TableCell>{expense.description}</TableCell>
+                        <TableCell className="text-right">
+                          {expense.currency} {expense.amount}
+                        </TableCell>
+                      </TableRow>
+                    )) ?? null)
+                  : null}
               </TableBody>
             </Table>
           </CardContent>

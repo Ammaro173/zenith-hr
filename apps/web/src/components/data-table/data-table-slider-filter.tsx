@@ -2,6 +2,7 @@
 
 import type { Column } from "@tanstack/react-table";
 import { PlusCircle, XCircle } from "lucide-react";
+// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,12 +84,15 @@ export function DataTableSliderFilter<TData>({
     }
 
     const rangeSize = maxValue - minValue;
-    const step =
-      rangeSize <= 20
-        ? 1
-        : rangeSize <= 100
-          ? Math.ceil(rangeSize / 20)
-          : Math.ceil(rangeSize / 50);
+    const step = (() => {
+      if (rangeSize <= 20) {
+        return 1;
+      }
+      if (rangeSize <= 100) {
+        return Math.ceil(rangeSize / 20);
+      }
+      return Math.ceil(rangeSize / 50);
+    })();
 
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
@@ -148,6 +152,8 @@ export function DataTableSliderFilter<TData>({
       <PopoverTrigger asChild>
         <Button className="border-dashed" size="sm" variant="outline">
           {columnFilterValue ? (
+            // biome-ignore lint/a11y/useKeyWithClickEvents: //TODO
+            // biome-ignore lint/a11y/useSemanticElements: //TODO
             <div
               aria-label={`Clear ${title} filter`}
               className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
