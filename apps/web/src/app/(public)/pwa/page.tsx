@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { env } from "@/lib/env";
 import { sendNotification, subscribeUser, unsubscribeUser } from "./actions";
 
 // Base64 URL decoding constants
@@ -111,7 +112,7 @@ function PushNotificationManager() {
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""
+          env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""
         ),
       });
       setSubscription(sub);

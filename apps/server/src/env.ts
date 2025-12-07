@@ -34,9 +34,7 @@ export const env = createEnv({
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
-  skipValidation:
-    process.env.SKIP_ENV_VALIDATION === "true" ||
-    process.env.BUILDING === "true",
+  skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
 });
 
 export type Env = typeof env;

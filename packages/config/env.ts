@@ -32,7 +32,7 @@ export const serverEnvSchema = {
     .enum(["development", "production", "test"])
     .default("development"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-  CORS_ORIGIN: z.string().url().optional(),
+  CORS_ORIGIN: z.string().url().default("http://localhost:3001"),
 };
 
 /**
@@ -79,9 +79,7 @@ export function createAppEnv(runtimeEnv: NodeJS.ProcessEnv = process.env) {
     server: allEnvSchema,
     runtimeEnv,
     emptyStringAsUndefined: true,
-    skipValidation:
-      runtimeEnv.SKIP_ENV_VALIDATION === "true" ||
-      runtimeEnv.BUILDING === "true",
+    skipValidation: runtimeEnv.SKIP_ENV_VALIDATION === "true",
   });
 }
 
@@ -97,8 +95,6 @@ export function createPackageEnv<T extends Record<string, z.ZodType>>(
     server: schema,
     runtimeEnv,
     emptyStringAsUndefined: true,
-    skipValidation:
-      runtimeEnv.SKIP_ENV_VALIDATION === "true" ||
-      runtimeEnv.BUILDING === "true",
+    skipValidation: runtimeEnv.SKIP_ENV_VALIDATION === "true",
   }) as { [K in keyof T]: z.infer<T[K]> };
 }
