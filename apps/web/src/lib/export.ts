@@ -14,27 +14,28 @@ export function exportTableToCSV<TData>(
     onlySelected = false,
   } = opts;
 
-  const headers = table
+  const columnIds = table
     .getAllLeafColumns()
-    .map((column) => column.id)
-    .filter((id) => !excludeColumns.includes(id));
+    .map((column) => column.id as keyof TData | "select" | "actions");
 
-  const csvContent = [
-    headers.join(","),
-    ...(onlySelected
-      ? table.getFilteredSelectedRowModel().rows
-      : table.getRowModel().rows
-    ).map((row) =>
-      headers
-        .map((header) => {
-          const cellValue = row.getValue(header);
-          return typeof cellValue === "string"
-            ? `"${cellValue.replace(/"/g, '""')}"`
-            : cellValue;
-        })
-        .join(",")
-    ),
-  ].join("\n");
+  const headers = columnIds.filter((id) => !excludeColumns.includes(id));
+
+  const rows = onlySelected
+    ? table.getFilteredSelectedRowModel().rows
+    : table.getRowModel().rows;
+
+  const csvRows = rows.map((row, _rowIdx) => {
+    const cells = headers.map((header) => {
+      const cellValue = row.getValue(header as string);
+      return typeof cellValue === "string"
+        ? `"${cellValue.replace(/"/g, '""')}"`
+        : cellValue;
+    });
+
+    return cells.join(",");
+  });
+
+  const csvContent = [headers.join(","), ...csvRows].join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 

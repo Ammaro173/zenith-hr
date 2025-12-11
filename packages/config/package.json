@@ -12,8 +12,14 @@
       "default": "./env.ts"
     }
   },
+  "scripts": {
+    "clean": "rimraf --glob \"dist\" \"out\" \"build\" \"coverage\" \".cache\" \".eslintcache\" \"node_modules\" \"**/*.tsbuildinfo\""
+  },
+  "devDependencies": {
+    "rimraf": "catalog:"
+  },
   "dependencies": {
-    "@t3-oss/env-core": "^0.13.8",
-    "zod": "^4.1.13"
+    "@t3-oss/env-core": "catalog:",
+    "zod": "catalog:"
   }
 }

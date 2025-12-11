@@ -16,24 +16,26 @@
     }
   },
   "scripts": {
+    "clean": "rimraf --glob \"dist\" \"out\" \"build\" \"coverage\" \".cache\" \".eslintcache\" \"node_modules\" \"**/*.tsbuildinfo\"",
     "db:push": "bun --env-file=../../.env drizzle-kit push",
     "db:studio": "bun --env-file=../../.env drizzle-kit studio",
     "db:generate": "bun --env-file=../../.env drizzle-kit generate",
     "db:migrate": "bun --env-file=../../.env drizzle-kit migrate"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1",
+    "@types/ws": "catalog:",
     "@zenith-hr/config": "workspace:*",
-    "drizzle-kit": "^0.31.8"
+    "drizzle-kit": "catalog:",
+    "rimraf": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@t3-oss/env-core": "^0.13.8",
-    "drizzle-orm": "^0.44.7",
+    "@t3-oss/env-core": "catalog:",
+    "drizzle-orm": "catalog:",
     "ws": "^8.18.3",
-    "zod": "^4.1.13"
+    "zod": "catalog:"
   }
 }

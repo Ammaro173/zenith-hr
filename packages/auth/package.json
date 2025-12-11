@@ -9,16 +9,19 @@
     }
   },
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "clean": "rimraf --glob \"dist\" \"out\" \"build\" \"coverage\" \".cache\" \".eslintcache\" \"node_modules\" \"**/*.tsbuildinfo\""
+  },
   "devDependencies": {
-    "@zenith-hr/config": "workspace:*"
+    "@zenith-hr/config": "workspace:*",
+    "rimraf": "catalog:"
   },
   "peerDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@zenith-hr/db": "workspace:*",
-    "better-auth": "^1.4.5",
-    "zod": "^4.1.13"
+    "better-auth": "catalog:",
+    "zod": "catalog:"
   }
 }
