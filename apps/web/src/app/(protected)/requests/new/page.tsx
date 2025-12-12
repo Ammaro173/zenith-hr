@@ -51,6 +51,9 @@ export default function NewRequestPage() {
     onSuccess: () => {
       router.push("/requests");
     },
+    onError: (err) => {
+      toast.error(err.message);
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {

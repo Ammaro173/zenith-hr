@@ -3,7 +3,20 @@
 import { useMutation } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { client } from "@/utils/orpc";
+
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const chunkSize = 32_768;
+  let binary = "";
+  const u8 = new Uint8Array(bytes);
+  for (let i = 0; i < u8.length; i += chunkSize) {
+    binary += String.fromCharCode(...u8.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 export default function CandidateSelectionPage() {
   const params = useParams();
   const router = useRouter();
@@ -13,30 +26,51 @@ export default function CandidateSelectionPage() {
     candidateName: "",
     candidateEmail: "",
     cvFile: null as File | null,
+    startDate: "",
   });
 
-  const selectMutation = useMutation({
-    mutationFn: async (data: { requestId: string; candidateId: string }) => {
-      // In real implementation, upload CV first, then select
-      return client.candidates.selectCandidate(data);
+  const uploadAndGenerate = useMutation({
+    mutationFn: async () => {
+      if (!formData.cvFile) {
+        throw new Error("CV file is required");
+      }
+      if (!formData.startDate) {
+        throw new Error("Start date is required");
+      }
+
+      const cvFileBase64 = await fileToBase64(formData.cvFile);
+
+      const uploaded = await client.candidates.uploadCV({
+        requestId,
+        candidateName: formData.candidateName,
+        candidateEmail: formData.candidateEmail,
+        cvFileBase64,
+      });
+
+      await client.candidates.selectCandidate({
+        requestId,
+        candidateId: uploaded.candidateId,
+      });
+
+      const contract = await client.contracts.generate({
+        requestId,
+        candidateName: formData.candidateName,
+        candidateEmail: formData.candidateEmail,
+        startDate: formData.startDate,
+      });
+      return contract;
     },
-    onSuccess: () => {
-      router.push(
-        `/contracts?requestId=${
-          requestId
-          // biome-ignore lint/suspicious/noExplicitAny: TODO
-        }` as any
-      );
+    onSuccess: (contract) => {
+      router.push(`/contracts/${contract.id}`);
+    },
+    onError: (err) => {
+      toast.error(err.message);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock candidate ID
-    selectMutation.mutate({
-      requestId,
-      candidateId: `${requestId}_${formData.candidateEmail}`,
-    });
+    uploadAndGenerate.mutate();
   };
 
   return (
@@ -90,15 +124,34 @@ export default function CandidateSelectionPage() {
                 cvFile: e.target.files?.[0] || null,
               })
             }
+            required
             type="file"
+          />
+        </div>
+        <div>
+          <label className="block font-medium text-sm" htmlFor="start-date">
+            Start Date
+          </label>
+          <input
+            className="mt-1 w-full rounded border p-2"
+            id="start-date"
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                startDate: e.target.value,
+              })
+            }
+            required
+            type="date"
+            value={formData.startDate}
           />
         </div>
         <button
           className="rounded bg-blue-500 px-4 py-2 text-primary hover:bg-blue-600 disabled:opacity-50"
-          disabled={selectMutation.isPending}
+          disabled={uploadAndGenerate.isPending}
           type="submit"
         >
-          {selectMutation.isPending ? "Selecting..." : "Select Candidate"}
+          {uploadAndGenerate.isPending ? "Processing..." : "Create Contract"}
         </button>
       </form>
     </div>

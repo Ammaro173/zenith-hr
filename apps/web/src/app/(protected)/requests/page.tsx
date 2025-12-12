@@ -4,6 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { orpc } from "@/utils/orpc";
 
+function getStatusBadgeClass(status: string): string {
+  if (status === "APPROVED_OPEN") {
+    return "bg-green-100 text-green-800";
+  }
+  if (status === "REJECTED") {
+    return "bg-red-100 text-red-800";
+  }
+  return "bg-yellow-100 text-yellow-800";
+}
+
 export default function RequestsPage() {
   const { data: requests, isLoading } = useQuery(
     orpc.requests.getMyRequests.queryOptions()
@@ -39,14 +49,9 @@ export default function RequestsPage() {
                 </p>
               </div>
               <span
-                className={`rounded px-2 py-1 text-xs ${
-                  request.status === "APPROVED_OPEN"
-                    ? "bg-green-100 text-green-800"
-                    : // biome-ignore lint/style/noNestedTernary: TODO
-                      request.status === "REJECTED"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-yellow-100 text-yellow-800"
-                }`}
+                className={`rounded px-2 py-1 text-xs ${getStatusBadgeClass(
+                  request.status
+                )}`}
               >
                 {request.status}
               </span>

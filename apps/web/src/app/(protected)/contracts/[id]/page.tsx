@@ -4,6 +4,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { client, orpc } from "@/utils/orpc";
 
+function getStatusBadgeClass(status: string): string {
+  if (status === "SIGNED") {
+    return "bg-green-100 text-green-800";
+  }
+  if (status === "SENT_FOR_SIGNATURE") {
+    return "bg-yellow-100 text-yellow-800";
+  }
+  return "bg-muted-foreground text-muted-foreground-800";
+}
+
 export default function ContractPage() {
   const params = useParams();
   const contractId = params.id as string;
@@ -14,9 +24,6 @@ export default function ContractPage() {
 
   const sendMutation = useMutation({
     mutationFn: (id: string) => client.contracts.sendForSignature({ id }),
-    onSuccess: () => {
-      // Refresh contract data
-    },
   });
 
   if (isLoading) {
@@ -43,14 +50,9 @@ export default function ContractPage() {
         <div className="mb-4">
           <h3 className="font-semibold">Status</h3>
           <span
-            className={`rounded px-2 py-1 text-xs ${
-              contract.status === "SIGNED"
-                ? "bg-green-100 text-green-800"
-                : // biome-ignore lint/style/noNestedTernary: TODO
-                  contract.status === "SENT_FOR_SIGNATURE"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-muted-foreground text-muted-foreground-800"
-            }`}
+            className={`rounded px-2 py-1 text-xs ${getStatusBadgeClass(
+              contract.status
+            )}`}
           >
             {contract.status}
           </span>

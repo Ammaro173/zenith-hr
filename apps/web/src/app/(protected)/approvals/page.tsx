@@ -10,6 +10,7 @@ type TransitionAction =
   | "REJECT"
   | "REQUEST_CHANGE"
   | "HOLD";
+
 type TripAction = "SUBMIT" | "APPROVE" | "REJECT" | "CANCEL";
 
 export default function ApprovalsPage() {
