@@ -17,35 +17,25 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  getNavigationItemsForRole,
+  getRoleFromSessionUser,
   type ProtectedNavigationItem,
-  protectedNavigationItems,
 } from "@/config/navigation";
-import { useCurrentAdmin } from "@/hooks/use-current-admin";
 import { authClient } from "@/lib/auth-client";
 import { For } from "@/utils/For";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { admin, isLoading } = useCurrentAdmin();
+  const { data: session, isPending } = authClient.useSession();
+  const role = getRoleFromSessionUser(session?.user);
 
   const navigationItems = useMemo<ProtectedNavigationItem[]>(() => {
-    const restrictedRoutes = new Set([
-      "/leads-management",
-      "/admin-management",
-    ]);
-
-    if (isLoading) {
+    if (isPending) {
       return [];
     }
 
-    if (admin?.role === "HR") {
-      return protectedNavigationItems.filter(
-        (item) => !restrictedRoutes.has(item.href)
-      );
-    }
-
-    return protectedNavigationItems;
-  }, [admin?.role, isLoading]);
+    return getNavigationItemsForRole(role);
+  }, [isPending, role]);
 
   const skeletonItems = useMemo(
     () => ["primary", "secondary", "tertiary", "quaternary"],
@@ -68,7 +58,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent className="px-5 py-9">
         <SidebarMenu>
-          {isLoading ? (
+          {isPending ? (
             skeletonItems.map((key) => (
               <SidebarMenuItem key={`sidebar-skeleton-${key}`}>
                 <div className="flex h-10 items-center gap-3 rounded-xl px-3 py-2">

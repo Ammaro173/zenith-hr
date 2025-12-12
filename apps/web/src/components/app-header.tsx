@@ -12,15 +12,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { getRoleFromSessionUser } from "@/config/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Show } from "@/utils/Show";
-import { RoleSwitcher } from "./role-switcher";
 import { Skeleton } from "./ui/skeleton";
 
 export function AppHeader() {
   const { data: session, isPending } = authClient.useSession();
   const { user } = session ?? {};
   const { name, email } = user ?? {};
+  const role = getRoleFromSessionUser(user);
   const userInitials =
     name
       ?.split(" ")
@@ -36,7 +37,6 @@ export function AppHeader() {
         {/* </div> */}
 
         <div className="ml-auto flex items-center gap-3">
-          <RoleSwitcher />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -95,6 +95,11 @@ export function AppHeader() {
                     <span className="text-muted-foreground text-xs">
                       {email}
                     </span>
+                    {role ? (
+                      <span className="text-muted-foreground text-xs">
+                        Role: {role}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </DropdownMenuLabel>

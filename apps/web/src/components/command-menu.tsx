@@ -16,7 +16,11 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { type ReactNode, useMemo } from "react";
-import { protectedNavigationItems } from "@/config/navigation";
+import {
+  getNavigationItemsForRole,
+  getRoleFromSessionUser,
+} from "@/config/navigation";
+import { authClient } from "@/lib/auth-client";
 
 export function CommandMenu({ children }: { children: ReactNode }) {
   return (
@@ -30,9 +34,11 @@ export function CommandMenu({ children }: { children: ReactNode }) {
 function CommandMenuInner() {
   const router = useRouter();
   const { setTheme } = useTheme();
+  const { data: session } = authClient.useSession();
+  const role = getRoleFromSessionUser(session?.user);
 
   const actions = useMemo(() => {
-    const navigationActions: Action[] = protectedNavigationItems.map(
+    const navigationActions: Action[] = getNavigationItemsForRole(role).map(
       (item) => ({
         id: item.href,
         name: item.title,
@@ -79,7 +85,7 @@ function CommandMenuInner() {
     ];
 
     return [...navigationActions, ...themeActions];
-  }, [router, setTheme]);
+  }, [role, router, setTheme]);
 
   useRegisterActions(actions);
 
