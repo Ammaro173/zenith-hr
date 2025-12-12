@@ -20,3 +20,14 @@ export const importUsersSchema = z.object({
     })
   ),
 });
+
+export const importDepartmentsSchema = z.object({
+  departments: z.array(
+    z.object({
+      id: z.string().uuid().optional(),
+      name: z.string().min(1),
+      costCenterCode: z.string().min(1),
+      headOfDepartmentId: z.string().optional(),
+    })
+  ),
+});
