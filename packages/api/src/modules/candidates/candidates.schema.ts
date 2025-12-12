@@ -4,7 +4,7 @@ export const uploadCvSchema = z.object({
   requestId: z.string().uuid(),
   candidateName: z.string().min(1),
   candidateEmail: z.string().email(),
-  cvFile: z.instanceof(Buffer),
+  cvFileBase64: z.string().min(1),
 });
 
 export const selectCandidateSchema = z.object({

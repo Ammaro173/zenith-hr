@@ -32,7 +32,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useCurrentAdmin } from "@/hooks/use-current-admin";
+import { getRoleFromSessionUser } from "@/config/navigation";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
 type AddExpenseInput = z.input<typeof addExpenseSchema>;
@@ -41,7 +42,8 @@ export default function BusinessTripDetailPage() {
   const params = useParams<{ id: string }>();
   const _router = useRouter();
   const queryClient = useQueryClient();
-  const { role } = useCurrentAdmin();
+  const { data: session } = authClient.useSession();
+  const role = getRoleFromSessionUser(session?.user);
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
 
   const { data: trip, isLoading: isTripLoading } = useQuery(
@@ -117,7 +119,7 @@ export default function BusinessTripDetailPage() {
   const canApprove =
     (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
     (role === "HR" && trip.status === "PENDING_HR") ||
-    role === "SUPER_ADMIN"; // Simplified for demo
+    role === "ADMIN";
   const hasExpenses = (expenses?.length ?? 0) > 0;
 
   return (

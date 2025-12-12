@@ -1,11 +1,15 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { getServerSession } from "@/lib/server-session";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_OPEN_VALUE = "true";
+
+export const dynamic = "force-dynamic";
 
 async function getSidebarOpenState(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -18,9 +22,10 @@ export default async function ProtectedLayout({
 }: {
   children: ReactNode;
 }) {
-  // TODO: Re-enable server-side auth check when auth setup is complete
-  // const session = await auth();
-  // if (!session) redirect("/login");
+  const session = await getServerSession();
+  if (session?.error || !session?.data?.user) {
+    redirect("/login");
+  }
 
   const isSidebarOpen = await getSidebarOpenState();
 

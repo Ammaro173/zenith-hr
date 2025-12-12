@@ -7,8 +7,12 @@ export const dashboardRouter = {
     // Check cache first (1 hour TTL)
     const cacheKey = "dashboard:stats";
     const cached = await cache.get<{
-      requestsCount: number;
-      candidatesCount: number;
+      totalRequests: number;
+      pendingRequests: number;
+      approvedRequests: number;
+      hiringRequests: number;
+      totalCandidates: number;
+      activeContracts: number;
       averageTimeToHire: number;
     }>(cacheKey);
     if (cached) {

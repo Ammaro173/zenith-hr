@@ -1,17 +1,16 @@
 import { redirect } from "next/navigation";
 import type React from "react";
 import LoginBackground from "@/components/shared/login-background";
-import { authClient } from "@/lib/auth-client";
-import isEmpty from "@/utils/is-empty";
+import { getServerSession } from "@/lib/server-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginLayout({
   children,
 }: React.PropsWithChildren) {
-  const session = await authClient.getSession();
+  const session = await getServerSession();
 
-  if (!(isEmpty(session) || session?.error)) {
+  if (!session?.error && session?.data?.user) {
     redirect("/dashboard");
   }
 

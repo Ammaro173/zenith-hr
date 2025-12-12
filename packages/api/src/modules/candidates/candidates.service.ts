@@ -31,7 +31,8 @@ export const createCandidatesService = (
 
       // 1. Upload CV
       const cvKey = `cvs/${input.requestId}/${Date.now()}.pdf`;
-      await storage.upload(cvKey, input.cvFile);
+      const cvBuffer = Buffer.from(input.cvFileBase64, "base64");
+      await storage.upload(cvKey, cvBuffer);
 
       // 2. Create Candidate ID
       const candidateId = `${input.requestId}_${input.candidateEmail}`;

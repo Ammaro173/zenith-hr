@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCurrentAdmin } from "@/hooks/use-current-admin";
+import { getRoleFromSessionUser } from "@/config/navigation";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
 type ChecklistStatus = "PENDING" | "CLEARED" | "REJECTED";
@@ -19,7 +20,8 @@ export default function SeparationDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { role } = useCurrentAdmin();
+  const { data: session } = authClient.useSession();
+  const role = getRoleFromSessionUser(session?.user);
   const [remarks, setRemarks] = useState<Record<string, string>>({});
 
   const { data: separation, isLoading } = useQuery(

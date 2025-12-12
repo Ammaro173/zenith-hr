@@ -22,13 +22,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getRoleFromSessionUser } from "@/config/navigation";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils";
 
 export default function PerformancePage() {
   const { data: cycles, isLoading } = useQuery(
     orpc.performance.getCycles.queryOptions()
   );
+  const { data: session } = authClient.useSession();
+  const role = getRoleFromSessionUser(session?.user);
   const hasCycles = (cycles?.length ?? 0) > 0;
+
+  const canCreateCycle = role === "HR" || role === "ADMIN";
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,13 +47,14 @@ export default function PerformancePage() {
             Manage reviews, goals, and performance cycles.
           </p>
         </div>
-        {/* TODO: Only show for HR/Admin */}
-        <Button asChild>
-          <Link href={"/performance/cycles/new" as Route}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Cycle
-          </Link>
-        </Button>
+        {canCreateCycle ? (
+          <Button asChild>
+            <Link href={"/performance/cycles/new" as Route}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Cycle
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
