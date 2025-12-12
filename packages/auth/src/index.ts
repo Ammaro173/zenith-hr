@@ -12,6 +12,15 @@ export const auth = betterAuth<BetterAuthOptions>({
     schema,
   }),
   trustedOrigins: env.CORS_ORIGIN ? [env.CORS_ORIGIN] : [],
+  user: {
+    additionalFields: {
+      sapNo: {
+        type: "string",
+        required: true,
+        unique: true,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {

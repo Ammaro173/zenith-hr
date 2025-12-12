@@ -1,9 +1,16 @@
 import { ORPCError } from "@orpc/server";
-import { protectedProcedure } from "../../shared/middleware";
+import { protectedProcedure, requireRoles } from "../../shared/middleware";
 import { requestIdSchema, transitionSchema } from "./workflow.schema";
 
 export const workflowRouter = {
-  transition: protectedProcedure
+  transition: requireRoles([
+    "REQUESTER",
+    "MANAGER",
+    "HR",
+    "FINANCE",
+    "CEO",
+    "ADMIN",
+  ])
     .input(transitionSchema)
     .handler(async ({ input, context }) => {
       // Auth is already handled by protectedProcedure middleware
@@ -26,6 +33,12 @@ export const workflowRouter = {
         };
       } catch (error) {
         if (error instanceof Error) {
+          if (error.message === "FORBIDDEN") {
+            throw new ORPCError("FORBIDDEN");
+          }
+          if (error.message === "Request not found") {
+            throw new ORPCError("NOT_FOUND");
+          }
           throw new ORPCError("BAD_REQUEST");
         }
         throw error;

@@ -43,6 +43,11 @@ export default function NewBusinessTripPage() {
       purpose: "",
       startDate: "",
       endDate: "",
+      delegatedUserId: "",
+      visaRequired: false,
+      needsFlightBooking: false,
+      needsHotelBooking: false,
+      perDiemAllowance: "",
       estimatedCost: "",
       currency: "USD",
     },
@@ -51,6 +56,9 @@ export default function NewBusinessTripPage() {
     onSubmit: async ({ value }) => {
       await createTrip({
         ...value,
+        perDiemAllowance: value.perDiemAllowance
+          ? Number(value.perDiemAllowance)
+          : undefined,
         estimatedCost: value.estimatedCost
           ? Number(value.estimatedCost)
           : undefined,
@@ -118,6 +126,29 @@ export default function NewBusinessTripPage() {
               )}
             </form.Field>
 
+            <form.Field name="delegatedUserId">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>
+                    Delegate (Replacement) User ID
+                  </Label>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="UUID of delegate while traveling"
+                    value={field.state.value}
+                  />
+                  {field.state.meta.errors ? (
+                    <p className="text-destructive text-sm">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </form.Field>
+
             <div className="grid grid-cols-2 gap-4">
               <form.Field name="startDate">
                 {(field) => (
@@ -163,6 +194,28 @@ export default function NewBusinessTripPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <form.Field name="perDiemAllowance">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>Per Diem Allowance</Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="0.00"
+                      type="number"
+                      value={field.state.value}
+                    />
+                    {field.state.meta.errors ? (
+                      <p className="text-destructive text-sm">
+                        {field.state.meta.errors.join(", ")}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+
               <form.Field name="estimatedCost">
                 {(field) => (
                   <div className="space-y-2">
@@ -203,6 +256,53 @@ export default function NewBusinessTripPage() {
                       </p>
                     ) : null}
                   </div>
+                )}
+              </form.Field>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <form.Field name="visaRequired">
+                {(field) => (
+                  <label className="flex items-center gap-2">
+                    <input
+                      checked={field.state.value}
+                      id={field.name}
+                      name={field.name}
+                      onChange={(e) => field.handleChange(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>Visa Required</span>
+                  </label>
+                )}
+              </form.Field>
+
+              <form.Field name="needsFlightBooking">
+                {(field) => (
+                  <label className="flex items-center gap-2">
+                    <input
+                      checked={field.state.value}
+                      id={field.name}
+                      name={field.name}
+                      onChange={(e) => field.handleChange(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>Flight Booking</span>
+                  </label>
+                )}
+              </form.Field>
+
+              <form.Field name="needsHotelBooking">
+                {(field) => (
+                  <label className="flex items-center gap-2">
+                    <input
+                      checked={field.state.value}
+                      id={field.name}
+                      name={field.name}
+                      onChange={(e) => field.handleChange(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>Hotel Booking</span>
+                  </label>
                 )}
               </form.Field>
             </div>

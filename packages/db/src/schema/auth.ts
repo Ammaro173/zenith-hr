@@ -2,11 +2,14 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  integer,
   pgEnum,
   pgTableCreator,
   text,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
+import { department } from "./departments";
 
 const pgTable = pgTableCreator((name) => name);
 
@@ -16,6 +19,14 @@ export const userRoleEnum = pgEnum("user_role", [
   "HR",
   "FINANCE",
   "CEO",
+  "IT",
+  "ADMIN",
+]);
+
+export const userStatusEnum = pgEnum("user_status", [
+  "ACTIVE",
+  "INACTIVE",
+  "ON_LEAVE",
 ]);
 
 export const user = pgTable(
@@ -27,8 +38,15 @@ export const user = pgTable(
     emailVerified: boolean("email_verified").notNull(),
     image: text("image"),
     role: userRoleEnum("role").notNull().default("REQUESTER"),
+    status: userStatusEnum("status").notNull().default("ACTIVE"),
+    sapNo: text("sap_no").notNull().unique(),
+    departmentId: uuid("department_id").references(() => department.id, {
+      onDelete: "set null",
+    }),
     reportsToManagerId: text("reports_to_manager_id"),
     passwordHash: text("password_hash"),
+    signatureUrl: text("signature_url"),
+    failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
     createdAt: timestamp("created_at").notNull(),
     updatedAt: timestamp("updated_at").notNull(),
   },
@@ -49,6 +67,10 @@ export const userRelations = relations(user, ({ one, many }) => ({
   }),
   reports: many(user, {
     relationName: "manager",
+  }),
+  department: one(department, {
+    fields: [user.departmentId],
+    references: [department.id],
   }),
 }));
 

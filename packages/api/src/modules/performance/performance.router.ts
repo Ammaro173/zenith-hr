@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure } from "../../shared/middleware";
+import { protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createCycleSchema,
   createGoalSchema,
@@ -9,16 +9,26 @@ import {
 } from "./performance.schema";
 
 export const performanceRouter = {
-  createCycle: protectedProcedure
+  createCycle: requireRoles(["HR", "ADMIN"])
     .input(createCycleSchema)
-    .handler(async ({ input, context }) => {
-      // TODO: Add role check for HR/Admin
-      return await context.services.performance.createCycle(input);
-    }),
+    .handler(
+      async ({ input, context }) =>
+        await context.services.performance.createCycle(input)
+    ),
 
   getCycles: protectedProcedure.handler(
     async ({ context }) => await context.services.performance.getCycles()
   ),
+
+  getCycle: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .handler(async ({ input, context }) => {
+      const cycle = await context.services.performance.getCycle(input.id);
+      if (!cycle) {
+        throw new Error("NOT_FOUND");
+      }
+      return cycle;
+    }),
 
   createReview: protectedProcedure
     .input(createReviewSchema)

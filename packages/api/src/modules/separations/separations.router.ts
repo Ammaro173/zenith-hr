@@ -1,13 +1,14 @@
 import { z } from "zod";
-import { protectedProcedure } from "../../shared/middleware";
+import { protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createSeparationSchema,
+  startClearanceSchema,
   updateChecklistSchema,
   updateSeparationSchema,
 } from "./separations.schema";
 
 export const separationsRouter = {
-  create: protectedProcedure
+  create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
     .input(createSeparationSchema)
     .handler(
       async ({ input, context }) =>
@@ -24,12 +25,21 @@ export const separationsRouter = {
         await context.services.separations.get(input.separationId)
     ),
 
-  update: protectedProcedure
+  update: requireRoles(["MANAGER", "HR", "ADMIN"])
     .input(updateSeparationSchema)
     .handler(async ({ input, context }) => {
       // TODO: Add permission checks
       return await context.services.separations.update(input);
     }),
+
+  startClearance: requireRoles(["HR"])
+    .input(startClearanceSchema)
+    .handler(async ({ input, context }) =>
+      context.services.separations.startClearance(
+        input,
+        context.session.user.id
+      )
+    ),
 
   updateChecklist: protectedProcedure
     .input(updateChecklistSchema)

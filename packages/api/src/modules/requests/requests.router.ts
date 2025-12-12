@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../shared/middleware";
+import { protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createRequestSchema,
   transitionSchema,
@@ -15,7 +15,7 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 export const requestsRouter = {
-  create: protectedProcedure
+  create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
     .input(createRequestSchema)
     .handler(async ({ input, context }) => {
       const newRequest = await context.services.requests.create(
@@ -45,11 +45,17 @@ export const requestsRouter = {
     context.services.requests.getByRequester(context.session.user.id)
   ),
 
-  getPendingApprovals: protectedProcedure.handler(async ({ context }) =>
+  getPendingApprovals: requireRoles([
+    "MANAGER",
+    "HR",
+    "FINANCE",
+    "CEO",
+    "ADMIN",
+  ]).handler(async ({ context }) =>
     context.services.requests.getPendingApprovals(context.session.user.id)
   ),
 
-  update: protectedProcedure
+  update: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
     .input(
       z.object({
         id: z.string().uuid(),
@@ -83,6 +89,11 @@ export const requestsRouter = {
         if (message === "FORBIDDEN") {
           throw new ORPCError("FORBIDDEN");
         }
+        if (message === "REPLACEMENT_NEEDS_TARGET") {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Replacement requests require a replacement user",
+          });
+        }
         throw error;
       }
     }),
@@ -93,7 +104,14 @@ export const requestsRouter = {
       context.services.requests.getRequestVersions(input.id)
     ),
 
-  transition: protectedProcedure
+  transition: requireRoles([
+    "REQUESTER",
+    "MANAGER",
+    "HR",
+    "FINANCE",
+    "CEO",
+    "ADMIN",
+  ])
     .input(transitionSchema)
     .handler(async ({ input, context }) => {
       try {

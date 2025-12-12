@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure } from "../../shared/middleware";
+import { protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   addExpenseSchema,
   createTripSchema,
@@ -8,7 +8,7 @@ import {
 } from "./business-trips.schema";
 
 export const businessTripsRouter = {
-  create: protectedProcedure
+  create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
     .input(createTripSchema)
     .handler(
       async ({ input, context }) =>
@@ -35,7 +35,16 @@ export const businessTripsRouter = {
       )
   ),
 
-  transition: protectedProcedure
+  getPendingApprovals: requireRoles([
+    "MANAGER",
+    "HR",
+    "FINANCE",
+    "ADMIN",
+  ]).handler(async ({ context }) =>
+    context.services.businessTrips.getPendingApprovals(context.session.user.id)
+  ),
+
+  transition: requireRoles(["REQUESTER", "MANAGER", "HR", "FINANCE", "ADMIN"])
     .input(tripActionSchema)
     .handler(async ({ input, context }) => {
       try {
@@ -47,6 +56,9 @@ export const businessTripsRouter = {
         const message = error instanceof Error ? error.message : String(error);
         if (message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND");
+        }
+        if (message === "FORBIDDEN") {
+          throw new ORPCError("FORBIDDEN");
         }
         if (message === "INVALID_TRANSITION") {
           throw new ORPCError("BAD_REQUEST", {
@@ -69,5 +81,21 @@ export const businessTripsRouter = {
     .handler(
       async ({ input, context }) =>
         await context.services.businessTrips.getExpenses(input.tripId)
+    ),
+
+  calculateAllowance: protectedProcedure
+    .input(
+      z.object({
+        perDiem: z.number().positive(),
+        startDate: z.coerce.date(),
+        endDate: z.coerce.date(),
+      })
+    )
+    .handler(async ({ input, context }) =>
+      context.services.businessTrips.calculateAllowance(
+        input.perDiem,
+        input.startDate,
+        input.endDate
+      )
     ),
 };

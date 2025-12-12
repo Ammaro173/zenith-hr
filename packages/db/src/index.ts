@@ -5,6 +5,9 @@ import { env } from "./env";
 // biome-ignore lint/performance/noNamespaceImport: schema barrel is required for Drizzle
 import * as schema from "./schema";
 
+//TODO i dont like this at all
+export { eq } from "drizzle-orm";
+
 // Configure WebSocket for non-edge environments
 neonConfig.webSocketConstructor = ws;
 

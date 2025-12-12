@@ -21,6 +21,7 @@ export default function SignUpForm({
       email: "",
       password: "",
       name: "",
+      sapNo: "",
     },
     onSubmit: async ({ value }) => {
       await authClient.signUp.email(
@@ -28,6 +29,7 @@ export default function SignUpForm({
           email: value.email,
           password: value.password,
           name: value.name,
+          sapNo: value.sapNo,
         },
         {
           onSuccess: () => {
@@ -45,6 +47,7 @@ export default function SignUpForm({
         name: z.string().min(2, "Name must be at least 2 characters"),
         email: z.email("Invalid email address"),
         password: z.string().min(8, "Password must be at least 8 characters"),
+        sapNo: z.string().min(1, "SAP number is required"),
       }),
     },
   });
@@ -71,6 +74,29 @@ export default function SignUpForm({
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Name</Label>
                 <Input
+                  id={field.name}
+                  name={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  value={field.state.value}
+                />
+                {field.state.meta.errors.map((error) => (
+                  <p className="text-red-500" key={error?.message}>
+                    {error?.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </form.Field>
+        </div>
+
+        <div>
+          <form.Field name="sapNo">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>SAP Number</Label>
+                <Input
+                  autoComplete="off"
                   id={field.name}
                   name={field.name}
                   onBlur={field.handleBlur}

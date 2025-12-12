@@ -31,7 +31,11 @@ export default function RequestsPage() {
               <div>
                 <h3 className="font-semibold">{request.requestCode}</h3>
                 <p className="text-muted-foreground text-sm">
-                  {(request.positionDetails as { title: string }).title}
+                  {(request.positionDetails as { title: string }).title} •{" "}
+                  {request.requestType?.toLowerCase()?.replace("_", " ")}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  {request.isBudgeted ? "Budgeted" : "Unbudgeted"}
                 </p>
               </div>
               <span

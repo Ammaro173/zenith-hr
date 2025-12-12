@@ -71,6 +71,16 @@ export const createWorkflowService = (db: typeof _db) => {
     });
   };
 
+  const getApproverForStatus = (status: RequestStatus): UserRole | null => {
+    const mapping: Partial<Record<RequestStatus, UserRole>> = {
+      PENDING_MANAGER: "MANAGER",
+      PENDING_HR: "HR",
+      PENDING_FINANCE: "FINANCE",
+      PENDING_CEO: "CEO",
+    };
+    return mapping[status] ?? null;
+  };
+
   return {
     async getNextApprover(requesterId: string): Promise<string | null> {
       const result = await db.execute(sql`
@@ -156,6 +166,15 @@ export const createWorkflowService = (db: typeof _db) => {
 
         let newStatus: RequestStatus;
 
+        const approverForCurrent = getApproverForStatus(currentStatus);
+        if (
+          approverForCurrent &&
+          actorRole !== approverForCurrent &&
+          action !== "REQUEST_CHANGE"
+        ) {
+          throw new Error("FORBIDDEN");
+        }
+
         switch (currentStatus) {
           case "DRAFT":
             if (action === "SUBMIT") {
@@ -225,6 +244,7 @@ export const createWorkflowService = (db: typeof _db) => {
           .update(manpowerRequest)
           .set({
             status: newStatus,
+            currentApproverRole: getApproverForStatus(newStatus),
             revisionVersion:
               newStatus === "DRAFT" && currentStatus !== "DRAFT"
                 ? request.revisionVersion + 1

@@ -1,5 +1,12 @@
 import { relations } from "drizzle-orm";
-import { date, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  date,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
 export const separationRequest = pgTable("separation_request", {
@@ -12,10 +19,18 @@ export const separationRequest = pgTable("separation_request", {
   }).notNull(),
   reason: text("reason").notNull(),
   lastWorkingDay: date("last_working_day").notNull(),
+  noticePeriodWaived: boolean("notice_period_waived").notNull().default(false),
   status: text("status", {
-    enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "COMPLETED"],
+    enum: [
+      "REQUESTED",
+      "MANAGER_APPROVED",
+      "HR_APPROVED",
+      "CLEARANCE_IN_PROGRESS",
+      "COMPLETED",
+      "REJECTED",
+    ],
   })
-    .default("DRAFT")
+    .default("REQUESTED")
     .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -30,13 +45,14 @@ export const separationChecklist = pgTable("separation_checklist", {
     enum: ["IT", "HR", "FINANCE", "ADMIN"],
   }).notNull(),
   item: text("item").notNull(),
-  status: text("status", { enum: ["PENDING", "COMPLETED", "NOT_APPLICABLE"] })
+  status: text("status", { enum: ["PENDING", "CLEARED", "REJECTED"] })
     .default("PENDING")
     .notNull(),
   completedBy: text("completed_by").references(() => user.id, {
     onDelete: "set null",
   }),
   completedAt: timestamp("completed_at"),
+  remarks: text("remarks"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

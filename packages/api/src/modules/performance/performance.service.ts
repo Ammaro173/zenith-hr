@@ -38,6 +38,15 @@ export const createPerformanceService = (
     });
   },
 
+  async getCycle(id: string) {
+    const [cycle] = await db
+      .select()
+      .from(performanceCycle)
+      .where(eq(performanceCycle.id, id))
+      .limit(1);
+    return cycle;
+  },
+
   async createReview(input: z.infer<typeof createReviewSchema>) {
     const [review] = await db
       .insert(performanceReview)

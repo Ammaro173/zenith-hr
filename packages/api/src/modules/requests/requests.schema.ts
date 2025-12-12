@@ -1,44 +1,43 @@
 import { z } from "zod";
 
 // Base position details schema
-export const basePositionDetailsSchema = z.object({
+const positionDetailsSchema = z.object({
   title: z.string().min(1),
   department: z.string().min(1),
-  justification: z.string().min(1),
-  type: z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "INTERN"]),
+  description: z.string().optional(),
 });
 
-// IT-specific fields
-export const itPositionDetailsSchema = basePositionDetailsSchema.extend({
-  techStack: z.array(z.string()).optional(),
-  experienceLevel: z.enum(["JUNIOR", "MID", "SENIOR", "LEAD"]).optional(),
+const budgetDetailsSchema = z.object({
+  currency: z.string().min(1).default("USD"),
+  notes: z.string().optional(),
 });
 
-// Sales-specific fields
-export const salesPositionDetailsSchema = basePositionDetailsSchema.extend({
-  commission: z.number().positive().optional(),
-  territory: z.string().optional(),
-});
+export const createRequestSchema = z
+  .object({
+    requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
+    isBudgeted: z.boolean().default(false),
+    replacementForUserId: z.string().uuid().optional(),
+    contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
+    justificationText: z.string().min(1),
+    salaryRangeMin: z.number().positive(),
+    salaryRangeMax: z.number().positive(),
+    positionDetails: positionDetailsSchema,
+    budgetDetails: budgetDetailsSchema,
+  })
+  .refine(
+    (data) =>
+      data.requestType === "NEW_POSITION" ||
+      (!!data.replacementForUserId && data.requestType === "REPLACEMENT"),
+    {
+      message: "replacementForUserId is required for replacement requests",
+      path: ["replacementForUserId"],
+    }
+  )
+  .refine((data) => data.salaryRangeMin <= data.salaryRangeMax, {
+    message: "salaryRangeMin cannot exceed salaryRangeMax",
+    path: ["salaryRangeMin"],
+  });
 
-// Budget details schema
-export const budgetDetailsSchema = z.object({
-  salaryMin: z.number().positive(),
-  salaryMax: z.number().positive(),
-  currency: z.string().default("USD"),
-  codes: z.array(z.string()).optional(),
-});
-
-// Create request schema (dynamic based on department)
-export const createRequestSchema = z.object({
-  positionDetails: z.union([
-    basePositionDetailsSchema,
-    itPositionDetailsSchema,
-    salesPositionDetailsSchema,
-  ]),
-  budgetDetails: budgetDetailsSchema,
-});
-
-// Update request schema
 export const updateRequestSchema = createRequestSchema.partial();
 
 // Transition schema

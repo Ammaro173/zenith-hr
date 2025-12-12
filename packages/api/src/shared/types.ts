@@ -1,4 +1,11 @@
-export type UserRole = "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO";
+export type UserRole =
+  | "REQUESTER"
+  | "MANAGER"
+  | "HR"
+  | "FINANCE"
+  | "CEO"
+  | "IT"
+  | "ADMIN";
 
 export type RequestStatus =
   | "DRAFT"

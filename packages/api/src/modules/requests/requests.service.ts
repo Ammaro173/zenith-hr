@@ -1,10 +1,12 @@
 import type { db as _db } from "@zenith-hr/db";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
-import { user } from "@zenith-hr/db/schema/auth";
+import { auditLog } from "@zenith-hr/db/schema/audit-logs";
+import { user, type userRoleEnum } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { z } from "zod";
+import { notifyUser } from "../../shared/notify";
 import type {
   createRequestSchema,
   updateRequestSchema,
@@ -31,16 +33,40 @@ export const createRequestsService = (db: typeof _db) => {
      * Create a new manpower request
      */
     async create(input: CreateRequestInput, requesterId: string) {
+      this.validateSalaryRange(input.salaryRangeMin, input.salaryRangeMax);
+
       const requestCode = this.generateRequestCode();
+
+      const [requester] = await db
+        .select({ role: user.role })
+        .from(user)
+        .where(eq(user.id, requesterId))
+        .limit(1);
+
+      const requesterRole = (requester?.role || "REQUESTER") as string;
+      const initialStatus =
+        requesterRole === "MANAGER" || requesterRole === "HR"
+          ? "PENDING_HR"
+          : "PENDING_MANAGER";
+      const initialApproverRole =
+        initialStatus === "PENDING_MANAGER" ? "MANAGER" : "HR";
 
       const [newRequest] = await db
         .insert(manpowerRequest)
         .values({
           requesterId,
           requestCode,
+          requestType: input.requestType,
+          isBudgeted: input.isBudgeted,
+          replacementForUserId: input.replacementForUserId || null,
+          contractDuration: input.contractDuration,
+          justificationText: input.justificationText,
+          salaryRangeMin: input.salaryRangeMin.toString(),
+          salaryRangeMax: input.salaryRangeMax.toString(),
+          currentApproverRole: initialApproverRole,
           positionDetails: input.positionDetails,
           budgetDetails: input.budgetDetails,
-          status: "PENDING_MANAGER", // Initial status
+          status: initialStatus,
         })
         .returning();
 
@@ -79,7 +105,8 @@ export const createRequestsService = (db: typeof _db) => {
         .where(eq(user.id, userId))
         .limit(1);
 
-      const userRole = (userRecord?.role || "REQUESTER") as string;
+      const userRole = (userRecord?.role ||
+        "REQUESTER") as (typeof userRoleEnum.enumValues)[number];
 
       let statusFilter: string;
       if (userRole === "MANAGER") {
@@ -97,7 +124,12 @@ export const createRequestsService = (db: typeof _db) => {
       return await db
         .select()
         .from(manpowerRequest)
-        .where(eq(manpowerRequest.status, statusFilter as "PENDING_MANAGER"));
+        .where(
+          and(
+            eq(manpowerRequest.status, statusFilter as "PENDING_MANAGER"),
+            eq(manpowerRequest.currentApproverRole, userRole)
+          )
+        );
     },
 
     /**
@@ -130,6 +162,23 @@ export const createRequestsService = (db: typeof _db) => {
           throw new Error("FORBIDDEN");
         }
 
+        const nextSalaryMin =
+          data.salaryRangeMin ?? Number(existing.salaryRangeMin);
+        const nextSalaryMax =
+          data.salaryRangeMax ?? Number(existing.salaryRangeMax);
+        this.validateSalaryRange(nextSalaryMin, nextSalaryMax);
+
+        const nextRequestType = data.requestType ?? existing.requestType;
+        const replacementForUserId =
+          data.replacementForUserId ?? existing.replacementForUserId;
+
+        if (
+          nextRequestType === "REPLACEMENT" &&
+          (!replacementForUserId || replacementForUserId.length === 0)
+        ) {
+          throw new Error("REPLACEMENT_NEEDS_TARGET");
+        }
+
         // Save version history
         await tx.insert(requestVersion).values({
           requestId: existing.id,
@@ -138,6 +187,14 @@ export const createRequestsService = (db: typeof _db) => {
             positionDetails: existing.positionDetails,
             budgetDetails: existing.budgetDetails,
             status: existing.status,
+            requestType: existing.requestType,
+            isBudgeted: existing.isBudgeted,
+            replacementForUserId: existing.replacementForUserId,
+            contractDuration: existing.contractDuration,
+            justificationText: existing.justificationText,
+            salaryRangeMin: existing.salaryRangeMin,
+            salaryRangeMax: existing.salaryRangeMax,
+            currentApproverRole: existing.currentApproverRole,
           },
           createdAt: new Date(),
         });
@@ -147,6 +204,10 @@ export const createRequestsService = (db: typeof _db) => {
           .update(manpowerRequest)
           .set({
             ...data,
+            replacementForUserId,
+            salaryRangeMin: nextSalaryMin.toString(),
+            salaryRangeMax: nextSalaryMax.toString(),
+            requestType: nextRequestType,
             version: existing.version + 1,
             updatedAt: new Date(),
           })
@@ -171,19 +232,8 @@ export const createRequestsService = (db: typeof _db) => {
     /**
      * Validate budget details
      */
-    validateBudgetDetails(budgetDetails: Record<string, unknown>): void {
-      const required = ["minSalary", "maxSalary", "currency"];
-      for (const field of required) {
-        if (!(field in budgetDetails)) {
-          throw new Error(`Missing required budget field: ${field}`);
-        }
-      }
-
-      const { minSalary, maxSalary } = budgetDetails as {
-        minSalary: number;
-        maxSalary: number;
-      };
-      if (minSalary > maxSalary) {
+    validateSalaryRange(min: number, max: number): void {
+      if (min > max) {
         throw new Error("Minimum salary cannot exceed maximum salary");
       }
     },
@@ -248,11 +298,27 @@ export const createRequestsService = (db: typeof _db) => {
           throw new Error("INVALID_TRANSITION");
         }
 
+        const nextApproverRole = (() => {
+          switch (newStatus) {
+            case "PENDING_MANAGER":
+              return "MANAGER" as (typeof userRoleEnum.enumValues)[number];
+            case "PENDING_HR":
+              return "HR" as (typeof userRoleEnum.enumValues)[number];
+            case "PENDING_FINANCE":
+              return "FINANCE" as (typeof userRoleEnum.enumValues)[number];
+            case "PENDING_CEO":
+              return "CEO" as (typeof userRoleEnum.enumValues)[number];
+            default:
+              return null;
+          }
+        })();
+
         // 3. Update request
         await tx
           .update(manpowerRequest)
           .set({
             status: newStatus,
+            currentApproverRole: nextApproverRole,
             updatedAt: new Date(),
             version: request.version + 1,
           })
@@ -267,6 +333,24 @@ export const createRequestsService = (db: typeof _db) => {
           comment,
           stepName: currentStatus,
           performedAt: new Date(),
+        });
+
+        await tx.insert(auditLog).values({
+          entityId: requestId,
+          entityType: "MANPOWER_REQUEST",
+          action,
+          performedBy: actorId,
+          performedAt: new Date(),
+          metadata: {
+            from: currentStatus,
+            to: newStatus,
+            comment,
+          },
+        });
+
+        await notifyUser({
+          userId: request.requesterId,
+          message: `Request ${request.requestCode} moved to ${newStatus}`,
         });
 
         return {

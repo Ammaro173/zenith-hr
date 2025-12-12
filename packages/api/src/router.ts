@@ -3,6 +3,7 @@ import { businessTripsRouter } from "./modules/business-trips";
 import { candidatesRouter } from "./modules/candidates";
 import { contractsRouter } from "./modules/contracts";
 import { dashboardRouter } from "./modules/dashboard";
+import { importsRouter } from "./modules/imports";
 import { performanceRouter } from "./modules/performance";
 import { requestsRouter } from "./modules/requests";
 import { separationsRouter } from "./modules/separations";
@@ -22,6 +23,7 @@ export const appRouter = o.router({
   candidates: candidatesRouter,
   webhooks: webhooksRouter,
   dashboard: dashboardRouter,
+  imports: importsRouter,
   businessTrips: businessTripsRouter,
   performance: performanceRouter,
   separations: separationsRouter,

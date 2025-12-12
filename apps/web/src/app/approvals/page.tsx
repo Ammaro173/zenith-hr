@@ -10,11 +10,15 @@ type TransitionAction =
   | "REJECT"
   | "REQUEST_CHANGE"
   | "HOLD";
+type TripAction = "SUBMIT" | "APPROVE" | "REJECT" | "CANCEL";
 
 export default function ApprovalsPage() {
   const queryClient = useQueryClient();
   const { data: requests, isLoading } = useQuery(
     orpc.requests.getPendingApprovals.queryOptions()
+  );
+  const { data: trips, isLoading: tripsLoading } = useQuery(
+    orpc.businessTrips.getPendingApprovals.queryOptions()
   );
   const [_selectedRequest, setSelectedRequest] = useState<string | null>(null);
 
@@ -33,6 +37,17 @@ export default function ApprovalsPage() {
   const handleAction = (requestId: string, action: TransitionAction) => {
     transitionMutation.mutate({ requestId, action });
   };
+
+  const tripTransition = useMutation({
+    mutationFn: (data: {
+      tripId: string;
+      action: TripAction;
+      comment?: string;
+    }) => client.businessTrips.transition(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    },
+  });
 
   if (isLoading) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
@@ -77,6 +92,49 @@ export default function ApprovalsPage() {
             </div>
           </div>
         ))}
+        <h2 className="mt-8 font-semibold text-lg">Trips</h2>
+        {tripsLoading ? (
+          <div>Loading trips...</div>
+        ) : (
+          trips?.map((trip) => (
+            <div className="rounded border p-4" key={trip.id}>
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">{trip.destination}</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {trip.purpose}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="rounded bg-green-500 px-3 py-1 text-primary text-sm hover:bg-green-600"
+                    onClick={() =>
+                      tripTransition.mutate({
+                        tripId: trip.id,
+                        action: "APPROVE",
+                      })
+                    }
+                    type="button"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="rounded bg-red-500 px-3 py-1 text-primary text-sm hover:bg-red-600"
+                    onClick={() =>
+                      tripTransition.mutate({
+                        tripId: trip.id,
+                        action: "REJECT",
+                      })
+                    }
+                    type="button"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

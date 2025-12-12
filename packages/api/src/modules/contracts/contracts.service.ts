@@ -44,12 +44,11 @@ export const createContractsService = (
         title: string;
         department: string;
       };
-      const budgetDetails = request.budgetDetails as {
-        salaryMin: number;
-        salaryMax: number;
-        currency: string;
-      };
-      const salary = (budgetDetails.salaryMin + budgetDetails.salaryMax) / 2;
+      const salaryMin = Number(request.salaryRangeMin ?? 0);
+      const salaryMax = Number(request.salaryRangeMax ?? 0);
+      const salary = (salaryMin + salaryMax) / 2;
+      const currency =
+        (request.budgetDetails as { currency?: string }).currency || "USD";
 
       // 1. Generate PDF
       const pdfBuffer = await pdf.generateContractPdf({
@@ -59,7 +58,7 @@ export const createContractsService = (
         candidateAddress: input.candidateAddress,
         positionTitle: positionDetails.title,
         salary,
-        currency: budgetDetails.currency || "USD",
+        currency,
         startDate: input.startDate,
       });
 
@@ -76,7 +75,7 @@ export const createContractsService = (
           candidateEmail: input.candidateEmail,
           contractTerms: {
             salary,
-            currency: budgetDetails.currency || "USD",
+            currency,
             startDate: input.startDate,
             positionTitle: positionDetails.title,
           },

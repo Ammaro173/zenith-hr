@@ -1,8 +1,10 @@
 export * from "./approval-logs";
+export * from "./audit-logs";
 export * from "./auth";
 export * from "./business-trips";
 export * from "./candidates";
 export * from "./contracts";
+export * from "./departments";
 export * from "./manpower-requests";
 export * from "./performance";
 export * from "./request-versions";
@@ -18,6 +20,7 @@ import { requestVersion } from "./request-versions";
 
 // Re-export relations using export-from syntax
 export { approvalLogRelations } from "./approval-logs";
+export { auditLogRelations } from "./audit-logs";
 export { userRelations } from "./auth";
 export { businessTripRelations, tripExpenseRelations } from "./business-trips";
 export { contractRelations } from "./contracts";

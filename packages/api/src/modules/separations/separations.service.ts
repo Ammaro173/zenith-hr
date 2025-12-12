@@ -1,8 +1,15 @@
-import { separationChecklist, separationRequest } from "@zenith-hr/db";
+import {
+  auditLog,
+  separationChecklist,
+  separationRequest,
+  user,
+} from "@zenith-hr/db";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
+import { notifyUser } from "../../shared/notify";
 import type {
   createSeparationSchema,
+  startClearanceSchema,
   updateChecklistSchema,
   updateSeparationSchema,
 } from "./separations.schema";
@@ -10,6 +17,31 @@ import type {
 export const createSeparationsService = (
   db: typeof import("@zenith-hr/db").db
 ) => {
+  const departmentItems: Record<"IT" | "ADMIN" | "FINANCE" | "HR", string[]> = {
+    IT: [
+      "Computer/Laptop",
+      "Printer",
+      "SAP Account Disable",
+      "Email Account Disable",
+    ],
+    ADMIN: [
+      "Access Card",
+      "Office Keys",
+      "Company Car",
+      "Mobile Phone",
+      "SIM Card",
+    ],
+    FINANCE: ["Outstanding Loans", "Credit Cards"],
+    HR: ["Medical Insurance Cards", "ID Badge"],
+  };
+
+  const roleToDepartment: Record<string, keyof typeof departmentItems> = {
+    IT: "IT",
+    ADMIN: "ADMIN",
+    FINANCE: "FINANCE",
+    HR: "HR",
+  };
+
   return {
     async create(
       input: z.infer<typeof createSeparationSchema>,
@@ -22,25 +54,15 @@ export const createSeparationsService = (
             employeeId,
             type: input.type,
             reason: input.reason,
-            lastWorkingDay: input.lastWorkingDay,
-            status: "DRAFT",
+            lastWorkingDay: input.lastWorkingDay.toISOString().slice(0, 10),
+            noticePeriodWaived: input.noticePeriodWaived,
+            status: "REQUESTED",
           })
           .returning();
 
         if (!request) {
           throw new Error("Failed to create separation request");
         }
-
-        // Auto-create checklist items based on type (simplified logic)
-        const departments = ["IT", "HR", "FINANCE", "ADMIN"] as const;
-        const checklistItems = departments.map((dept) => ({
-          separationId: request.id,
-          department: dept,
-          item: `Clearance from ${dept}`,
-          status: "PENDING" as const,
-        }));
-
-        await tx.insert(separationChecklist).values(checklistItems);
 
         return request;
       });
@@ -62,7 +84,9 @@ export const createSeparationsService = (
         .set({
           status: input.status,
           reason: input.reason,
-          lastWorkingDay: input.lastWorkingDay,
+          lastWorkingDay: input.lastWorkingDay
+            ? input.lastWorkingDay.toISOString().slice(0, 10)
+            : undefined,
           updatedAt: new Date(),
         })
         .where(eq(separationRequest.id, input.separationId))
@@ -74,16 +98,61 @@ export const createSeparationsService = (
       input: z.infer<typeof updateChecklistSchema>,
       userId: string
     ) {
+      const [actor] = await db
+        .select({ role: user.role })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1);
+
+      const actorRole = actor?.role;
+
+      const [checklist] = await db
+        .select()
+        .from(separationChecklist)
+        .where(eq(separationChecklist.id, input.checklistId))
+        .limit(1);
+
+      if (!checklist) {
+        throw new Error("NOT_FOUND");
+      }
+
+      const allowedDepartment = actorRole
+        ? roleToDepartment[actorRole]
+        : undefined;
+
+      if (!allowedDepartment || allowedDepartment !== checklist.department) {
+        throw new Error("FORBIDDEN");
+      }
+
       const [updated] = await db
         .update(separationChecklist)
         .set({
           status: input.status,
           completedBy: userId,
           completedAt: new Date(),
+          remarks: input.remarks,
           updatedAt: new Date(),
         })
         .where(eq(separationChecklist.id, input.checklistId))
         .returning();
+
+      await db.insert(auditLog).values({
+        entityId: checklist.separationId,
+        entityType: "SEPARATION",
+        action: `CHECKLIST_${input.status}`,
+        performedBy: userId,
+        performedAt: new Date(),
+        metadata: {
+          checklistId: input.checklistId,
+          department: checklist.department,
+          remarks: input.remarks,
+        },
+      });
+
+      await notifyUser({
+        userId,
+        message: `Checklist item ${checklist.item} updated to ${input.status}`,
+      });
       return updated;
     },
 
@@ -93,6 +162,70 @@ export const createSeparationsService = (
           employee: true,
         },
         orderBy: (requests, { desc }) => [desc(requests.createdAt)],
+      });
+    },
+
+    async startClearance(
+      input: z.infer<typeof startClearanceSchema>,
+      actorId: string
+    ) {
+      const [actor] = await db
+        .select({ role: user.role })
+        .from(user)
+        .where(eq(user.id, actorId))
+        .limit(1);
+
+      if (actor?.role !== "HR") {
+        throw new Error("FORBIDDEN");
+      }
+
+      return await db.transaction(async (tx) => {
+        const [request] = await tx
+          .select()
+          .from(separationRequest)
+          .where(eq(separationRequest.id, input.separationId))
+          .limit(1);
+
+        if (!request) {
+          throw new Error("NOT_FOUND");
+        }
+
+        const checklistItems = (
+          Object.keys(departmentItems) as (keyof typeof departmentItems)[]
+        ).flatMap((dept) =>
+          departmentItems[dept].map((itemName) => ({
+            separationId: request.id,
+            department: dept,
+            item: itemName,
+            status: "PENDING" as const,
+          }))
+        );
+
+        await tx.insert(separationChecklist).values(checklistItems);
+
+        const [updated] = await tx
+          .update(separationRequest)
+          .set({
+            status: "CLEARANCE_IN_PROGRESS",
+            updatedAt: new Date(),
+          })
+          .where(eq(separationRequest.id, input.separationId))
+          .returning();
+
+        await tx.insert(auditLog).values({
+          entityId: input.separationId,
+          entityType: "SEPARATION",
+          action: "START_CLEARANCE",
+          performedBy: actorId,
+          performedAt: new Date(),
+        });
+
+        await notifyUser({
+          userId: request.employeeId,
+          message: "Clearance process started",
+        });
+
+        return updated;
       });
     },
   };

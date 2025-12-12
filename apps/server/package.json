@@ -23,6 +23,7 @@
     "@zenith-hr/api": "workspace:*",
     "@zenith-hr/auth": "workspace:*",
     "@zenith-hr/db": "workspace:*",
+    "drizzle-orm": "catalog:",
     "ai": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
