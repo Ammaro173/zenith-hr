@@ -9,6 +9,9 @@ export const authClient = createAuthClient({
     inferAdditionalFields({
       user: {
         sapNo: { type: "string" },
+        role: { type: "string", required: false },
+        status: { type: "string", required: false },
+        departmentId: { type: "string", required: false },
       },
     }),
   ],
