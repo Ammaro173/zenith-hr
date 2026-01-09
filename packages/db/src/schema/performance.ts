@@ -67,7 +67,7 @@ export const performanceCycleRelations = relations(
   performanceCycle,
   ({ many }) => ({
     reviews: many(performanceReview),
-  })
+  }),
 );
 
 export const performanceReviewRelations = relations(
@@ -88,7 +88,7 @@ export const performanceReviewRelations = relations(
       relationName: "reviewerReviews",
     }),
     goals: many(performanceGoal),
-  })
+  }),
 );
 
 export const performanceGoalRelations = relations(
@@ -98,5 +98,5 @@ export const performanceGoalRelations = relations(
       fields: [performanceGoal.reviewId],
       references: [performanceReview.id],
     }),
-  })
+  }),
 );

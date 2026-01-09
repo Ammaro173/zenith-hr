@@ -15,7 +15,7 @@ type ClientPushSubscription =
     };
 
 const toWebPushSubscription = (
-  sub: ClientPushSubscription
+  sub: ClientPushSubscription,
 ): WebPushSubscription => {
   const json = "toJSON" in sub ? sub.toJSON() : sub;
   const endpoint = json.endpoint ?? "";
@@ -38,7 +38,7 @@ const toWebPushSubscription = (
 webpush.setVapidDetails(
   "mailto:admin@q-auto.com", //!For example: 'https://my-site.com/contact' or 'mailto: contact@my-site.com'
   env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "",
-  env.VAPID_PRIVATE_KEY ?? ""
+  env.VAPID_PRIVATE_KEY ?? "",
 );
 
 export async function subscribeUser(_sub: ClientPushSubscription) {
@@ -57,7 +57,7 @@ export async function unsubscribeUser() {
 
 export async function sendNotification(
   subscriptionData: ClientPushSubscription,
-  message: string
+  message: string,
 ) {
   if (!subscriptionData) {
     throw new Error("No subscription available");
@@ -72,7 +72,7 @@ export async function sendNotification(
         title: "Test Notification",
         body: message,
         icon: "/favicon/favicon.svg",
-      })
+      }),
     );
     return { success: true };
   } catch (error) {

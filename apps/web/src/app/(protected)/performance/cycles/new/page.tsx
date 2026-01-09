@@ -28,7 +28,7 @@ export default function NewCyclePage() {
         router.push("/performance");
       },
       onError: (err) => toast.error(err.message),
-    })
+    }),
   );
 
   const form = useForm({

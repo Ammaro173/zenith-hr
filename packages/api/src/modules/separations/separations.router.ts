@@ -14,15 +14,15 @@ export const separationsRouter = {
       async ({ input, context }) =>
         await context.services.separations.create(
           input,
-          context.session.user.id
-        )
+          context.session.user.id,
+        ),
     ),
 
   get: protectedProcedure
     .input(z.object({ separationId: z.string().uuid() }))
     .handler(
       async ({ input, context }) =>
-        await context.services.separations.get(input.separationId)
+        await context.services.separations.get(input.separationId),
     ),
 
   update: requireRoles(["MANAGER", "HR", "ADMIN"])
@@ -37,8 +37,8 @@ export const separationsRouter = {
     .handler(async ({ input, context }) =>
       context.services.separations.startClearance(
         input,
-        context.session.user.id
-      )
+        context.session.user.id,
+      ),
     ),
 
   updateChecklist: protectedProcedure
@@ -47,11 +47,11 @@ export const separationsRouter = {
       // TODO: Add permission checks (only specific departments)
       return await context.services.separations.updateChecklist(
         input,
-        context.session.user.id
+        context.session.user.id,
       );
     }),
 
   getSeparations: protectedProcedure.handler(
-    async ({ context }) => await context.services.separations.getAll()
+    async ({ context }) => await context.services.separations.getAll(),
   ),
 };

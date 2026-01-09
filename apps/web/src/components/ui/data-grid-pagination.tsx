@@ -73,7 +73,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
     Math.floor(pageIndex / paginationMoreLimit) * paginationMoreLimit;
   const currentGroupEnd = Math.min(
     currentGroupStart + paginationMoreLimit,
-    pageCount
+    pageCount,
   );
 
   // Render page buttons based on the current group
@@ -96,7 +96,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
           variant="ghost"
         >
           {i + 1}
-        </Button>
+        </Button>,
       );
     }
     return buttons;
@@ -142,7 +142,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
     <div
       className={cn(
         "flex grow flex-col flex-wrap items-center justify-between gap-2.5 py-2.5 sm:flex-row sm:py-0",
-        mergedProps?.className
+        mergedProps?.className,
       )}
       data-slot="data-grid-pagination"
     >

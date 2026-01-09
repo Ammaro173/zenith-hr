@@ -13,7 +13,7 @@ type CurrentAdminContextValue = {
 };
 
 const CurrentAdminContext = createContext<CurrentAdminContextValue | null>(
-  null
+  null,
 );
 
 export function CurrentAdminProvider({
@@ -34,7 +34,7 @@ export function CurrentAdminProvider({
         }
       },
     }),
-    [admin]
+    [admin],
   );
 
   return (

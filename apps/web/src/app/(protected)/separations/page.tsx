@@ -26,7 +26,7 @@ import { orpc } from "@/utils";
 
 export default function SeparationsPage() {
   const { data: separations, isLoading } = useQuery(
-    orpc.separations.getSeparations.queryOptions()
+    orpc.separations.getSeparations.queryOptions(),
   );
   const hasSeparations = (separations?.length ?? 0) > 0;
 
@@ -92,7 +92,7 @@ export default function SeparationsPage() {
                       <TableCell>
                         {format(
                           new Date(request.lastWorkingDay),
-                          "MMM d, yyyy"
+                          "MMM d, yyyy",
                         )}
                       </TableCell>
                       <TableCell>

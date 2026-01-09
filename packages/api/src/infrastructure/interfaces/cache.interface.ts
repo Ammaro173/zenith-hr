@@ -47,6 +47,6 @@ export type CacheService = {
    * @param entries - Array of key-value-ttl tuples
    */
   setMany?: <T>(
-    entries: Array<{ key: string; value: T; ttlSeconds: number }>
+    entries: Array<{ key: string; value: T; ttlSeconds: number }>,
   ) => Promise<void>;
 };

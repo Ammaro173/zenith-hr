@@ -25,7 +25,7 @@ export const workflowRouter = {
           actorId,
           input.action,
           input.comment,
-          ipAddress
+          ipAddress,
         );
 
         return {
@@ -61,6 +61,6 @@ export const workflowRouter = {
   getRequestHistory: protectedProcedure
     .input(requestIdSchema)
     .handler(async ({ input, context }) =>
-      context.services.workflow.getRequestHistory(input.id)
+      context.services.workflow.getRequestHistory(input.id),
     ),
 };

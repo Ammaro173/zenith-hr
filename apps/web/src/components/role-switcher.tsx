@@ -74,7 +74,7 @@ export function RoleSwitcher() {
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      role === r.value ? "opacity-100" : "opacity-0"
+                      role === r.value ? "opacity-100" : "opacity-0",
                     )}
                   />
                   {r.label}

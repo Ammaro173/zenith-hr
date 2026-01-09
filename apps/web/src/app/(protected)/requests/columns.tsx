@@ -86,7 +86,7 @@ export const columns = [
         variant: "text",
         placeholder: "Search title...",
       },
-    }
+    },
   ),
   columnHelper.accessor(
     (row: ManpowerRequest) =>
@@ -103,7 +103,7 @@ export const columns = [
         variant: "text",
         placeholder: "Search department...",
       },
-    }
+    },
   ),
   columnHelper.accessor("requestType", {
     header: "Type",

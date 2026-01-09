@@ -7,10 +7,10 @@ import { orpc } from "@/utils";
 
 export default function DashboardPage() {
   const { data: stats, isLoading } = useQuery(
-    orpc.dashboard.getStats.queryOptions()
+    orpc.dashboard.getStats.queryOptions(),
   );
   const { data: pending } = useQuery(
-    orpc.dashboard.getPendingCount.queryOptions()
+    orpc.dashboard.getPendingCount.queryOptions(),
   );
 
   if (isLoading) {

@@ -43,7 +43,7 @@ const webhookRpcHandler = new RPCHandler(appRouter, {
  */
 function verifyDocuSignSignature(
   _signature: string | null,
-  _payload: string
+  _payload: string,
 ): boolean {
   // TODO: Implement actual signature verification
   // See: https://developers.docusign.com/platform/webhooks/connect/hmac/
@@ -90,7 +90,7 @@ export async function docuSignWebhookHandler(context: Context) {
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 

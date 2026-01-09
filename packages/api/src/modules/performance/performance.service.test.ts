@@ -6,7 +6,7 @@ describe("PerformanceService", () => {
     insert: mock(() => ({
       values: mock(() => ({
         returning: mock(() =>
-          Promise.resolve([{ id: "cycle-123", status: "DRAFT" }])
+          Promise.resolve([{ id: "cycle-123", status: "DRAFT" }]),
         ),
       })),
     })),
@@ -14,7 +14,7 @@ describe("PerformanceService", () => {
       set: mock(() => ({
         where: mock(() => ({
           returning: mock(() =>
-            Promise.resolve([{ id: "review-123", overallRating: 4 }])
+            Promise.resolve([{ id: "review-123", overallRating: 4 }]),
           ),
         })),
       })),
@@ -25,7 +25,7 @@ describe("PerformanceService", () => {
       },
       performanceReview: {
         findFirst: mock(() =>
-          Promise.resolve({ id: "review-123", status: "DRAFT" })
+          Promise.resolve({ id: "review-123", status: "DRAFT" }),
         ),
       },
     },
@@ -44,7 +44,7 @@ describe("PerformanceService", () => {
     const result = await service.createCycle(input);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "cycle-123", status: "DRAFT" })
+      expect.objectContaining({ id: "cycle-123", status: "DRAFT" }),
     );
     expect(mockDb.insert).toHaveBeenCalled();
   });
@@ -60,7 +60,7 @@ describe("PerformanceService", () => {
     mockDb.insert.mockReturnValueOnce({
       values: mock(() => ({
         returning: mock(() =>
-          Promise.resolve([{ id: "review-123", status: "DRAFT", ...input }])
+          Promise.resolve([{ id: "review-123", status: "DRAFT", ...input }]),
         ),
       })),
     });
@@ -68,7 +68,7 @@ describe("PerformanceService", () => {
     const result = await service.createReview(input);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "review-123", status: "DRAFT" })
+      expect.objectContaining({ id: "review-123", status: "DRAFT" }),
     );
     expect(mockDb.insert).toHaveBeenCalled();
   });
@@ -83,7 +83,7 @@ describe("PerformanceService", () => {
     const result = await service.updateReview(input);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "review-123", overallRating: 4 })
+      expect.objectContaining({ id: "review-123", overallRating: 4 }),
     );
     expect(mockDb.update).toHaveBeenCalled();
   });
@@ -100,7 +100,7 @@ describe("PerformanceService", () => {
     mockDb.insert.mockReturnValueOnce({
       values: mock(() => ({
         returning: mock(() =>
-          Promise.resolve([{ id: "goal-1", status: "PENDING", ...input }])
+          Promise.resolve([{ id: "goal-1", status: "PENDING", ...input }]),
         ),
       })),
     });
@@ -108,7 +108,7 @@ describe("PerformanceService", () => {
     const result = await service.createGoal(input);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "goal-1", status: "PENDING" })
+      expect.objectContaining({ id: "goal-1", status: "PENDING" }),
     );
     expect(mockDb.insert).toHaveBeenCalled();
   });

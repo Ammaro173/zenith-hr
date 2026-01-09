@@ -47,7 +47,7 @@ export const manpowerRequest = pgTable("manpower_request", {
     () => user.id,
     {
       onDelete: "set null",
-    }
+    },
   ),
   contractDuration: contractDurationEnum("contract_duration").notNull(),
   justificationText: text("justification_text").notNull(),

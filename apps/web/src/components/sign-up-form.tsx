@@ -39,7 +39,7 @@ export default function SignUpForm({
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
           },
-        }
+        },
       );
     },
     validators: {

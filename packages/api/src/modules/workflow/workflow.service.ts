@@ -44,7 +44,7 @@ export const createWorkflowService = (db: typeof _db) => {
     actorId: string,
     action: ApprovalAction,
     stepName: string,
-    options?: { comment?: string; ipAddress?: string }
+    options?: { comment?: string; ipAddress?: string },
   ): Promise<void> => {
     await tx.insert(approvalLog).values({
       requestId,
@@ -61,7 +61,7 @@ export const createWorkflowService = (db: typeof _db) => {
     tx: TransactionDB,
     requestId: string,
     versionNumber: number,
-    snapshotData: Record<string, unknown>
+    snapshotData: Record<string, unknown>,
   ): Promise<void> => {
     await tx.insert(requestVersion).values({
       requestId,
@@ -116,7 +116,7 @@ export const createWorkflowService = (db: typeof _db) => {
 
     shouldSkipStep(
       requesterRole: UserRole,
-      currentStatus: RequestStatus
+      currentStatus: RequestStatus,
     ): boolean {
       if (requesterRole === "MANAGER" && currentStatus === "PENDING_MANAGER") {
         return true;
@@ -132,7 +132,7 @@ export const createWorkflowService = (db: typeof _db) => {
       actorId: string,
       action: ApprovalAction,
       comment?: string,
-      ipAddress?: string
+      ipAddress?: string,
     ): Promise<{
       previousStatus: RequestStatus;
       newStatus: RequestStatus;

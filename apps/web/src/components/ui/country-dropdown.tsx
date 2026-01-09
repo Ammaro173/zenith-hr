@@ -52,7 +52,7 @@ const CountryDropdownComponent = (
   {
     options = countries.all.filter(
       (country: Country) =>
-        country.emoji && country.status !== "deleted" && country.ioc !== "PRK"
+        country.emoji && country.status !== "deleted" && country.ioc !== "PRK",
     ),
     onChange,
     defaultValue,
@@ -61,11 +61,11 @@ const CountryDropdownComponent = (
     slim = false,
     ...props
   }: CountryDropdownProps,
-  ref: React.ForwardedRef<HTMLButtonElement>
+  ref: React.ForwardedRef<HTMLButtonElement>,
 ) => {
   const [open, setOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<Country | undefined>(
-    undefined
+    undefined,
   );
   const [searchValue, setSearchValue] = useState("");
 
@@ -73,12 +73,13 @@ const CountryDropdownComponent = (
     if (defaultValue) {
       // Try to find by alpha3 code first, then by name
       let initialCountry = options.find(
-        (country) => country.alpha3 === defaultValue
+        (country) => country.alpha3 === defaultValue,
       );
 
       if (!initialCountry) {
         initialCountry = options.find(
-          (country) => country.name.toLowerCase() === defaultValue.toLowerCase()
+          (country) =>
+            country.name.toLowerCase() === defaultValue.toLowerCase(),
         );
       }
 
@@ -106,15 +107,15 @@ const CountryDropdownComponent = (
       onChange?.(country.name);
       setOpen(false);
     },
-    [onChange]
+    [onChange],
   );
 
   const normalizedOptions = useMemo(
     () =>
       options.filter(
-        (country) => country.name && country.alpha2 && country.emoji
+        (country) => country.name && country.alpha2 && country.emoji,
       ),
-    [options]
+    [options],
   );
 
   const filteredOptions = useMemo(() => {
@@ -130,8 +131,8 @@ const CountryDropdownComponent = (
         country.alpha3.toLowerCase().includes(normalizedQuery) ||
         country.alpha2.toLowerCase().includes(normalizedQuery) ||
         country.countryCallingCodes.some((code) =>
-          code.toLowerCase().includes(normalizedQuery)
-        )
+          code.toLowerCase().includes(normalizedQuery),
+        ),
     );
   }, [normalizedOptions, searchValue]);
 
@@ -142,7 +143,7 @@ const CountryDropdownComponent = (
       height: slim ? 180 : 240,
       width: 0,
     }),
-    [slim]
+    [slim],
   );
 
   const rowVirtualizer = useVirtualizer({
@@ -159,7 +160,7 @@ const CountryDropdownComponent = (
 
   const triggerClasses = cn(
     "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-primary text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-    slim === true && "w-20"
+    slim === true && "w-20",
   );
 
   return (
@@ -270,7 +271,7 @@ const CountryDropdownComponent = (
                               "ml-auto h-4 w-4 shrink-0",
                               option.name === selectedCountry?.name
                                 ? "opacity-100"
-                                : "opacity-0"
+                                : "opacity-0",
                             )}
                           />
                         </CommandItem>

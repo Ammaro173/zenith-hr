@@ -55,7 +55,7 @@ export const GlimpseImage = ({
     alt={alt ?? ""}
     className={cn(
       "mb-4 aspect-120/63 w-full rounded-md border object-cover",
-      className
+      className,
     )}
     // height={63}
     // width={120}

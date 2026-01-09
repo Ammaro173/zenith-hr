@@ -33,11 +33,11 @@ export default function RequestDetailPage() {
   const [comment, setComment] = useState("");
 
   const { data: request, isLoading: isRequestLoading } = useQuery(
-    orpc.requests.getById.queryOptions({ input: { id: params.id } })
+    orpc.requests.getById.queryOptions({ input: { id: params.id } }),
   );
 
   const { data: history } = useQuery(
-    orpc.workflow.getRequestHistory.queryOptions({ input: { id: params.id } })
+    orpc.workflow.getRequestHistory.queryOptions({ input: { id: params.id } }),
   );
 
   const transitionMutation = useMutation({
@@ -49,7 +49,7 @@ export default function RequestDetailPage() {
       }),
     onSuccess: (data) => {
       toast.success(
-        `Request ${data.newStatus.toLowerCase().replace("_", " ")}`
+        `Request ${data.newStatus.toLowerCase().replace("_", " ")}`,
       );
       setComment("");
       router.refresh();
@@ -81,7 +81,7 @@ export default function RequestDetailPage() {
   const isApprover =
     request.currentApproverRole === session?.user?.role &&
     !["APPROVED_OPEN", "REJECTED", "ARCHIVED", "DRAFT"].includes(
-      request.status
+      request.status,
     );
 
   const positionDetails = request.positionDetails as {
@@ -116,7 +116,7 @@ export default function RequestDetailPage() {
                 "text-[10px] uppercase",
                 request.status === "APPROVED_OPEN" && "bg-green-500",
                 request.status === "REJECTED" && "bg-destructive",
-                request.status.startsWith("PENDING") && "bg-orange-500"
+                request.status.startsWith("PENDING") && "bg-orange-500",
               )}
             >
               {request.status.replace("_", " ")}
@@ -448,7 +448,7 @@ function ChainStep({
           status === "COMPLETED"
             ? "bg-black"
             : "border border-muted-foreground bg-muted",
-          isActive && "animate-pulse border-primary bg-primary ring-primary/20"
+          isActive && "animate-pulse border-primary bg-primary ring-primary/20",
         )}
       >
         {status === "COMPLETED" && (
@@ -459,7 +459,7 @@ function ChainStep({
         <div
           className={cn(
             "font-bold text-xs uppercase tracking-wider",
-            isActive ? "text-primary" : "text-foreground"
+            isActive ? "text-primary" : "text-foreground",
           )}
         >
           {label}

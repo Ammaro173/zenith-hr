@@ -11,7 +11,7 @@ declare global {
 
 export function trackEvent(
   event: string,
-  payload?: Record<string, unknown>
+  payload?: Record<string, unknown>,
 ): void {
   if (typeof window === "undefined") {
     return;

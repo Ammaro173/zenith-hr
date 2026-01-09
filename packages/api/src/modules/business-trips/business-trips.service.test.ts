@@ -6,7 +6,7 @@ describe("BusinessTripsService", () => {
     insert: mock(() => ({
       values: mock(() => ({
         returning: mock(() =>
-          Promise.resolve([{ id: "trip-123", status: "DRAFT" }])
+          Promise.resolve([{ id: "trip-123", status: "DRAFT" }]),
         ),
       })),
     })),
@@ -14,7 +14,7 @@ describe("BusinessTripsService", () => {
       set: mock(() => ({
         where: mock(() => ({
           returning: mock(() =>
-            Promise.resolve([{ id: "trip-123", status: "SUBMITTED" }])
+            Promise.resolve([{ id: "trip-123", status: "SUBMITTED" }]),
           ),
         })),
       })),
@@ -26,7 +26,7 @@ describe("BusinessTripsService", () => {
             id: "trip-123",
             status: "DRAFT",
             requesterId: "user-1",
-          })
+          }),
         ),
         findMany: mock(() => Promise.resolve([])),
       },
@@ -40,7 +40,7 @@ describe("BusinessTripsService", () => {
           limit: mock(() =>
             Promise.resolve([
               { id: "trip-123", status: "DRAFT", requesterId: "user-1" },
-            ])
+            ]),
           ),
         })),
       })),
@@ -64,7 +64,7 @@ describe("BusinessTripsService", () => {
     const result = await service.create(input, requesterId);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "trip-123", status: "DRAFT" })
+      expect.objectContaining({ id: "trip-123", status: "DRAFT" }),
     );
     expect(mockDb.insert).toHaveBeenCalled();
   });
@@ -86,7 +86,7 @@ describe("BusinessTripsService", () => {
     const result = await service.transition(input, actorId);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "trip-123", status: "SUBMITTED" })
+      expect.objectContaining({ id: "trip-123", status: "SUBMITTED" }),
     );
     expect(mockDb.update).toHaveBeenCalled();
   });
@@ -112,7 +112,7 @@ describe("BusinessTripsService", () => {
               amount: input.amount.toString(), // DB returns decimal as string
               date: new Date(input.date),
             },
-          ])
+          ]),
         ),
       })),
     });
@@ -120,7 +120,7 @@ describe("BusinessTripsService", () => {
     const result = await service.addExpense(input);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "expense-1", tripId: input.tripId })
+      expect.objectContaining({ id: "expense-1", tripId: input.tripId }),
     );
     expect(mockDb.insert).toHaveBeenCalled();
   });

@@ -1,20 +1,19 @@
 "use client";
 
 import type { Column } from "@tanstack/react-table";
-import type { ComponentProps } from "react";
-import { useCallback, useMemo } from "react";
+import * as React from "react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ExtendedColumnFilter } from "@/types/data-table";
 
-interface DataTableRangeFilterProps<TData> extends ComponentProps<"div"> {
+interface DataTableRangeFilterProps<TData> extends React.ComponentProps<"div"> {
   filter: ExtendedColumnFilter<TData>;
   column: Column<TData>;
   inputId: string;
   onFilterUpdate: (
     filterId: string,
-    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>
+    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
   ) => void;
 }
 
@@ -28,7 +27,7 @@ export function DataTableRangeFilter<TData>({
 }: DataTableRangeFilterProps<TData>) {
   const meta = column.columnDef.meta;
 
-  const [min, max] = useMemo(() => {
+  const [min, max] = React.useMemo(() => {
     const range = column.columnDef.meta?.range;
     if (range) {
       return range;
@@ -42,26 +41,29 @@ export function DataTableRangeFilter<TData>({
     return [values[0], values[1]];
   }, [column]);
 
-  const formatValue = useCallback((value: string | number | undefined) => {
-    if (value === undefined || value === "") {
-      return "";
-    }
-    const numValue = Number(value);
-    return Number.isNaN(numValue)
-      ? ""
-      : numValue.toLocaleString(undefined, {
-          maximumFractionDigits: 0,
-        });
-  }, []);
+  const formatValue = React.useCallback(
+    (value: string | number | undefined) => {
+      if (value === undefined || value === "") {
+        return "";
+      }
+      const numValue = Number(value);
+      return Number.isNaN(numValue)
+        ? ""
+        : numValue.toLocaleString(undefined, {
+            maximumFractionDigits: 0,
+          });
+    },
+    [],
+  );
 
-  const value = useMemo(() => {
+  const value = React.useMemo(() => {
     if (Array.isArray(filter.value)) {
       return filter.value.map(formatValue);
     }
     return [formatValue(filter.value), ""];
   }, [filter.value, formatValue]);
 
-  const onRangeValueChange = useCallback(
+  const onRangeValueChange = React.useCallback(
     (value: string, isMin?: boolean) => {
       const numValue = Number(value);
       const currentValues = Array.isArray(filter.value)
@@ -83,7 +85,7 @@ export function DataTableRangeFilter<TData>({
         });
       }
     },
-    [filter.filterId, filter.value, min, max, onFilterUpdate]
+    [filter.filterId, filter.value, min, max, onFilterUpdate],
   );
 
   return (

@@ -2,7 +2,6 @@ import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import ws from "ws";
 import { env } from "./env";
-// biome-ignore lint/performance/noNamespaceImport: schema barrel is required for Drizzle
 import * as schema from "./schema";
 
 //TODO i dont like this at all

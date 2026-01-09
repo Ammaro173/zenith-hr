@@ -36,5 +36,5 @@ export const requireRoles = (roles: UserRole[]) =>
           session: context.session as NonNullable<Context["session"]>,
         },
       });
-    })
+    }),
   );

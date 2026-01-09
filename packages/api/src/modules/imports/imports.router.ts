@@ -5,12 +5,12 @@ export const importsRouter = {
   importUsers: requireRoles(["ADMIN", "HR"])
     .input(importUsersSchema)
     .handler(async ({ input, context }) =>
-      context.services.imports.importUsers(input)
+      context.services.imports.importUsers(input),
     ),
 
   importDepartments: requireRoles(["ADMIN", "HR"])
     .input(importDepartmentsSchema)
     .handler(async ({ input, context }) =>
-      context.services.imports.importDepartments(input.departments)
+      context.services.imports.importDepartments(input.departments),
     ),
 };

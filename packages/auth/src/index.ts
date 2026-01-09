@@ -1,5 +1,4 @@
 import { db } from "@zenith-hr/db";
-// biome-ignore lint/performance/noNamespaceImport: biome is dumb
 import * as schema from "@zenith-hr/db/schema/auth";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";

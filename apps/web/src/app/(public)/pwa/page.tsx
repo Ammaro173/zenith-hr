@@ -57,7 +57,7 @@ function urlBase64ToUint8Array(base64String: string) {
 function PushNotificationManager() {
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(
-    null
+    null,
   );
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true); //TODO useTransition
@@ -75,7 +75,7 @@ function PushNotificationManager() {
       const sub = await registration.pushManager.getSubscription();
       setSubscriptionCallback(sub);
     },
-    []
+    [],
   );
 
   const checkSupport = useCallback(async () => {
@@ -112,7 +112,7 @@ function PushNotificationManager() {
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
-          env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""
+          env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "",
         ),
       });
       setSubscription(sub);
@@ -361,7 +361,7 @@ function InstallPrompt() {
       return () =>
         window.removeEventListener(
           "beforeinstallprompt",
-          handleBeforeInstallPrompt
+          handleBeforeInstallPrompt,
         );
     }
   }, []);

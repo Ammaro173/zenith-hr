@@ -55,7 +55,7 @@ export function ForgotPasswordForm() {
               toast.error("Reset request failed");
             }
           },
-        }
+        },
       );
     },
   });

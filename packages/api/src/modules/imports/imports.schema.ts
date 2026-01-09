@@ -17,7 +17,7 @@ export const importUsersSchema = z.object({
         "ADMIN",
       ]),
       departmentId: z.string().uuid().optional(),
-    })
+    }),
   ),
 });
 
@@ -28,6 +28,6 @@ export const importDepartmentsSchema = z.object({
       name: z.string().min(1),
       costCenterCode: z.string().min(1),
       headOfDepartmentId: z.string().optional(),
-    })
+    }),
   ),
 });

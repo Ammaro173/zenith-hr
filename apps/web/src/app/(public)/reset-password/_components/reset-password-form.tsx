@@ -27,13 +27,13 @@ const resetPasswordFormSchema = z
       .string()
       .min(
         MIN_PASSWORD_LENGTH,
-        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
       ),
     confirmPassword: z
       .string()
       .min(
         MIN_PASSWORD_LENGTH,
-        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
       ),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -91,7 +91,7 @@ export function ResetPasswordForm() {
                   : "An unknown error occurred",
             });
           },
-        }
+        },
       );
     },
   });

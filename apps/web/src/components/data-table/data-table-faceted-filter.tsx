@@ -2,9 +2,7 @@
 
 import type { Column } from "@tanstack/react-table";
 import { Check, PlusCircle, XCircle } from "lucide-react";
-import type { MouseEvent } from "react";
-import { useCallback, useState } from "react";
-
+import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,14 +36,14 @@ export function DataTableFacetedFilter<TData, TValue>({
   options,
   multiple,
 }: DataTableFacetedFilterProps<TData, TValue>) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
 
   const columnFilterValue = column?.getFilterValue();
   const selectedValues = new Set(
-    Array.isArray(columnFilterValue) ? columnFilterValue : []
+    Array.isArray(columnFilterValue) ? columnFilterValue : [],
   );
 
-  const onItemSelect = useCallback(
+  const onItemSelect = React.useCallback(
     (option: Option, isSelected: boolean) => {
       if (!column) {
         return;
@@ -65,30 +63,35 @@ export function DataTableFacetedFilter<TData, TValue>({
         setOpen(false);
       }
     },
-    [column, multiple, selectedValues]
+    [column, multiple, selectedValues],
   );
 
-  const onReset = useCallback(
-    (event?: MouseEvent) => {
+  const onReset = React.useCallback(
+    (event?: React.MouseEvent) => {
       event?.stopPropagation();
       column?.setFilterValue(undefined);
     },
-    [column]
+    [column],
   );
 
   return (
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
-        <Button className="border-dashed" size="sm" variant="outline">
+        <Button
+          className="border-dashed font-normal"
+          size="sm"
+          variant="outline"
+        >
           {selectedValues?.size > 0 ? (
-            <button
+            <div
               aria-label={`Clear ${title} filter`}
               className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               onClick={onReset}
-              type="button"
+              role="button"
+              tabIndex={0}
             >
               <XCircle />
-            </button>
+            </div>
           ) : (
             <PlusCircle />
           )}
@@ -131,12 +134,12 @@ export function DataTableFacetedFilter<TData, TValue>({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[12.5rem] p-0">
+      <PopoverContent align="start" className="w-50 p-0">
         <Command>
           <CommandInput placeholder={title} />
           <CommandList className="max-h-full">
             <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup className="max-h-[18.75rem] overflow-y-auto overflow-x-hidden">
+            <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
               {options.map((option) => {
                 const isSelected = selectedValues.has(option.value);
 
@@ -150,7 +153,7 @@ export function DataTableFacetedFilter<TData, TValue>({
                         "flex size-4 items-center justify-center rounded-sm border border-primary",
                         isSelected
                           ? "bg-primary"
-                          : "opacity-50 [&_svg]:invisible"
+                          : "opacity-50 [&_svg]:invisible",
                       )}
                     >
                       <Check />

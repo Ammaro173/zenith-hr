@@ -18,7 +18,7 @@ export const createDashboardService = (db: typeof _db) => {
         .select({ count: count() })
         .from(manpowerRequest)
         .where(
-          sql`${manpowerRequest.status}::text IN ('PENDING_MANAGER', 'PENDING_HR', 'PENDING_FINANCE', 'PENDING_CEO')`
+          sql`${manpowerRequest.status}::text IN ('PENDING_MANAGER', 'PENDING_HR', 'PENDING_FINANCE', 'PENDING_CEO')`,
         );
       return result?.count || 0;
     },

@@ -36,5 +36,5 @@ export const manpowerRequestRelations = relations(
     approvalLogs: many(approvalLog),
     contracts: many(contract),
     versions: many(requestVersion),
-  })
+  }),
 );

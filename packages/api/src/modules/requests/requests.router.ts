@@ -20,7 +20,7 @@ export const requestsRouter = {
     .handler(async ({ input, context }) => {
       const newRequest = await context.services.requests.create(
         input,
-        context.session.user.id
+        context.session.user.id,
       );
 
       if (!newRequest) {
@@ -42,11 +42,11 @@ export const requestsRouter = {
     }),
 
   getMyRequests: protectedProcedure.handler(async ({ context }) =>
-    context.services.requests.getByRequester(context.session.user.id)
+    context.services.requests.getByRequester(context.session.user.id),
   ),
 
   getPendingApprovals: protectedProcedure.handler(async ({ context }) =>
-    context.services.requests.getPendingApprovals(context.session.user.id)
+    context.services.requests.getPendingApprovals(context.session.user.id),
   ),
 
   update: protectedProcedure
@@ -55,7 +55,7 @@ export const requestsRouter = {
         id: z.string().uuid(),
         data: updateRequestSchema,
         version: z.number(), // Optimistic locking version
-      })
+      }),
     )
     .handler(async ({ input, context }) => {
       try {
@@ -63,7 +63,7 @@ export const requestsRouter = {
           input.id,
           input.data,
           input.version,
-          context.session.user.id
+          context.session.user.id,
         );
 
         if (!updated) {
@@ -95,7 +95,7 @@ export const requestsRouter = {
   getVersions: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .handler(async ({ input, context }) =>
-      context.services.requests.getRequestVersions(input.id)
+      context.services.requests.getRequestVersions(input.id),
     ),
 
   transition: protectedProcedure
@@ -106,7 +106,7 @@ export const requestsRouter = {
           input.requestId,
           context.session.user.id,
           input.action,
-          input.comment
+          input.comment,
         );
         return {
           requestId: input.requestId,

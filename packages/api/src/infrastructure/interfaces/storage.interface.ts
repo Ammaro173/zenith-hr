@@ -13,7 +13,7 @@ export type StorageService = {
   upload: (
     key: string,
     data: Buffer,
-    options?: UploadOptions
+    options?: UploadOptions,
   ) => Promise<string>;
 
   /**

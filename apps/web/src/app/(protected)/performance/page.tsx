@@ -28,7 +28,7 @@ import { orpc } from "@/utils";
 
 export default function PerformancePage() {
   const { data: cycles, isLoading } = useQuery(
-    orpc.performance.getCycles.queryOptions()
+    orpc.performance.getCycles.queryOptions(),
   );
   const { data: session } = authClient.useSession();
   const role = getRoleFromSessionUser(session?.user);

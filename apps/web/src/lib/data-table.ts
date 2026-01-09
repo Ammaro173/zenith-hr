@@ -6,7 +6,7 @@ import type {
   FilterVariant,
 } from "@/types/data-table";
 
-export function getCommonPinningStyles<TData>({
+export function getColumnPinningStyle<TData>({
   column,
   withBorder = false,
 }: {
@@ -19,23 +19,24 @@ export function getCommonPinningStyles<TData>({
   const isFirstRightPinnedColumn =
     isPinned === "right" && column.getIsFirstColumn("right");
 
+  let boxShadow: string | undefined;
+  if (withBorder) {
+    if (isLastLeftPinnedColumn) {
+      boxShadow = "-4px 0 4px -4px var(--border) inset";
+    } else if (isFirstRightPinnedColumn) {
+      boxShadow = "4px 0 4px -4px var(--border) inset";
+    }
+  }
+
   return {
-    boxShadow: withBorder
-      ? // biome-ignore lint/style/noNestedTernary: //TODO
-        isLastLeftPinnedColumn
-        ? "-4px 0 4px -4px var(--border) inset"
-        : // biome-ignore lint/style/noNestedTernary: //TODO
-          isFirstRightPinnedColumn
-          ? "4px 0 4px -4px var(--border) inset"
-          : undefined
-      : undefined,
+    boxShadow,
     left: isPinned === "left" ? `${column.getStart("left")}px` : undefined,
     right: isPinned === "right" ? `${column.getAfter("right")}px` : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: isPinned ? "var(--background)" : "var(--background)",
     width: column.getSize(),
-    zIndex: isPinned ? 1 : 0,
+    zIndex: isPinned ? 1 : undefined,
   };
 }
 
@@ -64,7 +65,7 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
 }
 
 export function getValidFilters<TData>(
-  filters: ExtendedColumnFilter<TData>[]
+  filters: ExtendedColumnFilter<TData>[],
 ): ExtendedColumnFilter<TData>[] {
   return filters.filter(
     (filter) =>
@@ -74,6 +75,6 @@ export function getValidFilters<TData>(
         ? filter.value.length > 0
         : filter.value !== "" &&
           filter.value !== null &&
-          filter.value !== undefined)
+          filter.value !== undefined),
   );
 }

@@ -65,7 +65,7 @@ export const separationRequestRelations = relations(
       references: [user.id],
     }),
     checklistItems: many(separationChecklist),
-  })
+  }),
 );
 
 export const separationChecklistRelations = relations(
@@ -79,5 +79,5 @@ export const separationChecklistRelations = relations(
       fields: [separationChecklist.completedBy],
       references: [user.id],
     }),
-  })
+  }),
 );

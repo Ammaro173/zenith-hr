@@ -132,7 +132,7 @@ function DataGridTableDnd<TData>({
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
+    useSensor(KeyboardSensor, {}),
   );
 
   return (
@@ -151,7 +151,7 @@ function DataGridTableDnd<TData>({
               .map((headerGroup: HeaderGroup<TData>, index) => {
                 console.log(
                   "table.getState().columnOrder:",
-                  table.getState().columnOrder
+                  table.getState().columnOrder,
                 );
 
                 return (
@@ -192,7 +192,7 @@ function DataGridTableDnd<TData>({
                         </DataGridTableBodyRowSkeletonCell>
                       ))}
                     </DataGridTableBodyRowSkeleton>
-                  )
+                  ),
                 );
               }
 

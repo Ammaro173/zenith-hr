@@ -39,11 +39,11 @@ export default function ImportsPage() {
 
   const usersPreview = useMemo(
     () => parseCsv(usersCsv).slice(0, 5),
-    [usersCsv]
+    [usersCsv],
   );
   const departmentsPreview = useMemo(
     () => parseCsv(departmentsCsv).slice(0, 5),
-    [departmentsCsv]
+    [departmentsCsv],
   );
 
   const importUsers = useMutation({
@@ -76,7 +76,7 @@ export default function ImportsPage() {
       const inserted = results.filter((r) => r.status === "inserted").length;
       const skipped = results.filter((r) => r.status === "skipped").length;
       toast.success(
-        `Users import done: ${inserted} inserted, ${skipped} skipped`
+        `Users import done: ${inserted} inserted, ${skipped} skipped`,
       );
     },
     onError: (err) => toast.error(err.message),

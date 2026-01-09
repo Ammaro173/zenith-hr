@@ -170,7 +170,7 @@ export interface DataTableRangeFilterProps<TData> extends EmptyProps<"div"> {
   /** The function to update the filter. */
   onFilterUpdate: (
     filterId: string,
-    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>
+    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
   ) => void;
 }
 

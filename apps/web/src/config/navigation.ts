@@ -98,7 +98,7 @@ export function getRoleFromSessionUser(user: unknown): UserRole | null {
 
 export function isNavItemAllowedForRole(
   item: ProtectedNavigationItem,
-  role: UserRole | null
+  role: UserRole | null,
 ): boolean {
   if (!item.allowedRoles || item.allowedRoles.length === 0) {
     return true;
@@ -110,9 +110,9 @@ export function isNavItemAllowedForRole(
 }
 
 export function getNavigationItemsForRole(
-  role: UserRole | null
+  role: UserRole | null,
 ): ProtectedNavigationItem[] {
   return protectedNavigationItems.filter((item) =>
-    isNavItemAllowedForRole(item, role)
+    isNavItemAllowedForRole(item, role),
   );
 }

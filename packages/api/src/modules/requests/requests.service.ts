@@ -127,8 +127,8 @@ export const createRequestsService = (db: typeof _db) => {
         .where(
           and(
             eq(manpowerRequest.status, statusFilter as "PENDING_MANAGER"),
-            eq(manpowerRequest.currentApproverRole, userRole)
-          )
+            eq(manpowerRequest.currentApproverRole, userRole),
+          ),
         );
     },
 
@@ -139,7 +139,7 @@ export const createRequestsService = (db: typeof _db) => {
       id: string,
       data: UpdateRequestInput,
       version: number,
-      userId: string
+      userId: string,
     ) {
       return await db.transaction(async (tx) => {
         // Check existence and version
@@ -245,7 +245,7 @@ export const createRequestsService = (db: typeof _db) => {
       requestId: string,
       actorId: string,
       action: "SUBMIT" | "APPROVE" | "REJECT" | "REQUEST_CHANGE" | "HOLD",
-      comment?: string
+      comment?: string,
     ) {
       return await db.transaction(async (tx) => {
         // 1. Get current request with lock
@@ -366,7 +366,7 @@ export const createRequestsService = (db: typeof _db) => {
      */
     async canUserEditRequest(
       requestId: string,
-      userId: string
+      userId: string,
     ): Promise<boolean> {
       const [request] = await db
         .select()

@@ -53,7 +53,7 @@ const hitboxVariants = cva(
       radius: "none",
       debug: false,
     },
-  }
+  },
 );
 
 interface HitboxProps
@@ -85,7 +85,7 @@ function Hitbox(props: HitboxProps) {
           radius,
           debug,
         }),
-        className
+        className,
       )}
       style={{
         ...style,

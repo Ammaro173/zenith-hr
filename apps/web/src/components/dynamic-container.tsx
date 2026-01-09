@@ -5,7 +5,6 @@
  */
 
 import { motion, type TargetAndTransition } from "motion/react";
-// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +75,7 @@ function DynamicContainer({
       height: height ? "max-content" : "auto",
       width: width ? "max-content" : "auto",
     }),
-    [height, width]
+    [height, width],
   );
 
   return (

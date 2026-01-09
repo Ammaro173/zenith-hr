@@ -41,7 +41,7 @@ export async function authHandler(context: Context) {
           {
             status: 423,
             headers: { "content-type": "application/json" },
-          }
+          },
         );
       }
     }
@@ -82,7 +82,7 @@ export async function authHandler(context: Context) {
               {
                 status: 423,
                 headers: { "content-type": "application/json" },
-              }
+              },
             );
           }
         }

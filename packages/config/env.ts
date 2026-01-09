@@ -89,7 +89,7 @@ export function createAppEnv(runtimeEnv: NodeJS.ProcessEnv = process.env) {
  */
 export function createPackageEnv<T extends Record<string, z.ZodType>>(
   schema: T,
-  runtimeEnv: NodeJS.ProcessEnv = process.env
+  runtimeEnv: NodeJS.ProcessEnv = process.env,
 ): { [K in keyof T]: z.infer<T[K]> } {
   return createEnv({
     server: schema,

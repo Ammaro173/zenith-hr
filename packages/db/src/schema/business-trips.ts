@@ -71,7 +71,7 @@ export const businessTripRelations = relations(
       relationName: "delegatedTrips",
     }),
     expenses: many(tripExpense),
-  })
+  }),
 );
 
 export const tripExpenseRelations = relations(tripExpense, ({ one }) => ({

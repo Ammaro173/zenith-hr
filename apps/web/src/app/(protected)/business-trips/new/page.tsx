@@ -34,7 +34,7 @@ export default function NewBusinessTripPage() {
       onError: (error: Error) => {
         toast.error(`Failed to create request: ${error.message}`);
       },
-    })
+    }),
   );
 
   const form = useForm({

@@ -6,7 +6,7 @@ export function exportTableToCSV<TData>(
     filename?: string;
     excludeColumns?: (keyof TData | "select" | "actions")[];
     onlySelected?: boolean;
-  } = {}
+  } = {},
 ): void {
   const {
     filename = "table",

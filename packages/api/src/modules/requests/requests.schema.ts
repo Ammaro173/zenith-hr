@@ -36,7 +36,7 @@ export const createRequestSchema = z
     {
       message: "replacementForUserId is required for replacement requests",
       path: ["replacementForUserId"],
-    }
+    },
   )
   .refine((data) => data.salaryRangeMin <= data.salaryRangeMax, {
     message: "salaryRangeMin cannot exceed salaryRangeMax",

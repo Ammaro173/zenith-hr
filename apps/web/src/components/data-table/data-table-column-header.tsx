@@ -21,40 +21,48 @@ import { cn } from "@/lib/utils";
 interface DataTableColumnHeaderProps<TData, TValue>
   extends React.ComponentProps<typeof DropdownMenuTrigger> {
   column: Column<TData, TValue>;
-  title: string;
+  label: string;
+}
+
+function SortIcon<TData, TValue>({
+  column,
+}: {
+  column: Column<TData, TValue>;
+}) {
+  const isSorted = column.getIsSorted();
+
+  if (isSorted === "desc") {
+    return <ChevronDown />;
+  }
+
+  if (isSorted === "asc") {
+    return <ChevronUp />;
+  }
+
+  return <ChevronsUpDown />;
 }
 
 export function DataTableColumnHeader<TData, TValue>({
   column,
-  title,
+  label,
   className,
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
   if (!(column.getCanSort() || column.getCanHide())) {
-    return <div className={cn(className)}>{title}</div>;
+    return <div className={cn(className)}>{label}</div>;
   }
-
-  const renderSortIcon = () => {
-    if (column.getIsSorted() === "desc") {
-      return <ChevronDown />;
-    }
-    if (column.getIsSorted() === "asc") {
-      return <ChevronUp />;
-    }
-    return <ChevronsUpDown />;
-  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
           "-ml-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring data-[state=open]:bg-accent [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
-          className
+          className,
         )}
         {...props}
       >
-        {title}
-        {column.getCanSort() ? renderSortIcon() : null}
+        {label}
+        {column.getCanSort() && <SortIcon column={column} />}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-28">
         {column.getCanSort() && (

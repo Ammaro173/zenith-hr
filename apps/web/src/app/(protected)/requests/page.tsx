@@ -13,16 +13,16 @@ import { columns } from "./columns";
 
 export default function RequestsPage() {
   const { data: requests, isLoading } = useQuery(
-    orpc.requests.getMyRequests.queryOptions()
+    orpc.requests.getMyRequests.queryOptions(),
   );
 
   const { table } = useDataTable({
     data: requests ?? [],
     columns,
     pageCount: requests ? Math.ceil(requests.length / 10) : 0,
-    manualPagination: false,
-    manualSorting: false,
-    manualFiltering: false,
+    // manualPagination: false,
+    // manualSorting: false,
+    // manualFiltering: false,
     initialState: {
       pagination: {
         pageIndex: 0,

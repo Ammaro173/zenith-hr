@@ -266,7 +266,7 @@ export default function DataGridDemo() {
         },
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({

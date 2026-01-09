@@ -1,8 +1,8 @@
 "use client";
 
 import type { Column, Table } from "@tanstack/react-table";
-import { Search, X } from "lucide-react";
-import { type ComponentProps, useCallback, useMemo } from "react";
+import { X } from "lucide-react";
+import * as React from "react";
 
 import { DataTableDateFilter } from "@/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-interface DataTableToolbarProps<TData> extends ComponentProps<"div"> {
+interface DataTableToolbarProps<TData> extends React.ComponentProps<"div"> {
   table: Table<TData>;
 }
 
@@ -24,12 +24,12 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
 
-  const columns = useMemo(
+  const columns = React.useMemo(
     () => table.getAllColumns().filter((column) => column.getCanFilter()),
-    [table]
+    [table],
   );
 
-  const onReset = useCallback(() => {
+  const onReset = React.useCallback(() => {
     table.resetColumnFilters();
   }, [table]);
 
@@ -38,7 +38,7 @@ export function DataTableToolbar<TData>({
       aria-orientation="horizontal"
       className={cn(
         "flex w-full items-start justify-between gap-2 p-1",
-        className
+        className,
       )}
       role="toolbar"
       {...props}
@@ -62,7 +62,7 @@ export function DataTableToolbar<TData>({
       </div>
       <div className="flex items-center gap-2">
         {children}
-        <DataTableViewOptions table={table} />
+        <DataTableViewOptions align="end" table={table} />
       </div>
     </div>
   );
@@ -77,7 +77,7 @@ function DataTableToolbarFilter<TData>({
   {
     const columnMeta = column.columnDef.meta;
 
-    const onFilterRender = useCallback(() => {
+    const onFilterRender = React.useCallback(() => {
       if (!columnMeta?.variant) {
         return null;
       }
@@ -85,29 +85,12 @@ function DataTableToolbarFilter<TData>({
       switch (columnMeta.variant) {
         case "text":
           return (
-            <div className="relative">
-              <Input
-                aria-label="Search admins"
-                className="peer h-8 max-w-md px-9 shadow-none focus-visible:ring-0"
-                onChange={(event) => column.setFilterValue(event.target.value)}
-                placeholder={columnMeta.placeholder ?? columnMeta.label}
-                type="search"
-                value={(column.getFilterValue() as string) ?? ""}
-              />
-              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
-                <Search size={16} strokeWidth={2} />
-              </div>
-              {/* <Button
-                aria-label="Submit search"
-                className="absolute inset-y-0 end-0 h-full w-9 transition-colors hover:bg-transparent focus:z-10 focus-visible:outline-none focus-visible:outline disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => column.setFilterValue("")}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                <X aria-hidden="true" size={16} strokeWidth={2} />
-              </Button> */}
-            </div>
+            <Input
+              className="h-8 w-40 lg:w-56"
+              onChange={(event) => column.setFilterValue(event.target.value)}
+              placeholder={columnMeta.placeholder ?? columnMeta.label}
+              value={(column.getFilterValue() as string) ?? ""}
+            />
           );
 
         case "number":

@@ -52,7 +52,7 @@ export class S3StorageService implements StorageService {
   async upload(
     key: string,
     data: Buffer,
-    options?: UploadOptions
+    options?: UploadOptions,
   ): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,

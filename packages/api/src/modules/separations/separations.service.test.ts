@@ -6,7 +6,7 @@ describe("SeparationsService", () => {
     insert: mock(() => ({
       values: mock(() => ({
         returning: mock(() =>
-          Promise.resolve([{ id: "sep-123", status: "DRAFT" }])
+          Promise.resolve([{ id: "sep-123", status: "DRAFT" }]),
         ),
       })),
     })),
@@ -14,7 +14,7 @@ describe("SeparationsService", () => {
       set: mock(() => ({
         where: mock(() => ({
           returning: mock(() =>
-            Promise.resolve([{ id: "sep-123", status: "SUBMITTED" }])
+            Promise.resolve([{ id: "sep-123", status: "SUBMITTED" }]),
           ),
         })),
       })),
@@ -22,7 +22,7 @@ describe("SeparationsService", () => {
     query: {
       separationRequest: {
         findFirst: mock(() =>
-          Promise.resolve({ id: "sep-123", status: "DRAFT" })
+          Promise.resolve({ id: "sep-123", status: "DRAFT" }),
         ),
       },
     },
@@ -42,7 +42,7 @@ describe("SeparationsService", () => {
     const result = await service.create(input, employeeId);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "sep-123", status: "DRAFT" })
+      expect.objectContaining({ id: "sep-123", status: "DRAFT" }),
     );
     // Should insert request and checklist items
     expect(mockDb.insert).toHaveBeenCalledTimes(2);
@@ -51,7 +51,7 @@ describe("SeparationsService", () => {
   it("should get a separation request", async () => {
     const result = await service.get("sep-123");
     expect(result).toEqual(
-      expect.objectContaining({ id: "sep-123", status: "DRAFT" })
+      expect.objectContaining({ id: "sep-123", status: "DRAFT" }),
     );
   });
 
@@ -64,7 +64,7 @@ describe("SeparationsService", () => {
     const result = await service.update(input);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "sep-123", status: "SUBMITTED" })
+      expect.objectContaining({ id: "sep-123", status: "SUBMITTED" }),
     );
     expect(mockDb.update).toHaveBeenCalled();
   });
@@ -81,7 +81,7 @@ describe("SeparationsService", () => {
       set: mock(() => ({
         where: mock(() => ({
           returning: mock(() =>
-            Promise.resolve([{ id: "chk-1", status: "COMPLETED" }])
+            Promise.resolve([{ id: "chk-1", status: "COMPLETED" }]),
           ),
         })),
       })),
@@ -90,7 +90,7 @@ describe("SeparationsService", () => {
     const result = await service.updateChecklist(input, userId);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "chk-1", status: "COMPLETED" })
+      expect.objectContaining({ id: "chk-1", status: "COMPLETED" }),
     );
     expect(mockDb.update).toHaveBeenCalled();
   });

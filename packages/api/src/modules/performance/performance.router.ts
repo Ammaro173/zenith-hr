@@ -13,11 +13,11 @@ export const performanceRouter = {
     .input(createCycleSchema)
     .handler(
       async ({ input, context }) =>
-        await context.services.performance.createCycle(input)
+        await context.services.performance.createCycle(input),
     ),
 
   getCycles: protectedProcedure.handler(
-    async ({ context }) => await context.services.performance.getCycles()
+    async ({ context }) => await context.services.performance.getCycles(),
   ),
 
   getCycle: protectedProcedure
@@ -41,7 +41,7 @@ export const performanceRouter = {
     .input(z.object({ reviewId: z.string().uuid() }))
     .handler(
       async ({ input, context }) =>
-        await context.services.performance.getReview(input.reviewId)
+        await context.services.performance.getReview(input.reviewId),
     ),
 
   updateReview: protectedProcedure
@@ -55,13 +55,13 @@ export const performanceRouter = {
     .input(createGoalSchema)
     .handler(
       async ({ input, context }) =>
-        await context.services.performance.createGoal(input)
+        await context.services.performance.createGoal(input),
     ),
 
   updateGoal: protectedProcedure
     .input(updateGoalSchema)
     .handler(
       async ({ input, context }) =>
-        await context.services.performance.updateGoal(input)
+        await context.services.performance.updateGoal(input),
     ),
 };

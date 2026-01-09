@@ -17,7 +17,7 @@ type UpstashRedisClient = {
   set: (
     key: string,
     value: unknown,
-    options?: { ex?: number }
+    options?: { ex?: number },
   ) => Promise<unknown>;
   del: (key: string) => Promise<number>;
   keys: (pattern: string) => Promise<string[]>;
@@ -37,7 +37,7 @@ type UpstashRedisClient = {
  * bun add @upstash/redis
  */
 export async function createRedisCache(
-  config: RedisCacheConfig
+  config: RedisCacheConfig,
 ): Promise<CacheService> {
   try {
     // Dynamic import to avoid requiring @upstash/redis as a hard dependency
@@ -86,7 +86,7 @@ export async function createRedisCache(
       },
 
       async setMany<T>(
-        entries: Array<{ key: string; value: T; ttlSeconds: number }>
+        entries: Array<{ key: string; value: T; ttlSeconds: number }>,
       ): Promise<void> {
         const pipeline = redis.pipeline();
         for (const entry of entries) {
@@ -97,7 +97,7 @@ export async function createRedisCache(
     };
   } catch {
     throw new Error(
-      "Failed to create Redis cache. Make sure @upstash/redis is installed: bun add @upstash/redis"
+      "Failed to create Redis cache. Make sure @upstash/redis is installed: bun add @upstash/redis",
     );
   }
 }

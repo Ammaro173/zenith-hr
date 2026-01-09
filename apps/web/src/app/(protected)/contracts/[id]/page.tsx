@@ -19,7 +19,7 @@ export default function ContractPage() {
   const contractId = params.id as string;
 
   const { data: contract, isLoading } = useQuery(
-    orpc.contracts.getById.queryOptions({ input: { id: contractId } })
+    orpc.contracts.getById.queryOptions({ input: { id: contractId } }),
   );
 
   const sendMutation = useMutation({
@@ -51,7 +51,7 @@ export default function ContractPage() {
           <h3 className="font-semibold">Status</h3>
           <span
             className={`rounded px-2 py-1 text-xs ${getStatusBadgeClass(
-              contract.status
+              contract.status,
             )}`}
           >
             {contract.status}

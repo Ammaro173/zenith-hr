@@ -28,7 +28,7 @@ function buildPattern(queries: string[], exactMatch: boolean): string {
 
 function highlightFirstMatch(
   text: string,
-  regex: RegExp
+  regex: RegExp,
 ): HighlightPart[] | string {
   const match = regex.exec(text);
   if (!match) {
@@ -67,7 +67,7 @@ function highlightFirstMatch(
 
 function highlightAllMatches(
   text: string,
-  regex: RegExp
+  regex: RegExp,
 ): HighlightPart[] | string {
   const matches = Array.from(text.matchAll(regex));
   if (matches.length === 0) {
@@ -156,7 +156,7 @@ export function Highlight({
             <mark
               className={cn(
                 "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-200",
-                markClassName
+                markClassName,
               )}
               key={part.id}
             >

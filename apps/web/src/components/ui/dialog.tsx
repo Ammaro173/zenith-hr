@@ -19,7 +19,7 @@ const dialogContentVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 );
 
 function Dialog({
@@ -54,7 +54,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       className={cn(
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-primary/50 backdrop-blur-lg [backdrop-filter:blur(4px)] data-[state=closed]:animate-out data-[state=open]:animate-in",
-        className
+        className,
       )}
       data-slot="dialog-overlay"
       {...props}
@@ -112,7 +112,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       className={cn(
         "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className
+        className,
       )}
       data-slot="dialog-footer"
       {...props}
@@ -128,7 +128,7 @@ function DialogTitle({
     <DialogPrimitive.Title
       className={cn(
         "font-semibold text-lg leading-none tracking-tight",
-        className
+        className,
       )}
       data-slot="dialog-title"
       {...props}

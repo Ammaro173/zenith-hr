@@ -170,7 +170,7 @@ const badgeVariants = cva(
       appearance: "default",
       size: "md",
     },
-  }
+  },
 );
 
 const badgeButtonVariants = cva(
@@ -184,7 +184,7 @@ const badgeButtonVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 );
 
 function Badge({
@@ -204,7 +204,7 @@ function Badge({
     <Comp
       className={cn(
         badgeVariants({ variant, size, appearance, shape, disabled }),
-        className
+        className,
       )}
       data-slot="badge"
       {...props}
@@ -235,7 +235,7 @@ function BadgeDot({ className, ...props }: React.ComponentProps<"span">) {
     <span
       className={cn(
         "size-1.5 rounded-full bg-[currentColor] opacity-75",
-        className
+        className,
       )}
       data-slot="badge-dot"
       {...props}

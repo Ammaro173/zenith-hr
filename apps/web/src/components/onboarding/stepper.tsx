@@ -61,7 +61,7 @@ export function Stepper({
 
   const currentIndex = Math.max(
     steps.findIndex((step) => step.id === activeValue),
-    0
+    0,
   );
   const currentStep = steps[currentIndex];
   const lastIndex = steps.length - 1;
@@ -86,7 +86,7 @@ export function Stepper({
 
       return steps[currentIndex]?.canNext !== false;
     },
-    [currentIndex, steps]
+    [currentIndex, steps],
   );
 
   const handleSubmit = useCallback(() => {

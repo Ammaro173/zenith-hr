@@ -25,7 +25,7 @@ import { orpc } from "@/utils";
 
 export default function BusinessTripsPage() {
   const { data: trips, isLoading } = useQuery(
-    orpc.businessTrips.getMyTrips.queryOptions()
+    orpc.businessTrips.getMyTrips.queryOptions(),
   );
   const hasTrips = (trips?.length ?? 0) > 0;
 

@@ -37,7 +37,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         className={cn(
           "flex h-9 w-full min-w-0 items-center gap-1 overflow-hidden rounded-md border border-input bg-transparent px-1.5 shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 sm:gap-2 sm:px-3",
           "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
-          className
+          className,
         )}
       >
         <div className="flex min-w-0 shrink items-center gap-0.5 whitespace-nowrap sm:gap-1">
@@ -51,7 +51,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         <input
           autoComplete="tel"
           className={cn(
-            "min-w-0 flex-1 bg-transparent text-base outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            "min-w-0 flex-1 bg-transparent text-base outline-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           )}
           inputMode="tel"
           maxLength={QAT_PHONE_LOCAL_LENGTH}
@@ -63,7 +63,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         />
       </div>
     );
-  }
+  },
 );
 
 PhoneInput.displayName = "PhoneInput";

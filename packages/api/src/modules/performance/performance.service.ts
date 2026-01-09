@@ -14,7 +14,7 @@ import type {
 } from "./performance.schema";
 
 export const createPerformanceService = (
-  db: typeof import("@zenith-hr/db").db
+  db: typeof import("@zenith-hr/db").db,
 ) => ({
   async createCycle(input: z.infer<typeof createCycleSchema>) {
     const [cycle] = await db

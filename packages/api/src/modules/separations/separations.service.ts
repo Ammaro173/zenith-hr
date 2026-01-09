@@ -15,7 +15,7 @@ import type {
 } from "./separations.schema";
 
 export const createSeparationsService = (
-  db: typeof import("@zenith-hr/db").db
+  db: typeof import("@zenith-hr/db").db,
 ) => {
   const departmentItems: Record<"IT" | "ADMIN" | "FINANCE" | "HR", string[]> = {
     IT: [
@@ -45,7 +45,7 @@ export const createSeparationsService = (
   return {
     async create(
       input: z.infer<typeof createSeparationSchema>,
-      employeeId: string
+      employeeId: string,
     ) {
       return await db.transaction(async (tx) => {
         const [request] = await tx
@@ -96,7 +96,7 @@ export const createSeparationsService = (
 
     async updateChecklist(
       input: z.infer<typeof updateChecklistSchema>,
-      userId: string
+      userId: string,
     ) {
       const [actor] = await db
         .select({ role: user.role })
@@ -167,7 +167,7 @@ export const createSeparationsService = (
 
     async startClearance(
       input: z.infer<typeof startClearanceSchema>,
-      actorId: string
+      actorId: string,
     ) {
       const [actor] = await db
         .select({ role: user.role })
@@ -198,7 +198,7 @@ export const createSeparationsService = (
             department: dept,
             item: itemName,
             status: "PENDING" as const,
-          }))
+          })),
         );
 
         await tx.insert(separationChecklist).values(checklistItems);

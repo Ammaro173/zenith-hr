@@ -16,10 +16,10 @@ type TripAction = "SUBMIT" | "APPROVE" | "REJECT" | "CANCEL";
 export default function ApprovalsPage() {
   const queryClient = useQueryClient();
   const { data: requests, isLoading } = useQuery(
-    orpc.requests.getPendingApprovals.queryOptions()
+    orpc.requests.getPendingApprovals.queryOptions(),
   );
   const { data: trips, isLoading: tripsLoading } = useQuery(
-    orpc.businessTrips.getPendingApprovals.queryOptions()
+    orpc.businessTrips.getPendingApprovals.queryOptions(),
   );
   const [_selectedRequest, setSelectedRequest] = useState<string | null>(null);
 

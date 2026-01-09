@@ -56,7 +56,7 @@ export const user = pgTable(
       foreignColumns: [table.id],
       name: "user_reports_to_manager_id_fkey",
     }).onDelete("set null"),
-  })
+  }),
 );
 
 export const userRelations = relations(user, ({ one, many }) => ({

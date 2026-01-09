@@ -43,7 +43,7 @@ export default function NewSeparationPage() {
         router.push("/separations");
       },
       onError: (err) => toast.error(err.message),
-    })
+    }),
   );
 
   const form = useForm({
@@ -86,7 +86,7 @@ export default function NewSeparationPage() {
                     onBlur={field.handleBlur}
                     onChange={(e) =>
                       field.handleChange(
-                        e.target.value as SeparationForm["type"]
+                        e.target.value as SeparationForm["type"],
                       )
                     }
                     value={field.state.value}

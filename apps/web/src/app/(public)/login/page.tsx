@@ -46,7 +46,7 @@ export default function LoginPage() {
     },
     onSubmit: async ({ value }) => {
       const { isSuccess, error } = await tryCatch(
-        mockLogin()
+        mockLogin(),
         // login({
         //   body: {
         //     email: value.email,
@@ -166,7 +166,7 @@ export default function LoginPage() {
                 >
                   <LoadingSwap
                     className={cn(
-                      canSubmit ? "text-secondary" : "text-primary"
+                      canSubmit ? "text-secondary" : "text-primary",
                     )}
                     isLoading={isSubmitting}
                   >

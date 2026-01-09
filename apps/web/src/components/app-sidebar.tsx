@@ -39,7 +39,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const skeletonItems = useMemo(
     () => ["primary", "secondary", "tertiary", "quaternary"],
-    []
+    [],
   );
 
   return (

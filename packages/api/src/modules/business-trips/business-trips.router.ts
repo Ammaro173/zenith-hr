@@ -14,8 +14,8 @@ export const businessTripsRouter = {
       async ({ input, context }) =>
         await context.services.businessTrips.create(
           input,
-          context.session.user.id
-        )
+          context.session.user.id,
+        ),
     ),
 
   getById: protectedProcedure
@@ -31,8 +31,8 @@ export const businessTripsRouter = {
   getMyTrips: protectedProcedure.handler(
     async ({ context }) =>
       await context.services.businessTrips.getByRequester(
-        context.session.user.id
-      )
+        context.session.user.id,
+      ),
   ),
 
   getPendingApprovals: requireRoles([
@@ -41,7 +41,7 @@ export const businessTripsRouter = {
     "FINANCE",
     "ADMIN",
   ]).handler(async ({ context }) =>
-    context.services.businessTrips.getPendingApprovals(context.session.user.id)
+    context.services.businessTrips.getPendingApprovals(context.session.user.id),
   ),
 
   transition: requireRoles(["REQUESTER", "MANAGER", "HR", "FINANCE", "ADMIN"])
@@ -50,7 +50,7 @@ export const businessTripsRouter = {
       try {
         return await context.services.businessTrips.transition(
           input,
-          context.session.user.id
+          context.session.user.id,
         );
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
@@ -73,14 +73,14 @@ export const businessTripsRouter = {
     .input(addExpenseSchema)
     .handler(
       async ({ input, context }) =>
-        await context.services.businessTrips.addExpense(input)
+        await context.services.businessTrips.addExpense(input),
     ),
 
   getExpenses: protectedProcedure
     .input(z.object({ tripId: z.string().uuid() }))
     .handler(
       async ({ input, context }) =>
-        await context.services.businessTrips.getExpenses(input.tripId)
+        await context.services.businessTrips.getExpenses(input.tripId),
     ),
 
   calculateAllowance: protectedProcedure
@@ -89,13 +89,13 @@ export const businessTripsRouter = {
         perDiem: z.number().positive(),
         startDate: z.coerce.date(),
         endDate: z.coerce.date(),
-      })
+      }),
     )
     .handler(async ({ input, context }) =>
       context.services.businessTrips.calculateAllowance(
         input.perDiem,
         input.startDate,
-        input.endDate
-      )
+        input.endDate,
+      ),
     ),
 };

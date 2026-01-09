@@ -38,7 +38,7 @@ export const candidatesRouter = {
       try {
         return await context.services.candidates.selectCandidate(
           input.requestId,
-          input.candidateId
+          input.candidateId,
         );
       } catch (error: unknown) {
         const message = getErrorMessage(error);
@@ -58,6 +58,6 @@ export const candidatesRouter = {
     .input(getCandidatesSchema)
     .handler(
       async ({ input, context }) =>
-        await context.services.candidates.getCandidates(input.requestId)
+        await context.services.candidates.getCandidates(input.requestId),
     ),
 };

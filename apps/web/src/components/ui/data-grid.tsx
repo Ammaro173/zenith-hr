@@ -95,7 +95,7 @@ export type DataGridProps<TData extends object> = {
 
 // biome-ignore lint/suspicious/noExplicitAny: //TODO
 const DataGridContext = createContext<DataGridContextProps<any> | undefined>(
-  undefined
+  undefined,
 );
 
 function useDataGrid() {
@@ -200,7 +200,7 @@ function DataGridContainer({
       className={cn(
         "grid w-full",
         border && "rounded-lg border border-border",
-        className
+        className,
       )}
       data-slot="data-grid"
     >

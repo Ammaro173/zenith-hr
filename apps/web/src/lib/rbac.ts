@@ -14,7 +14,7 @@ export async function requireAuth() {
 
 export async function requireRoles(
   roles: UserRole[],
-  redirectTo = "/dashboard"
+  redirectTo = "/dashboard",
 ) {
   const { session, user } = await requireAuth();
   const role = getRoleFromSessionUser(user);

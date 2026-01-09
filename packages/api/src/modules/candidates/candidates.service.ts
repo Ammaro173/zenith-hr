@@ -10,7 +10,7 @@ type UploadCvInput = z.infer<typeof uploadCvSchema>;
 
 export const createCandidatesService = (
   db: typeof _db,
-  storage: StorageService
+  storage: StorageService,
 ) => {
   return {
     async uploadCv(input: UploadCvInput) {

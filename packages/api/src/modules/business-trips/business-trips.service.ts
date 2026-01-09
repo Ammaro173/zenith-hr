@@ -232,7 +232,7 @@ export const createBusinessTripsService = (db: typeof _db) => ({
     const msInDay = 1000 * 60 * 60 * 24;
     const days = Math.max(
       1,
-      Math.floor((endDate.getTime() - startDate.getTime()) / msInDay) + 1
+      Math.floor((endDate.getTime() - startDate.getTime()) / msInDay) + 1,
     );
     return perDiem * days;
   },

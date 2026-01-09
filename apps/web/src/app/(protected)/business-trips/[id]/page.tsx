@@ -47,13 +47,13 @@ export default function BusinessTripDetailPage() {
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
 
   const { data: trip, isLoading: isTripLoading } = useQuery(
-    orpc.businessTrips.getById.queryOptions({ input: { id: params.id } })
+    orpc.businessTrips.getById.queryOptions({ input: { id: params.id } }),
   );
 
   const { data: expenses, isLoading: isExpensesLoading } = useQuery(
     orpc.businessTrips.getExpenses.queryOptions({
       input: { tripId: params.id },
-    })
+    }),
   );
 
   const { mutateAsync: transitionTrip } = useMutation(
@@ -69,7 +69,7 @@ export default function BusinessTripDetailPage() {
       onError: (error) => {
         toast.error(`Failed to update status: ${error.message}`);
       },
-    })
+    }),
   );
 
   const { mutateAsync: addExpense } = useMutation(
@@ -86,7 +86,7 @@ export default function BusinessTripDetailPage() {
       onError: (error) => {
         toast.error(`Failed to add expense: ${error.message}`);
       },
-    })
+    }),
   );
 
   const expenseDefaults: AddExpenseInput = {
@@ -231,7 +231,7 @@ export default function BusinessTripDetailPage() {
                             onBlur={field.handleBlur}
                             onChange={(e) =>
                               field.handleChange(
-                                e.target.value as AddExpenseInput["category"]
+                                e.target.value as AddExpenseInput["category"],
                               )
                             }
                             placeholder="e.g. MEAL, TRANSPORT"
@@ -251,7 +251,7 @@ export default function BusinessTripDetailPage() {
                               onBlur={field.handleBlur}
                               onChange={(e) =>
                                 field.handleChange(
-                                  Number.parseFloat(e.target.value) || 0
+                                  Number.parseFloat(e.target.value) || 0,
                                 )
                               }
                               type="number"
@@ -289,7 +289,7 @@ export default function BusinessTripDetailPage() {
                               field.handleChange(
                                 e.target.value
                                   ? new Date(e.target.value)
-                                  : new Date()
+                                  : new Date(),
                               )
                             }
                             type="date"

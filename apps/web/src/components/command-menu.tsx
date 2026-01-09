@@ -47,7 +47,7 @@ function CommandMenuInner() {
         perform: () => router.push(item.href as Route),
         icon: <item.icon className="h-4 w-4" />,
         subtitle: item.description,
-      })
+      }),
     );
 
     const themeActions: Action[] = [

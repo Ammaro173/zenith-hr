@@ -10,7 +10,6 @@ import {
   FileVideoIcon,
 } from "lucide-react";
 import { Slot as SlotPrimitive } from "radix-ui";
-// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +72,7 @@ function createStore(
   files: Map<File, FileState>,
   urlCache: WeakMap<File, string>,
   invalid: boolean,
-  onValueChange?: (files: File[]) => void
+  onValueChange?: (files: File[]) => void,
 ) {
   let state: StoreState = {
     files,
@@ -94,7 +93,7 @@ function createStore(
 
         if (onValueChange) {
           const fileList = Array.from(files.values()).map(
-            (fileState) => fileState.file
+            (fileState) => fileState.file,
           );
           onValueChange(fileList);
         }
@@ -171,7 +170,7 @@ function createStore(
 
         if (onValueChange) {
           const fileList = Array.from(files.values()).map(
-            (fileState) => fileState.file
+            (fileState) => fileState.file,
           );
           onValueChange(fileList);
         }
@@ -229,7 +228,7 @@ function createStore(
 }
 
 const StoreContext = React.createContext<ReturnType<typeof createStore> | null>(
-  null
+  null,
 );
 
 function useStoreContext(consumerName: string) {
@@ -244,7 +243,7 @@ function useStore<T>(selector: (state: StoreState) => T): T {
   const store = useStoreContext("useStore");
 
   const lastValueRef = useLazyRef<{ value: T; state: StoreState } | null>(
-    () => null
+    () => null,
   );
 
   const getSnapshot = React.useCallback(() => {
@@ -275,7 +274,7 @@ type FileUploadContextValue = {
 };
 
 const FileUploadContext = React.createContext<FileUploadContextValue | null>(
-  null
+  null,
 );
 
 function useFileUploadContext(consumerName: string) {
@@ -301,7 +300,7 @@ interface FileUploadRootProps
       onProgress: (file: File, progress: number) => void;
       onSuccess: (file: File) => void;
       onError: (file: File, error: Error) => void;
-    }
+    },
   ) => Promise<void> | void;
   accept?: string;
   maxFiles?: number;
@@ -356,12 +355,12 @@ function FileUploadRoot(props: FileUploadRootProps) {
 
   const store = React.useMemo(
     () => createStore(listeners, files, urlCache, invalid, onValueChange),
-    [listeners, files, invalid, onValueChange, urlCache]
+    [listeners, files, invalid, onValueChange, urlCache],
   );
 
   const acceptTypes = React.useMemo(
     () => accept?.split(",").map((t) => t.trim()) ?? null,
-    [accept]
+    [accept],
   );
 
   const onProgress = useLazyRef(() => {
@@ -402,7 +401,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
         }
       }
     },
-    [files, urlCache]
+    [files, urlCache],
   );
 
   const onFilesUpload = React.useCallback(
@@ -443,7 +442,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
         }
       }
     },
-    [store, onUpload, onProgress]
+    [store, onUpload, onProgress],
   );
 
   const onFilesChange = React.useCallback(
@@ -508,7 +507,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
                 type === fileType ||
                 type === fileExtension ||
                 (type.includes("/*") &&
-                  fileType.startsWith(type.replace("/*", "/")))
+                  fileType.startsWith(type.replace("/*", "/"))),
             )
           ) {
             rejectionMessage = "File type not accepted";
@@ -544,7 +543,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
 
         if (isControlled && onValueChange) {
           const currentFiles = Array.from(store.getState().files.values()).map(
-            (f) => f.file
+            (f) => f.file,
           );
           onValueChange([...currentFiles]);
         }
@@ -578,7 +577,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
       acceptTypes,
       maxSize,
       disabled,
-    ]
+    ],
   );
 
   const onInputChange = React.useCallback(
@@ -587,7 +586,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
       onFilesChange(files);
       event.target.value = "";
     },
-    [onFilesChange]
+    [onFilesChange],
   );
 
   const contextValue = React.useMemo<FileUploadContextValue>(
@@ -601,7 +600,7 @@ function FileUploadRoot(props: FileUploadRootProps) {
       inputRef,
       urlCache,
     }),
-    [dropzoneId, inputId, listId, labelId, dir, disabled, urlCache]
+    [dropzoneId, inputId, listId, labelId, dir, disabled, urlCache],
   );
 
   const RootPrimitive = asChild ? SlotPrimitive.Slot : "div";
@@ -682,7 +681,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
         context.inputRef.current?.click();
       }
     },
-    [context.inputRef, onClickProp]
+    [context.inputRef, onClickProp],
   );
 
   const onDragOver = React.useCallback(
@@ -696,7 +695,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       event.preventDefault();
       store.dispatch({ type: "SET_DRAG_OVER", dragOver: true });
     },
-    [store, onDragOverProp]
+    [store, onDragOverProp],
   );
 
   const onDragEnter = React.useCallback(
@@ -710,7 +709,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       event.preventDefault();
       store.dispatch({ type: "SET_DRAG_OVER", dragOver: true });
     },
-    [store, onDragEnterProp]
+    [store, onDragEnterProp],
   );
 
   const onDragLeave = React.useCallback(
@@ -733,7 +732,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       event.preventDefault();
       store.dispatch({ type: "SET_DRAG_OVER", dragOver: false });
     },
-    [store, onDragLeaveProp]
+    [store, onDragLeaveProp],
   );
 
   const onDrop = React.useCallback(
@@ -761,7 +760,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       inputElement.files = dataTransfer.files;
       inputElement.dispatchEvent(new Event("change", { bubbles: true }));
     },
-    [store, context.inputRef, onDropProp]
+    [store, context.inputRef, onDropProp],
   );
 
   const onPaste = React.useCallback(
@@ -807,7 +806,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       inputElement.files = dataTransfer.files;
       inputElement.dispatchEvent(new Event("change", { bubbles: true }));
     },
-    [store, context.inputRef, onPasteProp]
+    [store, context.inputRef, onPasteProp],
   );
 
   const onKeyDown = React.useCallback(
@@ -822,7 +821,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
         context.inputRef.current?.click();
       }
     },
-    [context.inputRef, onKeyDownProp]
+    [context.inputRef, onKeyDownProp],
   );
 
   const DropzonePrimitive = asChild ? SlotPrimitive.Slot : "div";
@@ -843,7 +842,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       {...dropzoneProps}
       className={cn(
         "relative flex select-none flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-[disabled]:pointer-events-none data-[dragging]:border-primary/30 data-[invalid]:border-destructive data-[dragging]:bg-accent/30 data-[invalid]:ring-destructive/20",
-        className
+        className,
       )}
       onClick={onClick}
       onDragEnter={onDragEnter}
@@ -874,7 +873,7 @@ function FileUploadTrigger(props: FileUploadTriggerProps) {
 
       context.inputRef.current?.click();
     },
-    [context.inputRef, onClickProp]
+    [context.inputRef, onClickProp],
   );
 
   const TriggerPrimitive = asChild ? SlotPrimitive.Slot : "button";
@@ -930,7 +929,7 @@ function FileUploadList(props: FileUploadListProps) {
       className={cn(
         "data-[state=inactive]:fade-out-0 data-[state=active]:fade-in-0 data-[state=inactive]:slide-out-to-top-2 data-[state=active]:slide-in-from-top-2 flex flex-col gap-2 data-[state=active]:animate-in data-[state=inactive]:animate-out",
         orientation === "horizontal" && "flex-row overflow-x-auto p-1.5",
-        className
+        className,
       )}
     />
   );
@@ -987,7 +986,7 @@ function FileUploadItem(props: FileUploadItemProps) {
       statusId,
       messageId,
     }),
-    [id, fileState, statusId, nameId, sizeId, messageId]
+    [id, fileState, statusId, nameId, sizeId, messageId],
   );
 
   if (!fileState) {
@@ -1021,7 +1020,7 @@ function FileUploadItem(props: FileUploadItemProps) {
         {...itemProps}
         className={cn(
           "relative flex items-center gap-2.5 rounded-md border p-3",
-          className
+          className,
         )}
       >
         {props.children}
@@ -1126,7 +1125,7 @@ function FileUploadItemPreview(props: FileUploadItemPreviewProps) {
 
       return getFileIcon(file);
     },
-    [itemContext.fileState?.file.type, context.urlCache]
+    [itemContext.fileState?.file.type, context.urlCache],
   );
 
   const onPreviewRender = React.useCallback(
@@ -1137,7 +1136,7 @@ function FileUploadItemPreview(props: FileUploadItemPreviewProps) {
 
       return getDefaultRender(file);
     },
-    [render, getDefaultRender]
+    [render, getDefaultRender],
   );
 
   if (!itemContext.fileState) {
@@ -1153,7 +1152,7 @@ function FileUploadItemPreview(props: FileUploadItemPreviewProps) {
       {...previewProps}
       className={cn(
         "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border bg-accent/50 [&>svg]:size-10",
-        className
+        className,
       )}
     >
       {onPreviewRender(itemContext.fileState.file)}
@@ -1197,7 +1196,7 @@ function FileUploadItemMetadata(props: FileUploadItemMetadataProps) {
           <span
             className={cn(
               "truncate font-medium text-sm",
-              size === "sm" && "font-normal text-[13px] leading-snug"
+              size === "sm" && "font-normal text-[13px] leading-snug",
             )}
             id={itemContext.nameId}
           >
@@ -1206,7 +1205,7 @@ function FileUploadItemMetadata(props: FileUploadItemMetadataProps) {
           <span
             className={cn(
               "truncate text-muted-foreground text-xs",
-              size === "sm" && "text-[11px] leading-snug"
+              size === "sm" && "text-[11px] leading-snug",
             )}
             id={itemContext.sizeId}
           >
@@ -1274,7 +1273,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
           {...progressProps}
           className={cn(
             "-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2",
-            className
+            className,
           )}
         >
           <svg
@@ -1324,7 +1323,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
           {...progressProps}
           className={cn(
             "absolute inset-0 bg-primary/50 transition-[clip-path] duration-300 ease-linear",
-            className
+            className,
           )}
           style={{
             clipPath: `inset(${topInset}% 0% 0% 0%)`,
@@ -1346,7 +1345,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
           {...progressProps}
           className={cn(
             "relative h-1.5 w-full overflow-hidden rounded-full bg-primary/20",
-            className
+            className,
           )}
         >
           <div
@@ -1383,7 +1382,7 @@ function FileUploadItemDelete(props: FileUploadItemDeleteProps) {
         file: itemContext.fileState.file,
       });
     },
-    [store, itemContext.fileState, onClickProp]
+    [store, itemContext.fileState, onClickProp],
   );
 
   if (!itemContext.fileState) {
@@ -1434,7 +1433,7 @@ function FileUploadClear(props: FileUploadClearProps) {
 
       store.dispatch({ type: "CLEAR" });
     },
-    [store, onClickProp]
+    [store, onClickProp],
   );
 
   const shouldRender = forceMount || fileCount > 0;

@@ -19,7 +19,7 @@ interface SegmentedControlProps<Value extends string>
 }
 
 export function SegmentedControl<Value extends string>(
-  props: SegmentedControlProps<Value>
+  props: SegmentedControlProps<Value>,
 ) {
   const { value, onValueChange, options, className, ...rest } = props;
 
@@ -27,7 +27,7 @@ export function SegmentedControl<Value extends string>(
     <div
       className={cn(
         "inline-flex items-center gap-2 rounded-md bg-muted p-0.5 text-sm shadow-inner",
-        className
+        className,
       )}
       role="tablist"
       {...rest}
@@ -44,7 +44,7 @@ export function SegmentedControl<Value extends string>(
                 "relative rounded-md px-4 py-1.5 font-medium transition-colors",
                 isActive
                   ? "bg-background text-foreground shadow-sm hover:bg-background"
-                  : "text-muted-foreground hover:bg-muted-foreground/5 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted-foreground/5 hover:text-foreground",
               )}
               key={option.value}
               onClick={() => onValueChange?.(option.value)}

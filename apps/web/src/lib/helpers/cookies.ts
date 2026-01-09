@@ -1,6 +1,6 @@
 export const parseToDataType = <T>(
   value: string | undefined,
-  isItRetry = false
+  isItRetry = false,
 ): T | undefined => {
   try {
     return value === "undefined" || value === undefined
@@ -34,7 +34,7 @@ export const getCookie = <T>(name: string): T | undefined => {
 export const getCookies = <
   T extends Record<string, unknown> = Record<string, unknown>,
 >(
-  cookies: string[] = []
+  cookies: string[] = [],
 ): T => {
   if (cookies.length) {
     const result: Partial<T> = {};
@@ -48,7 +48,7 @@ export const getCookies = <
     document.cookie.split("; ").map((c) => {
       const [key, value] = c.split("=");
       return [key, parseToDataType<unknown>(value)];
-    })
+    }),
   ) as T;
 };
 

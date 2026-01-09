@@ -3,9 +3,7 @@
 import type { Table } from "@tanstack/react-table";
 import { Loader, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
-// biome-ignore lint/performance/noNamespaceImport: namespace import used for portals
 import * as ReactDom from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -66,7 +64,7 @@ function DataTableActionBar<TData>({
           aria-orientation="horizontal"
           className={cn(
             "fixed inset-x-0 bottom-6 z-50 mx-auto flex w-fit flex-wrap items-center justify-center gap-2 rounded-md border bg-background p-2 text-foreground shadow-sm",
-            className
+            className,
           )}
           exit={{ opacity: 0, y: 20 }}
           initial={{ opacity: 0, y: 20 }}
@@ -78,7 +76,7 @@ function DataTableActionBar<TData>({
         </motion.div>
       )}
     </AnimatePresence>,
-    container
+    container,
   );
 }
 
@@ -102,7 +100,7 @@ function DataTableActionBarAction({
       className={cn(
         "gap-1.5 border border-secondary bg-secondary/50 hover:bg-secondary/70 [&>svg]:size-3.5",
         size === "icon" ? "size-7" : "h-7",
-        className
+        className,
       )}
       disabled={disabled || isPending}
       size={size}

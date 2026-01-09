@@ -11,7 +11,7 @@ const aiRequestSchema = z.object({
     z.object({
       role: z.enum(["user", "assistant", "system"]),
       content: z.string(),
-    })
+    }),
   ),
   model: z.string().optional().default("gemini-2.5-flash"),
 });
@@ -36,7 +36,7 @@ export async function aiRouteHandler(context: Context) {
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -63,7 +63,7 @@ export async function aiRouteHandler(context: Context) {
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   }
 }

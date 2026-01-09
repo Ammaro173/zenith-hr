@@ -52,7 +52,7 @@ export function ManpowerRequestForm({
   const createMutation = useMutation({
     mutationFn: (data: FormValues) =>
       client.requests.create(
-        data as Parameters<typeof client.requests.create>[0]
+        data as Parameters<typeof client.requests.create>[0],
       ),
     onSuccess: () => {
       toast.success("Manpower request submitted successfully");
@@ -94,7 +94,7 @@ export function ManpowerRequestForm({
     <form
       className={cn(
         "space-y-8",
-        mode === "sheet" ? "px-1" : "mx-auto max-w-3xl"
+        mode === "sheet" ? "px-1" : "mx-auto max-w-3xl",
       )}
       onSubmit={(e) => {
         e.preventDefault();
@@ -167,7 +167,7 @@ export function ManpowerRequestForm({
                       "relative flex cursor-pointer flex-col items-start gap-2 rounded-lg border p-4 font-normal transition-colors",
                       field.state.value === "NEW_POSITION"
                         ? "border-primary bg-primary/5"
-                        : "hover:bg-muted"
+                        : "hover:bg-muted",
                     )}
                     htmlFor="new-pos"
                   >
@@ -185,7 +185,7 @@ export function ManpowerRequestForm({
                       "relative flex cursor-pointer flex-col items-start gap-2 rounded-lg border p-4 font-normal transition-colors",
                       field.state.value === "REPLACEMENT"
                         ? "border-primary bg-primary/5"
-                        : "hover:bg-muted"
+                        : "hover:bg-muted",
                     )}
                     htmlFor="replacement"
                   >
@@ -271,7 +271,7 @@ export function ManpowerRequestForm({
                   <Select
                     onValueChange={(val) =>
                       field.handleChange(
-                        val as "FULL_TIME" | "TEMPORARY" | "CONSULTANT"
+                        val as "FULL_TIME" | "TEMPORARY" | "CONSULTANT",
                       )
                     }
                     value={field.state.value}
@@ -454,7 +454,7 @@ function UserSearchCombobox({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === user.id ? "opacity-100" : "opacity-0"
+                      value === user.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                   <div className="flex flex-col">

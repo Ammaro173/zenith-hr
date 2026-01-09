@@ -83,7 +83,7 @@ function DataGridColumnHeader<TData, TValue>({
     <div
       className={cn(
         "inline-flex h-full items-center gap-1.5 font-normal text-[0.8125rem] text-secondary-foreground/80 leading-[calc(1.125/0.8125)] [&_svg]:size-3.5 [&_svg]:opacity-60",
-        className
+        className,
       )}
     >
       {icon && icon}
@@ -95,7 +95,7 @@ function DataGridColumnHeader<TData, TValue>({
     <Button
       className={cn(
         "-ms-2 h-7 rounded-md px-2 font-normal text-secondary-foreground/80 hover:bg-secondary hover:text-foreground data-[state=open]:bg-secondary data-[state=open]:text-foreground",
-        className
+        className,
       )}
       disabled={isLoading || recordCount === 0}
       onClick={() => {
@@ -259,7 +259,7 @@ function DataGridColumnHeader<TData, TValue>({
                     .filter(
                       (col) =>
                         typeof col.accessorFn !== "undefined" &&
-                        col.getCanHide()
+                        col.getCanHide(),
                     )
                     .map((col) => (
                       <DropdownMenuCheckboxItem

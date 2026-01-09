@@ -2,7 +2,6 @@
 
 import type { Column } from "@tanstack/react-table";
 import { PlusCircle, XCircle } from "lucide-react";
-// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,7 @@ function parseValuesAsNumbers(value: unknown): RangeValue | undefined {
     value.length === 2 &&
     value.every(
       (v) =>
-        (typeof v === "string" || typeof v === "number") && !Number.isNaN(v)
+        (typeof v === "string" || typeof v === "number") && !Number.isNaN(v),
     )
   ) {
     return [Number(value[0]), Number(value[1])];
@@ -84,28 +83,26 @@ export function DataTableSliderFilter<TData>({
     }
 
     const rangeSize = maxValue - minValue;
-    const step = (() => {
-      if (rangeSize <= 20) {
-        return 1;
-      }
-      if (rangeSize <= 100) {
-        return Math.ceil(rangeSize / 20);
-      }
-      return Math.ceil(rangeSize / 50);
-    })();
+    let step = 1;
+
+    if (rangeSize > 100) {
+      step = Math.ceil(rangeSize / 50);
+    } else if (rangeSize > 20) {
+      step = Math.ceil(rangeSize / 20);
+    }
 
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
 
   const range = React.useMemo(
     (): RangeValue => columnFilterValue ?? [min, max],
-    [columnFilterValue, min, max]
+    [columnFilterValue, min, max],
   );
 
   const formatValue = React.useCallback(
     (value: number) =>
       value.toLocaleString(undefined, { maximumFractionDigits: 0 }),
-    []
+    [],
   );
 
   const onFromInputChange = React.useCallback(
@@ -115,7 +112,7 @@ export function DataTableSliderFilter<TData>({
         column.setFilterValue([numValue, range[1]]);
       }
     },
-    [column, min, range]
+    [column, min, range],
   );
 
   const onToInputChange = React.useCallback(
@@ -125,7 +122,7 @@ export function DataTableSliderFilter<TData>({
         column.setFilterValue([range[0], numValue]);
       }
     },
-    [column, max, range]
+    [column, max, range],
   );
 
   const onSliderValueChange = React.useCallback(
@@ -134,7 +131,7 @@ export function DataTableSliderFilter<TData>({
         column.setFilterValue(value);
       }
     },
-    [column]
+    [column],
   );
 
   const onReset = React.useCallback(
@@ -144,16 +141,18 @@ export function DataTableSliderFilter<TData>({
       }
       column.setFilterValue(undefined);
     },
-    [column]
+    [column],
   );
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button className="border-dashed" size="sm" variant="outline">
+        <Button
+          className="border-dashed font-normal"
+          size="sm"
+          variant="outline"
+        >
           {columnFilterValue ? (
-            // biome-ignore lint/a11y/useKeyWithClickEvents: //TODO
-            // biome-ignore lint/a11y/useSemanticElements: //TODO
             <div
               aria-label={`Clear ${title} filter`}
               className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

@@ -11,7 +11,7 @@ export default function PerformanceCyclePage() {
   const params = useParams<{ id: string }>();
 
   const { data: cycle, isLoading } = useQuery(
-    orpc.performance.getCycle.queryOptions({ input: { id: params.id } })
+    orpc.performance.getCycle.queryOptions({ input: { id: params.id } }),
   );
 
   if (isLoading) {

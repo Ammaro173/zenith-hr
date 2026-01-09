@@ -159,7 +159,7 @@ export function PasswordInputStrengthChecker() {
             <div
               className={cn(
                 "h-1 flex-1 rounded-full",
-                strengthResult.score > i ? color : "bg-secondary"
+                strengthResult.score > i ? color : "bg-secondary",
               )}
               key={i}
             />
@@ -188,7 +188,7 @@ const usePasswordInput = () => {
   const context = useContext(PasswordInputContext);
   if (context === null) {
     throw new Error(
-      "usePasswordInput must be used within a PasswordInputContext"
+      "usePasswordInput must be used within a PasswordInputContext",
     );
   }
   return context;

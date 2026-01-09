@@ -45,7 +45,7 @@ function ScrollBar({
           "h-full w-2 border-l border-l-transparent p-px",
         orientation === "horizontal" &&
           "h-2 flex-col border-t border-t-transparent p-px",
-        className
+        className,
       )}
       data-slot="scroll-area-scrollbar"
       orientation={orientation}

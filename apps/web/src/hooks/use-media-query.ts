@@ -1,4 +1,3 @@
-// biome-ignore lint/performance/noNamespaceImport: namespace import used throughout
 import * as React from "react";
 
 export function useMediaQuery(query: string) {

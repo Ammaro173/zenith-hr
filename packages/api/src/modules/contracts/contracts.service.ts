@@ -18,7 +18,7 @@ type UpdateContractInput = z.infer<typeof updateContractSchema>;
 export const createContractsService = (
   db: typeof _db,
   storage: StorageService,
-  pdf: PdfService
+  pdf: PdfService,
 ) => {
   return {
     async generate(input: GenerateContractInput) {
@@ -166,7 +166,7 @@ export const createContractsService = (
 
       const key = contractRecord.pdfS3Url.replace(
         "s3://zenith-hr-contracts/",
-        ""
+        "",
       );
 
       const presignedUrl = await storage.getPresignedUrl(key);

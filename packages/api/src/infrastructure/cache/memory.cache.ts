@@ -89,7 +89,7 @@ export class MemoryCache implements CacheService {
   }
 
   setMany<T>(
-    entries: Array<{ key: string; value: T; ttlSeconds: number }>
+    entries: Array<{ key: string; value: T; ttlSeconds: number }>,
   ): Promise<void> {
     for (const entry of entries) {
       this.cache.set(entry.key, {

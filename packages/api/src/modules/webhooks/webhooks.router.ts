@@ -10,7 +10,7 @@ export const webhooksRouter = {
           envelopeId: z.string(),
           status: z.string(),
         }),
-      })
+      }),
     )
     .handler(async ({ input, context }) => {
       // Mock DocuSign webhook handler
@@ -21,7 +21,7 @@ export const webhooksRouter = {
 
       return await context.services.webhooks.handleDocuSignEvent(
         envelopeId,
-        status
+        status,
       );
     }),
 };

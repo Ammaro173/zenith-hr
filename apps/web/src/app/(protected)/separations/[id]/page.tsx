@@ -27,7 +27,7 @@ export default function SeparationDetailPage() {
   const { data: separation, isLoading } = useQuery(
     orpc.separations.get.queryOptions({
       input: { separationId: params.id },
-    })
+    }),
   );
 
   const startClearance = useMutation(
@@ -37,7 +37,7 @@ export default function SeparationDetailPage() {
         queryClient.invalidateQueries();
       },
       onError: (err) => toast.error(err.message),
-    })
+    }),
   );
 
   const updateChecklist = useMutation(
@@ -47,7 +47,7 @@ export default function SeparationDetailPage() {
         queryClient.invalidateQueries();
       },
       onError: (err) => toast.error(err.message),
-    })
+    }),
   );
 
   if (isLoading) {
@@ -64,7 +64,7 @@ export default function SeparationDetailPage() {
       acc[item.department].push(item);
       return acc;
     },
-    {}
+    {},
   );
 
   const canStart =

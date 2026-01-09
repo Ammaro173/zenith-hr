@@ -100,7 +100,7 @@ function DataGridTableDndRows<TData>({
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
     useSensor(TouchSensor, {}),
-    useSensor(KeyboardSensor, {})
+    useSensor(KeyboardSensor, {}),
   );
 
   return (
@@ -127,7 +127,7 @@ function DataGridTableDndRows<TData>({
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                         {props.tableLayout?.columnsResizable &&
                           column.getCanResize() && (
@@ -163,7 +163,7 @@ function DataGridTableDndRows<TData>({
                         </DataGridTableBodyRowSkeletonCell>
                       ))}
                     </DataGridTableBodyRowSkeleton>
-                  )
+                  ),
                 );
               }
 

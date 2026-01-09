@@ -19,8 +19,8 @@ export const createUsersService = (db: typeof _db) => ({
         or(
           ilike(user.name, `%${query}%`),
           ilike(user.email, `%${query}%`),
-          ilike(user.sapNo, `%${query}%`)
-        )
+          ilike(user.sapNo, `%${query}%`),
+        ),
       )
       .limit(limit);
   },
