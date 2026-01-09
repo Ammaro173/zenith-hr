@@ -10,6 +10,7 @@ import { authHandler } from "./routes/auth.route";
 import { openApiRouteHandler } from "./routes/openapi.route";
 import { rpcRouteHandler } from "./routes/rpc.route";
 import { docuSignWebhookHandler } from "./routes/webhooks.route";
+
 /**
  * Zenith HR API Server
  *
@@ -33,7 +34,7 @@ export const app = new Elysia()
   }))
 
   // Auth routes
-  .all("/api/auth/*", authHandler)
+  .group("/api/auth", (app) => app.all("/*", authHandler))
 
   // RPC API routes
   .all("/rpc*", rpcRouteHandler)
@@ -48,6 +49,6 @@ export const app = new Elysia()
   .post("/api/webhooks/docusign", docuSignWebhookHandler)
 
   // Start server
-  .listen(env.PORT, () => {
+  .listen({ port: env.PORT, hostname: "0.0.0.0" }, () => {
     console.log(`Server is running on http://localhost:${env.PORT}`);
   });

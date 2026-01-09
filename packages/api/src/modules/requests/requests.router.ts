@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure, requireRoles } from "../../shared/middleware";
+import { protectedProcedure } from "../../shared/middleware";
 import {
   createRequestSchema,
   transitionSchema,
@@ -15,7 +15,7 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 export const requestsRouter = {
-  create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
+  create: protectedProcedure
     .input(createRequestSchema)
     .handler(async ({ input, context }) => {
       const newRequest = await context.services.requests.create(
@@ -45,17 +45,11 @@ export const requestsRouter = {
     context.services.requests.getByRequester(context.session.user.id)
   ),
 
-  getPendingApprovals: requireRoles([
-    "MANAGER",
-    "HR",
-    "FINANCE",
-    "CEO",
-    "ADMIN",
-  ]).handler(async ({ context }) =>
+  getPendingApprovals: protectedProcedure.handler(async ({ context }) =>
     context.services.requests.getPendingApprovals(context.session.user.id)
   ),
 
-  update: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
+  update: protectedProcedure
     .input(
       z.object({
         id: z.string().uuid(),
@@ -104,14 +98,7 @@ export const requestsRouter = {
       context.services.requests.getRequestVersions(input.id)
     ),
 
-  transition: requireRoles([
-    "REQUESTER",
-    "MANAGER",
-    "HR",
-    "FINANCE",
-    "CEO",
-    "ADMIN",
-  ])
+  transition: protectedProcedure
     .input(transitionSchema)
     .handler(async ({ input, context }) => {
       try {

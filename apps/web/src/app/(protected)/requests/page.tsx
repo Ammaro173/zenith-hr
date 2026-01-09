@@ -1,63 +1,77 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import { DataTable } from "@/components/data-table/data-table";
+import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { Button } from "@/components/ui/button";
+import { useDataTable } from "@/hooks/use-data-table";
 import { orpc } from "@/utils/orpc";
-
-function getStatusBadgeClass(status: string): string {
-  if (status === "APPROVED_OPEN") {
-    return "bg-green-100 text-green-800";
-  }
-  if (status === "REJECTED") {
-    return "bg-red-100 text-red-800";
-  }
-  return "bg-yellow-100 text-yellow-800";
-}
+import { columns } from "./columns";
 
 export default function RequestsPage() {
   const { data: requests, isLoading } = useQuery(
     orpc.requests.getMyRequests.queryOptions()
   );
 
+  const { table } = useDataTable({
+    data: requests ?? [],
+    columns,
+    pageCount: requests ? Math.ceil(requests.length / 10) : 0,
+    manualPagination: false,
+    manualSorting: false,
+    manualFiltering: false,
+    initialState: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: 10,
+      },
+      sorting: [{ id: "createdAt", desc: true }],
+    },
+  });
+
   if (isLoading) {
-    return <div className="container mx-auto px-4 py-8">Loading...</div>;
+    return (
+      <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-8 p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <div className="h-10 w-64 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
+            <div className="h-4 w-96 animate-pulse rounded-md bg-zinc-100 dark:bg-zinc-800" />
+          </div>
+        </div>
+        <DataTableSkeleton columnCount={6} rowCount={10} />
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-bold text-2xl">My Requests</h1>
-        <Link
-          className="rounded bg-blue-500 px-4 py-2 text-primary hover:bg-blue-600"
-          href="/requests/new"
+    <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-8 p-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="font-bold text-3xl text-black tracking-tight dark:text-white">
+            Manpower Requests
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Manage and track your recruitment requests in one place.
+          </p>
+        </div>
+        <Button
+          asChild
+          className="bg-black text-white shadow-xs hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
         >
-          New Request
-        </Link>
+          <Link className="gap-2" href="/requests/new" prefetch={false}>
+            <Plus className="size-4" />
+            New Request
+          </Link>
+        </Button>
       </div>
+
       <div className="space-y-4">
-        {requests?.map((request) => (
-          <div className="rounded border p-4" key={request.id}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">{request.requestCode}</h3>
-                <p className="text-muted-foreground text-sm">
-                  {(request.positionDetails as { title: string }).title} •{" "}
-                  {request.requestType?.toLowerCase()?.replace("_", " ")}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {request.isBudgeted ? "Budgeted" : "Unbudgeted"}
-                </p>
-              </div>
-              <span
-                className={`rounded px-2 py-1 text-xs ${getStatusBadgeClass(
-                  request.status
-                )}`}
-              >
-                {request.status}
-              </span>
-            </div>
-          </div>
-        ))}
+        <DataTable table={table}>
+          <DataTableToolbar table={table} />
+        </DataTable>
       </div>
     </div>
   );

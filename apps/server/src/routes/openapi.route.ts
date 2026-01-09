@@ -2,7 +2,7 @@ import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { onError } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import { appRouter, createContext } from "@zenith-hr/api";
+import { appRouter, createContext } from "@zenith-hr/api/server";
 import type { Context } from "elysia";
 
 /**

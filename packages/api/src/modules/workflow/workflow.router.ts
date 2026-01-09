@@ -9,6 +9,7 @@ export const workflowRouter = {
     "HR",
     "FINANCE",
     "CEO",
+    "IT",
     "ADMIN",
   ])
     .input(transitionSchema)

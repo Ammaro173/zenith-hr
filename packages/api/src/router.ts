@@ -7,6 +7,7 @@ import { importsRouter } from "./modules/imports";
 import { performanceRouter } from "./modules/performance";
 import { requestsRouter } from "./modules/requests";
 import { separationsRouter } from "./modules/separations";
+import { usersRouter } from "./modules/users";
 import { webhooksRouter } from "./modules/webhooks";
 import { workflowRouter } from "./modules/workflow";
 import { o, protectedProcedure, publicProcedure } from "./shared/middleware";
@@ -27,6 +28,7 @@ export const appRouter = o.router({
   businessTrips: businessTripsRouter,
   performance: performanceRouter,
   separations: separationsRouter,
+  users: usersRouter,
 });
 
 export type AppRouter = typeof appRouter;

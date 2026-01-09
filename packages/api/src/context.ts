@@ -19,6 +19,7 @@ import { createImportsService } from "./modules/imports";
 import { createPerformanceService } from "./modules/performance";
 import { createRequestsService } from "./modules/requests";
 import { createSeparationsService } from "./modules/separations";
+import { createUsersService } from "./modules/users";
 import { createWebhooksService } from "./modules/webhooks";
 import { createWorkflowService } from "./modules/workflow";
 
@@ -57,6 +58,7 @@ export async function createContext({ context }: CreateContextOptions) {
     performance: createPerformanceService(db),
     separations: createSeparationsService(db),
     imports: createImportsService(db),
+    users: createUsersService(db),
     webhooks: createWebhooksService(db),
   };
 

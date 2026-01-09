@@ -13,7 +13,14 @@ const parsedOrigins = env.CORS_ORIGIN.split(",")
 export const corsPlugin = cors({
   origin: parsedOrigins.length > 1 ? parsedOrigins : parsedOrigins[0],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    // "Accept",
+    // "Origin",
+    // "X-Requested-With",
+    // "x-orpc-path",
+  ],
   credentials: true,
   maxAge: 86_400, // 24 hours
 });

@@ -5,11 +5,16 @@ const positionDetailsSchema = z.object({
   title: z.string().min(1),
   department: z.string().min(1),
   description: z.string().optional(),
+  location: z.string().optional().default("Doha, Qatar"),
+  startDate: z.string().optional(),
+  reportingTo: z.string().optional(),
 });
 
 const budgetDetailsSchema = z.object({
-  currency: z.string().min(1).default("USD"),
+  currency: z.string().min(1).default("QAR"),
   notes: z.string().optional(),
+  costCenter: z.string().optional(),
+  budgetCode: z.string().optional(),
 });
 
 export const createRequestSchema = z

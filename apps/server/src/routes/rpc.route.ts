@@ -1,6 +1,6 @@
 import { onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import { appRouter, createContext } from "@zenith-hr/api";
+import { appRouter, createContext } from "@zenith-hr/api/server";
 import type { Context } from "elysia";
 
 /**
