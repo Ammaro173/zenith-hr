@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/noNestedTernary: //TODO */
 import {
   closestCenter,
   DndContext,

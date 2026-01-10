@@ -1,4 +1,4 @@
-// refresh
+/** biome-ignore-all lint/style/noNestedTernary: //TODO */
 import {
   type Cell,
   type Column,
@@ -304,7 +304,7 @@ function DataGridTableBodyRow<TData>({
           ? "selected"
           : undefined
       }
-      onClick={() => props.onRowClick && props.onRowClick(row.original)}
+      onClick={() => props.onRowClick?.(row.original)}
       ref={dndRef}
       style={{ ...(dndStyle ? dndStyle : null) }}
     >

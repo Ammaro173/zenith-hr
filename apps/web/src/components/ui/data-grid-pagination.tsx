@@ -12,7 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-interface DataGridPaginationProps {
+type DataGridPaginationProps = {
   sizes?: number[];
   sizesInfo?: string;
   sizesLabel?: string;
@@ -27,7 +27,7 @@ interface DataGridPaginationProps {
   previousPageLabel?: string;
   nextPageLabel?: string;
   ellipsisText?: string;
-}
+};
 
 function DataGridPagination(props: DataGridPaginationProps) {
   const { table, recordCount, isLoading } = useDataGrid();
@@ -50,7 +50,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
   const mergedProps: DataGridPaginationProps = { ...defaultProps, ...props };
 
   const btnBaseClasses = "size-7 p-0 text-sm";
-  const btnArrowClasses = btnBaseClasses + " rtl:transform rtl:rotate-180";
+  const btnArrowClasses = `${btnBaseClasses} rtl:transform rtl:rotate-180`;
   const pageIndex = table.getState().pagination.pageIndex;
   const pageSize = table.getState().pagination.pageSize;
   const from = pageIndex * pageSize + 1;
@@ -78,6 +78,7 @@ function DataGridPagination(props: DataGridPaginationProps) {
 
   // Render page buttons based on the current group
   const renderPageButtons = () => {
+    // biome-ignore lint/suspicious/noEvolvingTypes: Used for the buttons array
     const buttons = [];
     for (let i = currentGroupStart; i < currentGroupEnd; i++) {
       buttons.push(
