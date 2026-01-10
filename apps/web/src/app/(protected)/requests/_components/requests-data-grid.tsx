@@ -44,7 +44,7 @@ export function RequestsDataGrid() {
         headerSticky: true,
         width: "fixed",
         columnsResizable: true,
-        columnsPinnable: true,
+        columnsPinnable: false,
         columnsVisibility: true,
       }}
     >
