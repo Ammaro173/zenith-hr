@@ -20,7 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-interface DataGridColumnFilterProps<TData, TValue> {
+type DataGridColumnFilterProps<TData, TValue> = {
   column?: Column<TData, TValue>;
   title?: string;
   options: {
@@ -28,7 +28,7 @@ interface DataGridColumnFilterProps<TData, TValue> {
     value: string;
     icon?: React.ComponentType<{ className?: string }>;
   }[];
-}
+};
 
 function DataGridColumnFilter<TData, TValue>({
   column,

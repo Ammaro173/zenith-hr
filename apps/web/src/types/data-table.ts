@@ -5,11 +5,13 @@ import type { FilterItemSchema } from "@/lib/parsers";
 
 declare module "@tanstack/react-table" {
   // biome-ignore lint/style/useConsistentTypeDefinitions: TData is used in the TableMeta interface
+  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     queryKeys?: QueryKeys;
   }
 
   // biome-ignore lint/style/useConsistentTypeDefinitions: TData and TValue are used in the ColumnMeta interface
+  // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
     placeholder?: string;

@@ -1,3 +1,6 @@
+/** biome-ignore-all lint/style/useConsistentTypeDefinitions: TData and TValue are used in the ColumnMeta interface */
+/** biome-ignore-all lint/suspicious/noExplicitAny: Used for the DataGridContextProps type */
+/** biome-ignore-all lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface */
 "use client";
 
 import type {

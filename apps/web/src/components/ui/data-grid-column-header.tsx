@@ -39,6 +39,16 @@ interface DataGridColumnHeaderProps<TData, TValue>
   visibility?: boolean;
 }
 
+function getSortIcon(sortDirection: false | "asc" | "desc") {
+  if (sortDirection === "desc") {
+    return <ArrowDown className="mt-px size-[0.7rem]!" />;
+  }
+  if (sortDirection === "asc") {
+    return <ArrowUp className="mt-px size-[0.7rem]!" />;
+  }
+  return <ChevronsUpDown className="mt-px size-[0.7rem]!" />;
+}
+
 function DataGridColumnHeader<TData, TValue>({
   column,
   title = "",
@@ -113,14 +123,7 @@ function DataGridColumnHeader<TData, TValue>({
       {icon && icon}
       {title}
 
-      {column.getCanSort() &&
-        (column.getIsSorted() === "desc" ? (
-          <ArrowDown className="mt-px size-[0.7rem]!" />
-        ) : column.getIsSorted() === "asc" ? (
-          <ArrowUp className="mt-px size-[0.7rem]!" />
-        ) : (
-          <ChevronsUpDown className="mt-px size-[0.7rem]!" />
-        ))}
+      {column.getCanSort() && getSortIcon(column.getIsSorted())}
     </Button>
   );
 
