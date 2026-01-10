@@ -4,11 +4,12 @@ import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user, type userRoleEnum } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { notifyUser } from "../../shared/notify";
 import type {
   createRequestSchema,
+  GetMyRequestsInput,
   updateRequestSchema,
 } from "./requests.schema";
 
@@ -86,13 +87,67 @@ export const createRequestsService = (db: typeof _db) => {
     },
 
     /**
-     * Get requests for a specific user
+     * Get requests for a specific user with filtering, search and pagination
      */
-    async getByRequester(requesterId: string) {
-      return await db
-        .select()
-        .from(manpowerRequest)
-        .where(eq(manpowerRequest.requesterId, requesterId));
+    async getByRequester(requesterId: string, params: GetMyRequestsInput) {
+      const { page, pageSize, search, status, requestType, sortBy, sortOrder } =
+        params;
+
+      const conditions = [eq(manpowerRequest.requesterId, requesterId)];
+
+      // Status filter
+      if (status?.length) {
+        conditions.push(inArray(manpowerRequest.status, status));
+      }
+
+      // Type filter
+      if (requestType?.length) {
+        conditions.push(inArray(manpowerRequest.requestType, requestType));
+      }
+
+      // Search (requestCode, positionDetails->title, positionDetails->department)
+      if (search) {
+        conditions.push(
+          sql`(${manpowerRequest.requestCode} ILIKE ${`%${search}%`} OR 
+              ${manpowerRequest.positionDetails}->>'title' ILIKE ${`%${search}%`} OR 
+              ${manpowerRequest.positionDetails}->>'department' ILIKE ${`%${search}%`})`,
+        );
+      }
+
+      const offset = (page - 1) * pageSize;
+
+      // Determine sort column or expression
+      const orderFn = sortOrder === "desc" ? desc : asc;
+      const orderBy =
+        sortBy === "title" || sortBy === "department"
+          ? orderFn(sql`${manpowerRequest.positionDetails}->>${sortBy}`)
+          : orderFn(
+              manpowerRequest[sortBy as keyof typeof manpowerRequest._.columns],
+            );
+
+      const [data, totalResult] = await Promise.all([
+        db
+          .select()
+          .from(manpowerRequest)
+          .where(and(...conditions))
+          .orderBy(orderBy)
+          .limit(pageSize)
+          .offset(offset),
+        db
+          .select({ count: count() })
+          .from(manpowerRequest)
+          .where(and(...conditions)),
+      ]);
+
+      const total = totalResult[0]?.count ?? 0;
+
+      return {
+        data,
+        total,
+        page,
+        pageSize,
+        pageCount: Math.ceil(total / pageSize),
+      };
     },
 
     /**

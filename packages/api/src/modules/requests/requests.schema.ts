@@ -45,6 +45,41 @@ export const createRequestSchema = z
 
 export const updateRequestSchema = createRequestSchema.partial();
 
+export const getMyRequestsSchema = z.object({
+  page: z.number().min(1).default(1),
+  pageSize: z.number().min(1).max(100).default(10),
+  search: z.string().optional(),
+  status: z
+    .array(
+      z.enum([
+        "DRAFT",
+        "PENDING_MANAGER",
+        "PENDING_HR",
+        "PENDING_FINANCE",
+        "PENDING_CEO",
+        "APPROVED_OPEN",
+        "HIRING_IN_PROGRESS",
+        "REJECTED",
+        "ARCHIVED",
+      ]),
+    )
+    .optional(),
+  requestType: z.array(z.enum(["NEW_POSITION", "REPLACEMENT"])).optional(),
+  sortBy: z
+    .enum([
+      "createdAt",
+      "requestCode",
+      "status",
+      "title",
+      "department",
+      "requestType",
+    ])
+    .default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export type GetMyRequestsInput = z.infer<typeof getMyRequestsSchema>;
+
 // Transition schema
 export const transitionSchema = z.object({
   requestId: z.string().uuid(),

@@ -116,7 +116,6 @@ function DataGridColumnHeader<TData, TValue>({
       {column.getCanSort() &&
         (column.getIsSorted() === "desc" ? (
           <ArrowDown className="mt-px size-[0.7rem]!" />
-          // biome-ignore lint/style/noNestedTernary: //TODO
         ) : column.getIsSorted() === "asc" ? (
           <ArrowUp className="mt-px size-[0.7rem]!" />
         ) : (
@@ -129,9 +128,9 @@ function DataGridColumnHeader<TData, TValue>({
     <Button
       aria-label={`Unpin ${title} column`}
       className="-me-1 size-7 rounded-md"
-      // mode="icon"
+      mode="icon"
       onClick={() => column.pin(false)}
-      size="icon"
+      size="sm"
       title={`Unpin ${title} column`}
       variant="ghost"
     >

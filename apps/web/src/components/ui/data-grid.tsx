@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 import type { FilterVariant } from "@/types/data-table";
 
 declare module "@tanstack/react-table" {
-  // biome-ignore lint/correctness/noUnusedVariables: Required for module augmentation
-  // biome-ignore lint/style/useConsistentTypeDefinitions: //TODO
   interface ColumnMeta<TData extends RowData, TValue> {
     headerTitle?: string;
     headerClassName?: string;
@@ -40,12 +38,12 @@ export type DataGridApiResponse<T> = {
   };
 };
 
-export type DataGridContextProps<TData extends object> = {
+export interface DataGridContextProps<TData extends object> {
   props: DataGridProps<TData>;
   table: Table<TData>;
   recordCount: number;
   isLoading: boolean;
-};
+}
 
 export type DataGridRequestParams = {
   pageIndex: number;
@@ -54,7 +52,7 @@ export type DataGridRequestParams = {
   columnFilters?: ColumnFiltersState;
 };
 
-export type DataGridProps<TData extends object> = {
+export interface DataGridProps<TData extends object> {
   className?: string;
   table?: Table<TData>;
   recordCount: number;
@@ -91,9 +89,8 @@ export type DataGridProps<TData extends object> = {
     footer?: string;
     edgeCell?: string;
   };
-};
+}
 
-// biome-ignore lint/suspicious/noExplicitAny: //TODO
 const DataGridContext = createContext<DataGridContextProps<any> | undefined>(
   undefined,
 );
@@ -174,7 +171,6 @@ function DataGrid<TData extends object>({
     },
   };
 
-  // Ensure table is provided
   if (!table) {
     throw new Error('DataGrid requires a "table" prop');
   }

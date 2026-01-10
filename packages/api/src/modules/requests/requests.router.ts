@@ -3,6 +3,7 @@ import { z } from "zod";
 import { protectedProcedure } from "../../shared/middleware";
 import {
   createRequestSchema,
+  getMyRequestsSchema,
   transitionSchema,
   updateRequestSchema,
 } from "./requests.schema";
@@ -41,9 +42,11 @@ export const requestsRouter = {
       return request;
     }),
 
-  getMyRequests: protectedProcedure.handler(async ({ context }) =>
-    context.services.requests.getByRequester(context.session.user.id),
-  ),
+  getMyRequests: protectedProcedure
+    .input(getMyRequestsSchema)
+    .handler(async ({ input, context }) =>
+      context.services.requests.getByRequester(context.session.user.id, input),
+    ),
 
   getPendingApprovals: protectedProcedure.handler(async ({ context }) =>
     context.services.requests.getPendingApprovals(context.session.user.id),
