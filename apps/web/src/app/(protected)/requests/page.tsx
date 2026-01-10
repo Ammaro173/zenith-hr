@@ -1,20 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  createColumnHelper,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  type PaginationState,
-  type SortingState,
-  useReactTable,
-} from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Eye, FunnelX, MoreHorizontal, Plus, Settings2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs";
+import { useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
@@ -38,10 +31,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDataTable } from "@/hooks/use-data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { orpc } from "@/utils/orpc";
 
-interface ManpowerRequest {
+type ManpowerRequest = {
   id: string;
   requestCode: string;
   requestType: "NEW_POSITION" | "REPLACEMENT";
@@ -54,7 +48,7 @@ interface ManpowerRequest {
     location?: string;
   };
   budgetDetails: unknown;
-}
+};
 
 const statusVariants: Record<
   string,
@@ -90,67 +84,48 @@ const typeOptions = [
   { label: "Replacement", value: "REPLACEMENT" },
 ];
 
+const columnHelper = createColumnHelper<ManpowerRequest>();
+
 export default function RequestsPage() {
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
+  // URL-synced search state
+  const [globalFilter, setGlobalFilter] = useQueryState("q", {
+    defaultValue: "",
+    shallow: false,
   });
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "createdAt", desc: true },
-  ]);
-  const [filters, setFilters] = useState<Filter[]>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
+
+  // URL-synced filter states
+  const [statusFilter, setStatusFilter] = useQueryState(
+    "status",
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
+  const [requestTypeFilter, setRequestTypeFilter] = useQueryState(
+    "type",
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
 
   const debouncedSearch = useDebouncedValue(globalFilter, 300);
 
-  // Extract filter values for the API call
-  const statusFilter = useMemo(() => {
-    const filter = filters.find((f) => f.field === "status");
-    return filter?.values && filter.values.length > 0
-      ? filter.values
-      : undefined;
-  }, [filters]);
-
-  const requestTypeFilter = useMemo(() => {
-    const filter = filters.find((f) => f.field === "requestType");
-    return filter?.values && filter.values.length > 0
-      ? (filter.values as ("NEW_POSITION" | "REPLACEMENT")[])
-      : undefined;
-  }, [filters]);
-
-  // Build input object with stable reference
-  const queryInput = useMemo(
-    () => ({
-      page: pagination.pageIndex + 1,
-      pageSize: pagination.pageSize,
-      search: debouncedSearch || undefined,
-      status: statusFilter as any,
-      requestType: requestTypeFilter as any,
-      sortBy: (sorting[0]?.id as any) || "createdAt",
-      sortOrder: (sorting[0]?.desc ? "desc" : "asc") as "desc" | "asc",
-    }),
-    [
-      pagination.pageIndex,
-      pagination.pageSize,
-      debouncedSearch,
-      statusFilter,
-      requestTypeFilter,
-      sorting,
-    ],
-  );
-
-  // Fetch data from API
-  const { data, isLoading, isFetching } = useQuery({
-    ...orpc.requests.getMyRequests.queryOptions({
-      input: queryInput,
-    }),
-    placeholderData: (previousData) => previousData,
-  });
-
-  const requests = data?.data ?? [];
-  const totalCount = data?.total ?? 0;
-
-  const columnHelper = createColumnHelper<ManpowerRequest>();
+  // Derive filters array from URL state for the Filters component
+  const filters = useMemo<Filter[]>(() => {
+    const result: Filter[] = [];
+    if (statusFilter.length > 0) {
+      result.push({
+        id: "status",
+        field: "status",
+        operator: "isAnyOf",
+        values: statusFilter,
+      });
+    }
+    if (requestTypeFilter.length > 0) {
+      result.push({
+        id: "requestType",
+        field: "requestType",
+        operator: "isAnyOf",
+        values: requestTypeFilter,
+      });
+    }
+    return result;
+  }, [statusFilter, requestTypeFilter]);
 
   const columns = useMemo(
     () => [
@@ -295,8 +270,58 @@ export default function RequestsPage() {
         enableHiding: false,
       }),
     ],
-    [columnHelper],
+    [],
   );
+
+  // Use the useDataTable hook - pagination and sorting synced to URL automatically
+  const { table } = useDataTable({
+    columns,
+    data: [], // Will be replaced with actual data
+    pageCount: -1, // Will be updated
+    initialState: {
+      sorting: [{ id: "createdAt", desc: true }],
+    },
+    shallow: false, // Use router navigation for full URL sync
+  });
+
+  const { pagination, sorting } = table.getState();
+
+  // Valid sortBy values for the API
+  type SortByField = "status" | "requestCode" | "requestType" | "createdAt" | "title" | "department";
+  const validSortFields: SortByField[] = ["status", "requestCode", "requestType", "createdAt", "title", "department"];
+
+  // Build query input from URL-synced state
+  const queryInput = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+      search: debouncedSearch || undefined,
+      status: statusFilter.length > 0 ? (statusFilter as ("DRAFT" | "PENDING_MANAGER" | "PENDING_HR" | "PENDING_FINANCE" | "PENDING_CEO" | "APPROVED_OPEN" | "REJECTED" | "HIRING_IN_PROGRESS" | "ARCHIVED")[]) : undefined,
+      requestType: requestTypeFilter.length > 0 ? (requestTypeFilter as ("NEW_POSITION" | "REPLACEMENT")[]) : undefined,
+      sortBy: (validSortFields.includes(sorting[0]?.id as SortByField) ? sorting[0]?.id : "createdAt") as SortByField,
+      sortOrder: (sorting[0]?.desc ? "desc" : "asc") as "desc" | "asc",
+    }),
+    [pagination, debouncedSearch, statusFilter, requestTypeFilter, sorting],
+  );
+
+  // Fetch data from API
+  const { data, isLoading, isFetching } = useQuery({
+    ...orpc.requests.getMyRequests.queryOptions({
+      input: queryInput,
+    }),
+    placeholderData: (previousData) => previousData,
+  });
+
+  const requests = data?.data ?? [];
+  const totalCount = data?.total ?? 0;
+
+  // Update table with fetched data
+  table.setOptions((prev) => ({
+    ...prev,
+    data: requests as ManpowerRequest[],
+    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    rowCount: totalCount,
+  }));
 
   // Filter field configuration
   const filterFields = useMemo<FilterFieldConfig[]>(
@@ -323,33 +348,25 @@ export default function RequestsPage() {
     [],
   );
 
-  const handleFiltersChange = useCallback((newFilters: Filter[]) => {
-    setFilters(newFilters);
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-  }, []);
+  const handleFiltersChange = useCallback(
+    (newFilters: Filter[]) => {
+      const newStatus =
+        (newFilters.find((f) => f.field === "status")?.values ?? []) as string[];
+      const newType =
+        (newFilters.find((f) => f.field === "requestType")?.values ?? []) as string[];
 
-  const table = useReactTable({
-    columns,
-    // Pass API data as the source of truth
-    data: requests as ManpowerRequest[],
-    state: {
-      pagination,
-      sorting,
+      setStatusFilter(newStatus.length > 0 ? newStatus : null);
+      setRequestTypeFilter(newType.length > 0 ? newType : null);
+      table.setPageIndex(0);
     },
-    enableSorting: true,
-    enableSortingRemoval: false,
-    manualPagination: true,
-    manualSorting: true,
-    rowCount: totalCount,
-    onPaginationChange: setPagination,
-    onSortingChange: (updater) => {
-      setSorting(updater);
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+    [setStatusFilter, setRequestTypeFilter, table],
+  );
+
+  const handleClearFilters = useCallback(() => {
+    setStatusFilter(null);
+    setRequestTypeFilter(null);
+    table.setPageIndex(0);
+  }, [setStatusFilter, setRequestTypeFilter, table]);
 
   if (isLoading) {
     return (
@@ -415,7 +432,7 @@ export default function RequestsPage() {
               className="h-9 w-full sm:max-w-xs"
               onChange={(e) => {
                 setGlobalFilter(e.target.value);
-                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+                table.setPageIndex(0);
               }}
               placeholder="Search requests..."
               type="text"
@@ -442,12 +459,8 @@ export default function RequestsPage() {
               variant="outline"
             />
             {filters.length > 0 && (
-              <Button
-                onClick={() => handleFiltersChange([])}
-                size="sm"
-                variant="ghost"
-              >
-                <FunnelX className="mr-2 h-4 w-4" />
+              <Button onClick={handleClearFilters} size="sm" variant="ghost">
+                <FunnelX className="me-2 h-4 w-4" />
                 Clear filters
               </Button>
             )}
