@@ -71,7 +71,7 @@ export function useRequestsTable() {
     return result;
   }, [statusFilter, requestTypeFilter]);
 
-  const { table } = useDataTable({
+  const { table, sorting, pagination } = useDataTable({
     columns,
     data: [],
     pageCount: -1,
@@ -80,8 +80,6 @@ export function useRequestsTable() {
     },
     shallow: false,
   });
-
-  const { pagination, sorting } = table.getState();
 
   const queryInput = useMemo(
     () => ({

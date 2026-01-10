@@ -151,7 +151,21 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
 
   const columnIds = React.useMemo(
     () =>
-      new Set(columns.map((column) => column.id).filter(Boolean) as string[]),
+      new Set(
+        columns
+          .map((column) => {
+            // For accessor columns using string accessors, the id is derived from accessorKey
+            // For columns with explicit id, use that
+            if (column.id) {
+              return column.id;
+            }
+            if ("accessorKey" in column && column.accessorKey) {
+              return column.accessorKey as string;
+            }
+            return null;
+          })
+          .filter(Boolean) as string[],
+      ),
     [columns],
   );
 
@@ -327,7 +341,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   });
 
   return React.useMemo(
-    () => ({ table, shallow, debounceMs, throttleMs }),
-    [table, shallow, debounceMs, throttleMs],
+    () => ({ table, shallow, debounceMs, throttleMs, sorting, pagination }),
+    [table, shallow, debounceMs, throttleMs, sorting, pagination],
   );
 }
