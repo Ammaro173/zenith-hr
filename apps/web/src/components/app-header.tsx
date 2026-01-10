@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import { Show } from "@/utils/Show";
 import { Skeleton } from "./ui/skeleton";
 
 export function AppHeader() {
+  const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const { user } = session ?? {};
   const { name, email } = user ?? {};
@@ -116,7 +118,13 @@ export function AppHeader() {
               <DropdownMenuItem
                 className="cursor-pointer px-4 py-2.5 text-destructive transition-all duration-200 hover:translate-x-1 hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => {
-                  authClient.signOut();
+                  authClient.signOut({
+                    fetchOptions: {
+                      onSuccess: () => {
+                        router.push("/login");
+                      },
+                    },
+                  });
                 }}
               >
                 <LogOut className="mr-3 size-4 transition-all duration-200 group-hover:scale-110 group-hover:text-destructive" />

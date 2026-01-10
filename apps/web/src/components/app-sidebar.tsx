@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import { authClient } from "@/lib/auth-client";
 import { For } from "@/utils/For";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const router = useRouter();
   const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
   const role = getRoleFromSessionUser(session?.user);
@@ -124,7 +125,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <Button
             className="w-full rounded-none bg-primary text-center text-primary-foreground transition hover:bg-primary/90"
             onClick={async () => {
-              await authClient.signOut();
+              await authClient.signOut({
+                fetchOptions: {
+                  onSuccess: () => {
+                    router.push("/login");
+                  },
+                },
+              });
             }}
             type="button"
           >

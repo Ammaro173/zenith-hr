@@ -116,3 +116,23 @@ export function getNavigationItemsForRole(
     isNavItemAllowedForRole(item, role),
   );
 }
+
+/**
+ * Returns the default landing route based on user role.
+ * Different roles are directed to the most relevant page for their workflow.
+ */
+export function getDefaultRouteForRole(role: UserRole | null): string {
+  if (role === "ADMIN") {
+    return "/imports";
+  }
+  if (
+    role === "CEO" ||
+    role === "FINANCE" ||
+    role === "HR" ||
+    role === "MANAGER"
+  ) {
+    return "/approvals";
+  }
+  // REQUESTER, IT, and unknown roles go to dashboard
+  return "/dashboard";
+}
