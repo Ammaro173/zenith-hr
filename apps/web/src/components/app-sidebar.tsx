@@ -15,7 +15,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   getNavigationItemsForRole,
   getRoleFromSessionUser,
@@ -24,23 +23,23 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { For } from "@/utils/For";
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string | null;
+  };
+};
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session, isPending } = authClient.useSession();
-  const role = getRoleFromSessionUser(session?.user);
+  const role = getRoleFromSessionUser(user);
 
-  const navigationItems = useMemo<ProtectedNavigationItem[]>(() => {
-    if (isPending) {
-      return [];
-    }
-
-    return getNavigationItemsForRole(role);
-  }, [isPending, role]);
-
-  const skeletonItems = useMemo(
-    () => ["primary", "secondary", "tertiary", "quaternary"],
-    [],
+  const navigationItems = useMemo<ProtectedNavigationItem[]>(
+    () => getNavigationItemsForRole(role),
+    [role],
   );
 
   return (
@@ -59,56 +58,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent className="px-5 py-9">
         <SidebarMenu>
-          {isPending ? (
-            skeletonItems.map((key) => (
-              <SidebarMenuItem key={`sidebar-skeleton-${key}`}>
-                <div className="flex h-10 items-center gap-3 rounded-xl px-3 py-2">
-                  <Skeleton className="size-5 rounded-full" />
-                  <Skeleton className="h-3 w-28" />
-                </div>
-              </SidebarMenuItem>
-            ))
-          ) : (
-            <For
-              each={navigationItems}
-              render={(item) => {
-                const isActive = pathname.startsWith(item.href);
-                const ItemIcon = item.icon;
+          <For
+            each={navigationItems}
+            render={(item) => {
+              const isActive = pathname.startsWith(item.href);
+              const ItemIcon = item.icon;
 
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      className="group h-10 flex-1 gap-3 rounded-xl px-3 py-2 transition"
-                      isActive={isActive}
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    className="group h-10 flex-1 gap-3 rounded-xl px-3 py-2 transition"
+                    isActive={isActive}
+                  >
+                    <Link
+                      className="flex w-full items-center gap-3 text-left transition-all"
+                      href={item.href as Route}
                     >
-                      <Link
-                        className="flex w-full items-center gap-3 text-left transition-all"
-                        href={item.href as Route}
+                      <ItemIcon
+                        className={`size-5! ${
+                          isActive ? "text-secondary" : "text-muted-foreground"
+                        }`}
+                      />
+                      <span
+                        className={`font-medium text-sm tracking-tight ${
+                          isActive ? "text-secondary" : "text-muted-foreground"
+                        }`}
                       >
-                        <ItemIcon
-                          className={`size-5! ${
-                            isActive
-                              ? "text-secondary"
-                              : "text-muted-foreground"
-                          }`}
-                        />
-                        <span
-                          className={`font-medium text-sm tracking-tight ${
-                            isActive
-                              ? "text-secondary"
-                              : "text-muted-foreground"
-                          }`}
-                        >
-                          {item.title}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              }}
-            />
-          )}
+                        {item.title}
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            }}
+          />
         </SidebarMenu>
       </SidebarContent>
 

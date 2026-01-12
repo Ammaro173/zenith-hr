@@ -15,14 +15,19 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getRoleFromSessionUser } from "@/config/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Show } from "@/utils/Show";
-import { Skeleton } from "./ui/skeleton";
 
-export function AppHeader() {
+type AppHeaderProps = {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role?: string | null;
+  };
+};
+
+export function AppHeader({ user }: AppHeaderProps) {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
-  const { user } = session ?? {};
-  const { name, email } = user ?? {};
+  const { name, email } = user;
   const role = getRoleFromSessionUser(user);
   const userInitials =
     name
@@ -43,41 +48,26 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button
                 className="group relative flex cursor-pointer items-center gap-3 rounded-full border border-border/60 bg-background/80 px-3 py-2 shadow-sm transition-all duration-300 hover:border-border hover:bg-background hover:shadow-lg focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                disabled={isPending}
                 type="button"
                 variant="ghost"
               >
-                <Show>
-                  <Show.When isTrue={isPending}>
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="size-6 rounded-full" />
-                      <div className="hidden gap-1 sm:flex sm:flex-col">
-                        <Skeleton className="h-3 w-24" />
-                        <Skeleton className="h-2.5 w-32" />
-                      </div>
-                      <Skeleton className="size-4" />
-                    </div>
-                  </Show.When>
-                  <Show.Else>
-                    <div className="relative">
-                      <Avatar className="size-6 border border-border/50 transition-all duration-300 group-hover:border-border group-hover:shadow-md group-hover:ring-2 group-hover:ring-primary/20">
-                        <AvatarFallback className="bg-linear-to-br from-primary via-primary to-primary/70 font-semibold text-primary text-xs transition-all duration-300 group-hover:from-primary/90 group-hover:to-primary/80 group-hover:shadow-sm">
-                          {userInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="-bottom-0.5 -right-0.5 absolute size-3 animate-pulse rounded-full border-2 border-white bg-green-500" />
-                    </div>
-                    <div className="hidden gap-0.5 text-left sm:flex sm:flex-col">
-                      <span className="font-medium text-sm leading-none transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground">
-                        {name}
-                      </span>
-                      <span className="text-muted-foreground text-xs transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/80">
-                        {email}
-                      </span>
-                    </div>
-                    <ChevronDown className="size-4 text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-foreground group-data-[state=open]:rotate-180" />
-                  </Show.Else>
-                </Show>
+                <div className="relative">
+                  <Avatar className="size-6 border border-border/50 transition-all duration-300 group-hover:border-border group-hover:shadow-md group-hover:ring-2 group-hover:ring-primary/20">
+                    <AvatarFallback className="bg-linear-to-br from-primary via-primary to-primary/70 font-semibold text-primary text-xs transition-all duration-300 group-hover:from-primary/90 group-hover:to-primary/80 group-hover:shadow-sm">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="-bottom-0.5 -right-0.5 absolute size-3 animate-pulse rounded-full border-2 border-white bg-green-500" />
+                </div>
+                <div className="hidden gap-0.5 text-left sm:flex sm:flex-col">
+                  <span className="font-medium text-sm leading-none transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground">
+                    {name}
+                  </span>
+                  <span className="text-muted-foreground text-xs transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/80">
+                    {email}
+                  </span>
+                </div>
+                <ChevronDown className="size-4 text-muted-foreground transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-foreground group-data-[state=open]:rotate-180" />
               </Button>
             </DropdownMenuTrigger>
 

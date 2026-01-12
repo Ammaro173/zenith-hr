@@ -29,11 +29,13 @@ export default async function ProtectedLayout({
 
   const isSidebarOpen = await getSidebarOpenState();
 
+  const user = session.data.user;
+
   return (
     <SidebarProvider defaultOpen={isSidebarOpen}>
-      <AppSidebar />
+      <AppSidebar user={user} />
       <SidebarInset className="bg-background">
-        <AppHeader />
+        <AppHeader user={user} />
         <main className="@container/protected-layout container mx-auto flex w-full flex-1 flex-col gap-6 px-6 pt-6 pb-10">
           {children}
         </main>
