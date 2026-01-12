@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Settings2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings2, UserCheck } from "lucide-react";
 import * as React from "react";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Show } from "@/utils";
 import { useManpowerRequestFormContext } from "../manpower-request-form-context";
+import { UserSearchCombobox } from "../user-search-combobox";
 
 export function AdvancedOptionsSection() {
   const { form } = useManpowerRequestFormContext();
@@ -21,7 +22,7 @@ export function AdvancedOptionsSection() {
       >
         <div className="flex items-center gap-2 font-semibold text-sm">
           <Settings2 className="size-4" />
-          Advanced Options
+          Advanced & Workflow Options
         </div>
         <Show>
           <Show.When isTrue={isOpen}>
@@ -36,6 +37,32 @@ export function AdvancedOptionsSection() {
       {isOpen && (
         <div className="space-y-6 pt-4">
           <Separator />
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+              <UserCheck className="size-3" />
+              Workflow Overrides
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <form.Field name="approverId">
+                {(field) => (
+                  <FormField
+                    description="Optionally override the initial approver if hierarchy calculation is not desired."
+                    field={field}
+                    label="Select Initial Approver"
+                  >
+                    <UserSearchCombobox
+                      onChange={field.handleChange}
+                      value={field.state.value}
+                    />
+                  </FormField>
+                )}
+              </form.Field>
+            </div>
+          </div>
+
+          <Separator />
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <form.Field name="positionDetails.location">
               {(field) => (
