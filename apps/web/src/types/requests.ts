@@ -9,12 +9,28 @@ export type ManpowerRequest = {
   currentApproverRole: string | null;
   createdAt: string | Date;
   positionDetails: {
-    title?: string;
-    department?: string;
+    title: string;
+    department: string;
     description?: string;
     location?: string;
+    startDate?: string;
+    reportingTo?: string;
   };
   budgetDetails: unknown;
+  requester?: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+  };
+  replacementForUser?: {
+    id: string;
+    name: string;
+  } | null;
+  currentApprover?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 export type RequestStatus = GetMyRequestsInput["status"] extends
