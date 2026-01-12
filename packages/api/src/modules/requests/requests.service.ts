@@ -51,12 +51,13 @@ export const createRequestsService = (
           ? "PENDING_HR"
           : "PENDING_MANAGER";
 
-      // Get the initial approver for this request
+      // Use provided approverId or auto-determine from hierarchy
       const initialApproverId =
-        await workflowService.getNextApproverIdForStatus(
+        input.approverId ||
+        (await workflowService.getNextApproverIdForStatus(
           requesterId,
           initialStatus as "PENDING_MANAGER" | "PENDING_HR",
-        );
+        ));
 
       const [newRequest] = await db
         .insert(manpowerRequest)
@@ -83,15 +84,73 @@ export const createRequestsService = (
     },
 
     /**
-     * Get request by ID
+     * Get request by ID with related user details
      */
     async getById(id: string) {
       const [request] = await db
-        .select()
+        .select({
+          id: manpowerRequest.id,
+          requesterId: manpowerRequest.requesterId,
+          requestCode: manpowerRequest.requestCode,
+          status: manpowerRequest.status,
+          requestType: manpowerRequest.requestType,
+          isBudgeted: manpowerRequest.isBudgeted,
+          replacementForUserId: manpowerRequest.replacementForUserId,
+          contractDuration: manpowerRequest.contractDuration,
+          justificationText: manpowerRequest.justificationText,
+          salaryRangeMin: manpowerRequest.salaryRangeMin,
+          salaryRangeMax: manpowerRequest.salaryRangeMax,
+          currentApproverId: manpowerRequest.currentApproverId,
+          currentApproverRole: manpowerRequest.currentApproverRole,
+          positionDetails: manpowerRequest.positionDetails,
+          budgetDetails: manpowerRequest.budgetDetails,
+          revisionVersion: manpowerRequest.revisionVersion,
+          version: manpowerRequest.version,
+          createdAt: manpowerRequest.createdAt,
+          updatedAt: manpowerRequest.updatedAt,
+          requester: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          },
+        })
         .from(manpowerRequest)
+        .innerJoin(user, eq(manpowerRequest.requesterId, user.id))
         .where(eq(manpowerRequest.id, id))
         .limit(1);
-      return request;
+
+      if (!request) {
+        return null;
+      }
+
+      // Fetch replacement user if exists
+      let replacementForUser: { id: string; name: string | null } | null = null;
+      if (request.replacementForUserId) {
+        const [u] = await db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.id, request.replacementForUserId))
+          .limit(1);
+        replacementForUser = u || null;
+      }
+
+      // Fetch current approver if exists
+      let currentApprover: { id: string; name: string | null } | null = null;
+      if (request.currentApproverId) {
+        const [u] = await db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.id, request.currentApproverId))
+          .limit(1);
+        currentApprover = u || null;
+      }
+
+      return {
+        ...request,
+        replacementForUser,
+        currentApprover,
+      };
     },
 
     /**

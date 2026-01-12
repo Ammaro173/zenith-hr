@@ -46,6 +46,7 @@ export const createRequestSchema = z
     salaryRangeMax: z.number().positive(),
     positionDetails: positionDetailsSchema,
     budgetDetails: budgetDetailsSchema,
+    approverId: z.string().uuid().optional(),
   })
   .refine(
     (data) =>
@@ -73,14 +74,10 @@ export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
     department: "",
     description: "",
     location: "Doha, Qatar",
-    startDate: undefined,
-    reportingTo: undefined,
   },
   budgetDetails: {
     currency: "QAR",
     notes: "",
-    costCenter: undefined,
-    budgetCode: undefined,
   },
 };
 

@@ -359,8 +359,22 @@ export const createWorkflowService = (db: typeof _db) => {
 
     async getRequestHistory(id: string) {
       return await db
-        .select()
+        .select({
+          id: approvalLog.id,
+          requestId: approvalLog.requestId,
+          actorId: approvalLog.actorId,
+          action: approvalLog.action,
+          stepName: approvalLog.stepName,
+          comment: approvalLog.comment,
+          performedAt: approvalLog.performedAt,
+          actor: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+          },
+        })
         .from(approvalLog)
+        .leftJoin(user, eq(approvalLog.actorId, user.id))
         .where(eq(approvalLog.requestId, id))
         .orderBy(approvalLog.performedAt);
     },
