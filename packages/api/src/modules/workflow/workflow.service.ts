@@ -1,6 +1,7 @@
 import type { db as _db } from "@zenith-hr/db";
 import type * as schema from "@zenith-hr/db/schema";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
+import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
@@ -71,6 +72,23 @@ export const createWorkflowService = (db: typeof _db) => {
     });
   };
 
+  const createAuditLog = async (
+    tx: TransactionDB,
+    entityId: string,
+    performedBy: string,
+    action: string,
+    metadata?: Record<string, unknown>,
+  ): Promise<void> => {
+    await tx.insert(auditLog).values({
+      entityId,
+      entityType: "MANPOWER_REQUEST",
+      action,
+      performedBy,
+      performedAt: new Date(),
+      metadata: metadata || null,
+    });
+  };
+
   const getApproverForStatus = (status: RequestStatus): UserRole | null => {
     const mapping: Partial<Record<RequestStatus, UserRole>> = {
       PENDING_MANAGER: "MANAGER",
@@ -82,6 +100,7 @@ export const createWorkflowService = (db: typeof _db) => {
   };
 
   return {
+    getApproverForStatus,
     async getNextApprover(requesterId: string): Promise<string | null> {
       const result = await db.execute(sql`
         WITH RECURSIVE manager_hierarchy AS (
@@ -125,6 +144,44 @@ export const createWorkflowService = (db: typeof _db) => {
         return true;
       }
       return false;
+    },
+
+    async getNextApproverIdForStatus(
+      requesterId: string,
+      status: RequestStatus,
+      txOrDb?: TransactionDB | typeof db,
+    ): Promise<string | null> {
+      const queryDb = txOrDb || db;
+      const targetRole = getApproverForStatus(status);
+      if (!targetRole) {
+        return null;
+      }
+
+      // For manager review, try to find direct manager first
+      if (status === "PENDING_MANAGER") {
+        const managerId = await this.getNextApprover(requesterId);
+        if (managerId) {
+          return managerId;
+        }
+
+        // If no manager found, fall through to finding anyone with HR role as per user request
+        const [hrUser] = await queryDb
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.role, "HR"))
+          .limit(1);
+        return hrUser?.id || null;
+      }
+
+      // For other roles, find the first user with that role
+      // (Simplified logic - could be enhanced to use department heads)
+      const [targetUser] = await queryDb
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.role, targetRole))
+        .limit(1);
+
+      return targetUser?.id || null;
     },
 
     async transitionRequest(
@@ -240,10 +297,17 @@ export const createWorkflowService = (db: typeof _db) => {
         }
 
         // Update request status within transaction
+        const nextApproverId = await this.getNextApproverIdForStatus(
+          request.requesterId,
+          newStatus,
+          tx,
+        );
+
         await tx
           .update(manpowerRequest)
           .set({
             status: newStatus,
+            currentApproverId: nextApproverId,
             currentApproverRole: getApproverForStatus(newStatus),
             revisionVersion:
               newStatus === "DRAFT" && currentStatus !== "DRAFT"
@@ -259,6 +323,13 @@ export const createWorkflowService = (db: typeof _db) => {
         await createApprovalLog(tx, requestId, actorId, action, stepName, {
           comment,
           ipAddress,
+        });
+
+        // Create audit log
+        await createAuditLog(tx, requestId, actorId, action, {
+          from: currentStatus,
+          to: newStatus,
+          comment,
         });
 
         // Archive version if reverting to DRAFT - within transaction

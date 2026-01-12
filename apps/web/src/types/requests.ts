@@ -5,6 +5,8 @@ export type ManpowerRequest = {
   requestCode: string;
   requestType: "NEW_POSITION" | "REPLACEMENT";
   status: string;
+  currentApproverId: string | null;
+  currentApproverRole: string | null;
   createdAt: string | Date;
   positionDetails: {
     title?: string;

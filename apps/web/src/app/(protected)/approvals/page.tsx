@@ -66,6 +66,10 @@ export default function ApprovalsPage() {
                 <p className="text-muted-foreground text-sm">
                   {(request.positionDetails as { title: string }).title}
                 </p>
+                <p className="text-muted-foreground text-xs">
+                  Status: {request.status} • Awaiting{" "}
+                  {request.currentApproverRole} approval
+                </p>
               </div>
               <div className="flex gap-2">
                 <button

@@ -79,7 +79,7 @@ export default function RequestDetailPage() {
   }
 
   const isApprover =
-    request.currentApproverRole === session?.user?.role &&
+    request.currentApproverId === session?.user?.id &&
     !["APPROVED_OPEN", "REJECTED", "ARCHIVED", "DRAFT"].includes(
       request.status,
     );

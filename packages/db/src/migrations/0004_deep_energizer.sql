@@ -1,0 +1,2 @@
+ALTER TABLE "manpower_request" ADD COLUMN "current_approver_id" text;--> statement-breakpoint
+ALTER TABLE "manpower_request" ADD CONSTRAINT "manpower_request_current_approver_id_user_id_fk" FOREIGN KEY ("current_approver_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;

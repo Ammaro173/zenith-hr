@@ -59,6 +59,9 @@ export const manpowerRequest = pgTable("manpower_request", {
     precision: 12,
     scale: 2,
   }).notNull(),
+  currentApproverId: text("current_approver_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
   currentApproverRole: userRoleEnum("current_approver_role"),
   positionDetails: jsonb("position_details").notNull(),
   budgetDetails: jsonb("budget_details").notNull(),

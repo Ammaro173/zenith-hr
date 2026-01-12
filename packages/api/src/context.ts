@@ -48,12 +48,14 @@ export async function createContext({ context }: CreateContextOptions) {
   const requestId = crypto.randomUUID();
 
   // Initialize services with dependencies
+  const workflow = createWorkflowService(db);
+
   const services = {
-    requests: createRequestsService(db),
+    workflow,
+    requests: createRequestsService(db, workflow),
     contracts: createContractsService(db, storage, pdf),
     dashboard: createDashboardService(db),
     candidates: createCandidatesService(db, storage),
-    workflow: createWorkflowService(db),
     businessTrips: createBusinessTripsService(db),
     performance: createPerformanceService(db),
     separations: createSeparationsService(db),

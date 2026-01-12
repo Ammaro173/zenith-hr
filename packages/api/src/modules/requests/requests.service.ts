@@ -1,12 +1,10 @@
 import type { db as _db } from "@zenith-hr/db";
-import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
-import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user, type userRoleEnum } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
-import { notifyUser } from "../../shared/notify";
+import type { WorkflowService } from "../workflow/workflow.service";
 import type {
   createRequestSchema,
   GetMyRequestsInput,
@@ -19,7 +17,10 @@ type UpdateRequestInput = z.infer<typeof updateRequestSchema>;
 /**
  * Factory function to create RequestService with injected dependencies
  */
-export const createRequestsService = (db: typeof _db) => {
+export const createRequestsService = (
+  db: typeof _db,
+  workflowService: WorkflowService,
+) => {
   return {
     /**
      * Generate a unique request code
@@ -49,8 +50,13 @@ export const createRequestsService = (db: typeof _db) => {
         requesterRole === "MANAGER" || requesterRole === "HR"
           ? "PENDING_HR"
           : "PENDING_MANAGER";
-      const initialApproverRole =
-        initialStatus === "PENDING_MANAGER" ? "MANAGER" : "HR";
+
+      // Get the initial approver for this request
+      const initialApproverId =
+        await workflowService.getNextApproverIdForStatus(
+          requesterId,
+          initialStatus as "PENDING_MANAGER" | "PENDING_HR",
+        );
 
       const [newRequest] = await db
         .insert(manpowerRequest)
@@ -64,7 +70,9 @@ export const createRequestsService = (db: typeof _db) => {
           justificationText: input.justificationText,
           salaryRangeMin: input.salaryRangeMin.toString(),
           salaryRangeMax: input.salaryRangeMax.toString(),
-          currentApproverRole: initialApproverRole,
+          currentApproverId: initialApproverId,
+          currentApproverRole:
+            workflowService.getApproverForStatus(initialStatus),
           positionDetails: input.positionDetails,
           budgetDetails: input.budgetDetails,
           status: initialStatus,
@@ -182,7 +190,7 @@ export const createRequestsService = (db: typeof _db) => {
         .where(
           and(
             eq(manpowerRequest.status, statusFilter as "PENDING_MANAGER"),
-            eq(manpowerRequest.currentApproverRole, userRole),
+            eq(manpowerRequest.currentApproverId, userId),
           ),
         );
     },
@@ -291,129 +299,6 @@ export const createRequestsService = (db: typeof _db) => {
       if (min > max) {
         throw new Error("Minimum salary cannot exceed maximum salary");
       }
-    },
-
-    /**
-     * Transition request status with approval workflow
-     */
-    async transitionRequest(
-      requestId: string,
-      actorId: string,
-      action: "SUBMIT" | "APPROVE" | "REJECT" | "REQUEST_CHANGE" | "HOLD",
-      comment?: string,
-    ) {
-      return await db.transaction(async (tx) => {
-        // 1. Get current request with lock
-        const [request] = await tx
-          .select()
-          .from(manpowerRequest)
-          .where(eq(manpowerRequest.id, requestId))
-          .limit(1);
-
-        if (!request) {
-          throw new Error("NOT_FOUND");
-        }
-
-        // 2. Determine new status
-        let newStatus = request.status;
-        const currentStatus = request.status;
-
-        if (action === "SUBMIT" && currentStatus === "DRAFT") {
-          newStatus = "PENDING_MANAGER";
-        } else if (action === "APPROVE") {
-          switch (currentStatus) {
-            case "PENDING_MANAGER":
-              newStatus = "PENDING_HR";
-              break;
-            case "PENDING_HR":
-              newStatus = "PENDING_FINANCE";
-              break;
-            case "PENDING_FINANCE":
-              newStatus = "PENDING_CEO";
-              break;
-            case "PENDING_CEO":
-              newStatus = "APPROVED_OPEN";
-              break;
-            default:
-              throw new Error("INVALID_TRANSITION");
-          }
-        } else if (action === "REJECT") {
-          newStatus = "REJECTED";
-        } else if (action === "REQUEST_CHANGE") {
-          // Return to requester for changes
-          newStatus = "DRAFT";
-        }
-
-        if (
-          newStatus === currentStatus &&
-          action !== "HOLD" &&
-          (action === "APPROVE" || action === "SUBMIT")
-        ) {
-          // If status didn't change and it wasn't a HOLD, block invalid approve/submit transitions
-          throw new Error("INVALID_TRANSITION");
-        }
-
-        const nextApproverRole = (() => {
-          switch (newStatus) {
-            case "PENDING_MANAGER":
-              return "MANAGER" as (typeof userRoleEnum.enumValues)[number];
-            case "PENDING_HR":
-              return "HR" as (typeof userRoleEnum.enumValues)[number];
-            case "PENDING_FINANCE":
-              return "FINANCE" as (typeof userRoleEnum.enumValues)[number];
-            case "PENDING_CEO":
-              return "CEO" as (typeof userRoleEnum.enumValues)[number];
-            default:
-              return null;
-          }
-        })();
-
-        // 3. Update request
-        await tx
-          .update(manpowerRequest)
-          .set({
-            status: newStatus,
-            currentApproverRole: nextApproverRole,
-            updatedAt: new Date(),
-            version: request.version + 1,
-          })
-          .where(eq(manpowerRequest.id, requestId));
-
-        // 4. Create approval log
-        // We need to import approvalLog from schema, adding import at top of file
-        await tx.insert(approvalLog).values({
-          requestId,
-          actorId,
-          action,
-          comment,
-          stepName: currentStatus,
-          performedAt: new Date(),
-        });
-
-        await tx.insert(auditLog).values({
-          entityId: requestId,
-          entityType: "MANPOWER_REQUEST",
-          action,
-          performedBy: actorId,
-          performedAt: new Date(),
-          metadata: {
-            from: currentStatus,
-            to: newStatus,
-            comment,
-          },
-        });
-
-        await notifyUser({
-          userId: request.requesterId,
-          message: `Request ${request.requestCode} moved to ${newStatus}`,
-        });
-
-        return {
-          previousStatus: currentStatus,
-          newStatus,
-          requestId,
-        };
-      });
     },
 
     /**
