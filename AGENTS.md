@@ -12,6 +12,7 @@ This document provides context, conventions, and critical rules for AI assistant
 - [Architectural Decisions](#architectural-decisions)
 - [Critical Rules](#critical-rules)
 - [File Organization](#file-organization)
+- [Frontend Feature Organization](#frontend-feature-organization)
 - [Naming Conventions](#naming-conventions)
 - [Import Ordering](#import-ordering)
 - [Error Handling](#error-handling)
@@ -29,13 +30,13 @@ This document provides context, conventions, and critical rules for AI assistant
 
 ### Domain Terminology
 
-| Term | Description |
-|------|-------------|
-| **Manpower Request** | A staffing request submitted by a manager for a new hire |
-| **Candidate** | A potential hire with uploaded CV, linked to a request |
-| **Contract** | Employment agreement generated after candidate selection |
-| **Approval Workflow** | Multi-tier approval chain: Manager → HR → Finance → CEO |
-| **Request Status** | State machine: DRAFT → PENDING_* → APPROVED_OPEN → HIRING_IN_PROGRESS |
+| Term                  | Description                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| **Manpower Request**  | A staffing request submitted by a manager for a new hire                |
+| **Candidate**         | A potential hire with uploaded CV, linked to a request                  |
+| **Contract**          | Employment agreement generated after candidate selection                |
+| **Approval Workflow** | Multi-tier approval chain: Manager → HR → Finance → CEO                 |
+| **Request Status**    | State machine: DRAFT → PENDING\_\* → APPROVED_OPEN → HIRING_IN_PROGRESS |
 
 ### Target Users
 
@@ -84,7 +85,10 @@ export const requestsRouter = {
   create: protectedProcedure
     .input(createRequestSchema)
     .handler(async ({ input, context }) => {
-      return await context.services.requests.create(input, context.session.user.id);
+      return await context.services.requests.create(
+        input,
+        context.session.user.id
+      );
     }),
 };
 ```
@@ -107,7 +111,7 @@ export const createRequestsService = (db: typeof _db) => ({
       .values({ ...data, requesterId: userId })
       .returning();
     return request;
-  }
+  },
 });
 
 // NOT this (unnecessary repository layer):
@@ -140,6 +144,7 @@ export type RequestsService = ReturnType<typeof createRequestsService>;
 ```
 
 **Benefits:**
+
 - Simple and explicit dependencies
 - Easy to test (just pass mock dependencies)
 - No decorator magic or reflection
@@ -157,7 +162,7 @@ The `protectedProcedure` middleware **already handles authentication**. Adding a
 // ❌ WRONG - Redundant auth check
 protectedProcedure.handler(async ({ context }) => {
   if (!context.session?.user) {
-    throw new ORPCError("UNAUTHORIZED"); // REMOVE THIS!
+    throw new ORPCError('UNAUTHORIZED'); // REMOVE THIS!
   }
   const userId = context.session.user.id;
   // ...
@@ -220,7 +225,11 @@ Always type infrastructure services using the defined interfaces:
 
 ```typescript
 // ✅ CORRECT - Using interface type
-import type { StorageService, PdfService, CacheService } from "./infrastructure/interfaces";
+import type {
+  StorageService,
+  PdfService,
+  CacheService,
+} from './infrastructure/interfaces';
 
 const storage: StorageService = new S3StorageService();
 const pdf: PdfService = new PdfService();
@@ -275,18 +284,73 @@ packages/api/src/infrastructure/
 
 ---
 
+## Frontend Feature Organization
+
+### Feature-Based Structure
+
+Reusable feature code lives in `apps/web/src/features/{feature-name}/`. We follow a **lean (Option A)** approach where structure emerges based on complexity.
+
+```
+apps/web/src/features/manpower-requests/
+├── index.ts                              # Barrel exports
+├── use-manpower-request-form.ts          # Hooks (flat until >3 hooks)
+├── manpower-request-form.tsx             # Components (flat until >5 components)
+├── manpower-request-form-context.tsx     # Context providers
+├── types.ts                              # Feature-specific types
+└── form-sections/                        # Subfolders only when logically grouped
+    └── ...
+```
+
+### When to Create Subfolders
+
+| Condition                                     | Action                         |
+| --------------------------------------------- | ------------------------------ |
+| >3 hooks in a feature                         | Create `hooks/` subfolder      |
+| >5 components in a feature                    | Create `components/` subfolder |
+| Logically grouped files (e.g., form sections) | Create named subfolder         |
+| Single file of a type                         | Keep flat                      |
+
+### What Stays Route-Colocated
+
+Files used **only** by a specific route stay in `_components/` or `_hooks/` within the `app` directory. This follows Next.js conventions and avoids over-engineering.
+
+```
+app/(protected)/requests/
+├── _components/          # Route-specific UI (columns, data-grid)
+├── _hooks/               # Route-specific hooks (use-requests-table)
+├── page.tsx
+└── [id]/page.tsx
+```
+
+### Import Pattern
+
+Always use the barrel export for feature code to maintain a clean interface:
+
+```typescript
+// ✅ CORRECT - Use barrel export
+import {
+  ManpowerRequestForm,
+  useManpowerRequestForm,
+} from '@/features/manpower-requests';
+
+// ❌ WRONG - Direct file import
+import { ManpowerRequestForm } from '@/features/manpower-requests/manpower-request-form';
+```
+
+---
+
 ## Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| **Files** | kebab-case | `manpower-requests.ts`, `approval-logs.ts` |
-| **TypeScript types/interfaces** | PascalCase | `RequestStatus`, `CreateRequestInput` |
-| **Functions** | camelCase | `createRequestsService`, `getById` |
-| **Database tables** | snake_case | `manpower_request`, `approval_log` |
-| **Constants** | UPPER_SNAKE_CASE | `APPROVAL_ACTIONS`, `REQUEST_STATUSES` |
-| **Zod schemas** | camelCase + Schema suffix | `createRequestSchema`, `uploadCvSchema` |
-| **Router objects** | camelCase + Router suffix | `requestsRouter`, `candidatesRouter` |
-| **Service factories** | create + PascalCase + Service | `createRequestsService` |
+| Type                            | Convention                    | Example                                    |
+| ------------------------------- | ----------------------------- | ------------------------------------------ |
+| **Files**                       | kebab-case                    | `manpower-requests.ts`, `approval-logs.ts` |
+| **TypeScript types/interfaces** | PascalCase                    | `RequestStatus`, `CreateRequestInput`      |
+| **Functions**                   | camelCase                     | `createRequestsService`, `getById`         |
+| **Database tables**             | snake_case                    | `manpower_request`, `approval_log`         |
+| **Constants**                   | UPPER_SNAKE_CASE              | `APPROVAL_ACTIONS`, `REQUEST_STATUSES`     |
+| **Zod schemas**                 | camelCase + Schema suffix     | `createRequestSchema`, `uploadCvSchema`    |
+| **Router objects**              | camelCase + Router suffix     | `requestsRouter`, `candidatesRouter`       |
+| **Service factories**           | create + PascalCase + Service | `createRequestsService`                    |
 
 ---
 
@@ -296,18 +360,18 @@ Biome enforces this import order:
 
 ```typescript
 // 1. External packages (alphabetical)
-import { ORPCError } from "@orpc/server";
-import { eq } from "drizzle-orm";
-import type { z } from "zod";
+import { ORPCError } from '@orpc/server';
+import { eq } from 'drizzle-orm';
+import type { z } from 'zod';
 
 // 2. Internal packages (@zenith-hr/*)
-import { db } from "@zenith-hr/db";
-import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
+import { db } from '@zenith-hr/db';
+import { manpowerRequest } from '@zenith-hr/db/schema/manpower-requests';
 
 // 3. Relative imports
-import { protectedProcedure } from "../../shared/middleware";
-import type { StorageService } from "../../infrastructure/interfaces";
-import { createRequestSchema } from "./requests.schema";
+import { protectedProcedure } from '../../shared/middleware';
+import type { StorageService } from '../../infrastructure/interfaces';
+import { createRequestSchema } from './requests.schema';
 ```
 
 ---
@@ -317,17 +381,19 @@ import { createRequestSchema } from "./requests.schema";
 ### Use ORPCError for API Errors
 
 ```typescript
-import { ORPCError } from "@orpc/server";
+import { ORPCError } from '@orpc/server';
 
 // Standard error codes
-throw new ORPCError("NOT_FOUND");
-throw new ORPCError("BAD_REQUEST");
-throw new ORPCError("UNAUTHORIZED");
-throw new ORPCError("FORBIDDEN");
+throw new ORPCError('NOT_FOUND');
+throw new ORPCError('BAD_REQUEST');
+throw new ORPCError('UNAUTHORIZED');
+throw new ORPCError('FORBIDDEN');
 
 // With custom message
-throw new ORPCError("CONFLICT", { message: "Version mismatch - please refresh" });
-throw new ORPCError("NOT_FOUND", { message: "Candidate not found" });
+throw new ORPCError('CONFLICT', {
+  message: 'Version mismatch - please refresh',
+});
+throw new ORPCError('NOT_FOUND', { message: 'Candidate not found' });
 ```
 
 ### Error Handling in Routers
@@ -402,10 +468,10 @@ function processData(data: any) {
 
 // ✅ CORRECT
 function processData(data: unknown) {
-  if (typeof data === "object" && data !== null && "value" in data) {
+  if (typeof data === 'object' && data !== null && 'value' in data) {
     return (data as { value: unknown }).value;
   }
-  throw new Error("Invalid data");
+  throw new Error('Invalid data');
 }
 ```
 
@@ -428,7 +494,7 @@ export const createRequestsService = (db: typeof _db) => ({
 
 ```typescript
 // packages/api/src/modules/requests/requests.schema.ts
-import { z } from "zod";
+import { z } from 'zod';
 
 export const createRequestSchema = z.object({
   positionDetails: z.object({
@@ -477,7 +543,7 @@ const [newRequest] = await db
     requestCode: this.generateRequestCode(),
     positionDetails: input.positionDetails,
     budgetDetails: input.budgetDetails,
-    status: "PENDING_MANAGER",
+    status: 'PENDING_MANAGER',
   })
   .returning();
 ```
@@ -510,16 +576,16 @@ await db.transaction(async (tx) => {
 
 ## Where to Add Things
 
-| Task | Location |
-|------|----------|
-| New API module | `packages/api/src/modules/{name}/` |
-| New route | `{module}.router.ts`, then add to `appRouter` in `packages/api/src/router.ts` |
-| New service | `{module}.service.ts`, then wire in `packages/api/src/context.ts` |
-| New database table | `packages/db/src/schema/{table-name}.ts`, export in `packages/db/src/schema/index.ts` |
-| New environment variable | `packages/config/env.ts` schema + app-specific `env.ts` |
-| New infrastructure service | `packages/api/src/infrastructure/{type}/` + interface in `interfaces/` |
-| New Zod schema | `{module}.schema.ts` |
-| Shared types | `packages/api/src/shared/types.ts` |
+| Task                       | Location                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------- |
+| New API module             | `packages/api/src/modules/{name}/`                                                    |
+| New route                  | `{module}.router.ts`, then add to `appRouter` in `packages/api/src/router.ts`         |
+| New service                | `{module}.service.ts`, then wire in `packages/api/src/context.ts`                     |
+| New database table         | `packages/db/src/schema/{table-name}.ts`, export in `packages/db/src/schema/index.ts` |
+| New environment variable   | `packages/config/env.ts` schema + app-specific `env.ts`                               |
+| New infrastructure service | `packages/api/src/infrastructure/{type}/` + interface in `interfaces/`                |
+| New Zod schema             | `{module}.schema.ts`                                                                  |
+| Shared types               | `packages/api/src/shared/types.ts`                                                    |
 
 ### Adding a New Module Checklist
 
@@ -535,16 +601,16 @@ await db.transaction(async (tx) => {
 
 ## Forbidden Patterns
 
-| Pattern | Why It's Forbidden | Instead Use |
-|---------|-------------------|-------------|
-| Direct database access in routers | Bypasses service layer | `context.services.{module}.method()` |
-| Business logic in routers | Routers should only handle HTTP | Move logic to services |
-| Hardcoded environment paths | Breaks portability | Use `env.ts` configuration |
-| `error: any` in catch blocks | Loses type safety | `error: unknown` with type guards |
-| Redundant auth checks in protected handlers | Already handled by middleware | Remove the check |
-| Missing transactions for related updates | Data inconsistency risk | Wrap in `db.transaction()` |
-| Using concrete types for infrastructure | Loses abstraction benefits | Use interface types |
-| Nested routers with business logic | Unclear responsibility | Flat router + service call |
+| Pattern                                     | Why It's Forbidden              | Instead Use                          |
+| ------------------------------------------- | ------------------------------- | ------------------------------------ |
+| Direct database access in routers           | Bypasses service layer          | `context.services.{module}.method()` |
+| Business logic in routers                   | Routers should only handle HTTP | Move logic to services               |
+| Hardcoded environment paths                 | Breaks portability              | Use `env.ts` configuration           |
+| `error: any` in catch blocks                | Loses type safety               | `error: unknown` with type guards    |
+| Redundant auth checks in protected handlers | Already handled by middleware   | Remove the check                     |
+| Missing transactions for related updates    | Data inconsistency risk         | Wrap in `db.transaction()`           |
+| Using concrete types for infrastructure     | Loses abstraction benefits      | Use interface types                  |
+| Nested routers with business logic          | Unclear responsibility          | Flat router + service call           |
 
 ---
 
@@ -557,7 +623,7 @@ await db.transaction(async (tx) => {
 export function createTestContext(overrides?: Partial<Context>): Context {
   return {
     session: {
-      user: { id: "test-user-id", email: "test@example.com" },
+      user: { id: 'test-user-id', email: 'test@example.com' },
     },
     db: mockDb,
     services: {
@@ -581,7 +647,7 @@ describe("RequestsService", () => {
   it("should create a request", async () => {
     const input = { positionDetails: {...}, budgetDetails: {...} };
     const result = await service.create(input, "user-123");
-    
+
     expect(result.requestCode).toMatch(/^REQ-/);
     expect(result.status).toBe("PENDING_MANAGER");
   });
@@ -594,16 +660,17 @@ describe("RequestsService", () => {
 
 Follow conventional commit format:
 
-| Type | Usage |
-|------|-------|
-| `feat` | New feature | `feat: add contract generation` |
-| `fix` | Bug fix | `fix: resolve auth bypass in protected routes` |
-| `refactor` | Code refactoring | `refactor: extract cache interface` |
-| `docs` | Documentation | `docs: update README` |
-| `chore` | Maintenance | `chore: update dependencies` |
-| `test` | Tests | `test: add workflow service tests` |
+| Type       | Usage            |
+| ---------- | ---------------- | ---------------------------------------------- |
+| `feat`     | New feature      | `feat: add contract generation`                |
+| `fix`      | Bug fix          | `fix: resolve auth bypass in protected routes` |
+| `refactor` | Code refactoring | `refactor: extract cache interface`            |
+| `docs`     | Documentation    | `docs: update README`                          |
+| `chore`    | Maintenance      | `chore: update dependencies`                   |
+| `test`     | Tests            | `test: add workflow service tests`             |
 
 Examples:
+
 ```
 feat: add candidate CV upload endpoint
 fix: resolve race condition in approval workflow
@@ -618,47 +685,51 @@ chore: upgrade drizzle-orm to 0.44.7
 
 ### Commands
 
-| Command | Purpose |
-|---------|---------|
-| `bun run dev` | Start development servers |
-| `bun run check` | Run Biome linter with fixes |
-| `bun run check-types` | TypeScript type checking |
-| `bun run db:push` | Push schema to database |
-| `bun run db:studio` | Open Drizzle Studio |
-| `bun run db:generate` | Generate migrations |
-| `bun run build` | Build all packages |
+| Command               | Purpose                     |
+| --------------------- | --------------------------- |
+| `bun run dev`         | Start development servers   |
+| `bun run check`       | Run Biome linter with fixes |
+| `bun run check-types` | TypeScript type checking    |
+| `bun run db:push`     | Push schema to database     |
+| `bun run db:studio`   | Open Drizzle Studio         |
+| `bun run db:generate` | Generate migrations         |
+| `bun run build`       | Build all packages          |
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `packages/api/src/router.ts` | Main app router |
-| `packages/api/src/context.ts` | Request context factory |
-| `packages/api/src/shared/middleware.ts` | Auth middleware |
-| `packages/db/src/schema/` | Database schema definitions |
-| `packages/config/env.ts` | Environment schema |
+| File                                    | Purpose                     |
+| --------------------------------------- | --------------------------- |
+| `packages/api/src/router.ts`            | Main app router             |
+| `packages/api/src/context.ts`           | Request context factory     |
+| `packages/api/src/shared/middleware.ts` | Auth middleware             |
+| `packages/db/src/schema/`               | Database schema definitions |
+| `packages/config/env.ts`                | Environment schema          |
 
 ### Common Import Paths
 
 ```typescript
 // Database
-import { db } from "@zenith-hr/db";
-import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
+import { db } from '@zenith-hr/db';
+import { manpowerRequest } from '@zenith-hr/db/schema/manpower-requests';
 
 // Auth
-import { auth } from "@zenith-hr/auth";
+import { auth } from '@zenith-hr/auth';
 
 // Middleware
-import { protectedProcedure, publicProcedure } from "../../shared/middleware";
+import { protectedProcedure, publicProcedure } from '../../shared/middleware';
 
 // Infrastructure interfaces
-import type { StorageService, PdfService, CacheService } from "../../infrastructure/interfaces";
+import type {
+  StorageService,
+  PdfService,
+  CacheService,
+} from '../../infrastructure/interfaces';
 
 // oRPC
-import { ORPCError } from "@orpc/server";
+import { ORPCError } from '@orpc/server';
 
 // Drizzle
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql } from 'drizzle-orm';
 ```
 
 ---

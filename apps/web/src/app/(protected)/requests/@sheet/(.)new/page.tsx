@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ManpowerRequestForm } from "@/components/requests/manpower-request-form";
 import {
   Sheet,
   SheetContent,
@@ -10,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ManpowerRequestForm } from "@/features/manpower-requests";
 
 export default function InterceptedNewRequestPage() {
   const router = useRouter();

@@ -4,8 +4,8 @@ import { History } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ManpowerRequestForm } from "@/components/requests/manpower-request-form";
 import { Button } from "@/components/ui/button";
+import { ManpowerRequestForm } from "@/features/manpower-requests";
 
 export default function NewRequestPage() {
   const router = useRouter();

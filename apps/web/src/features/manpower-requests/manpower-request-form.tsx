@@ -2,7 +2,6 @@
 
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useManpowerRequestForm } from "@/hooks/use-manpower-request-form";
 import { cn } from "@/lib/utils";
 import {
   AdvancedOptionsSection,
@@ -11,6 +10,7 @@ import {
   PositionDetailsSection,
 } from "./form-sections";
 import { ManpowerRequestFormProvider } from "./manpower-request-form-context";
+import { useManpowerRequestForm } from "./use-manpower-request-form";
 
 type ManpowerRequestFormProps = {
   mode?: "page" | "sheet";
