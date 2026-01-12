@@ -1,26 +1,44 @@
 import { z } from "zod";
 
-// Base position details schema
 const positionDetailsSchema = z.object({
   title: z.string().min(1),
   department: z.string().min(1),
   description: z.string().optional(),
-  location: z.string().optional().default("Doha, Qatar"),
+  location: z.string().min(1),
   startDate: z.string().optional(),
   reportingTo: z.string().optional(),
 });
 
 const budgetDetailsSchema = z.object({
-  currency: z.string().min(1).default("QAR"),
+  currency: z.string().min(1),
   notes: z.string().optional(),
   costCenter: z.string().optional(),
   budgetCode: z.string().optional(),
 });
 
+export const REQUEST_TYPES = [
+  {
+    value: "NEW_POSITION",
+    label: "New Position",
+    description: "Creating a completely new role in the organization.",
+  },
+  {
+    value: "REPLACEMENT",
+    label: "Replacement",
+    description: "Hiring to replace an employee who has left or is leaving.",
+  },
+] as const;
+
+export const CONTRACT_DURATIONS = [
+  { value: "FULL_TIME", label: "Full Time" },
+  { value: "TEMPORARY", label: "Temporary" },
+  { value: "CONSULTANT", label: "Consultant" },
+] as const;
+
 export const createRequestSchema = z
   .object({
     requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
-    isBudgeted: z.boolean().default(false),
+    isBudgeted: z.boolean(),
     replacementForUserId: z.string().uuid().optional(),
     contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
     justificationText: z.string().min(1),
@@ -42,6 +60,29 @@ export const createRequestSchema = z
     message: "salaryRangeMin cannot exceed salaryRangeMax",
     path: ["salaryRangeMin"],
   });
+
+export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
+  requestType: "NEW_POSITION",
+  isBudgeted: false,
+  contractDuration: "FULL_TIME",
+  justificationText: "",
+  salaryRangeMin: 1000,
+  salaryRangeMax: 2000,
+  positionDetails: {
+    title: "",
+    department: "",
+    description: "",
+    location: "Doha, Qatar",
+    startDate: undefined,
+    reportingTo: undefined,
+  },
+  budgetDetails: {
+    currency: "QAR",
+    notes: "",
+    costCenter: undefined,
+    budgetCode: undefined,
+  },
+};
 
 export const updateRequestSchema = createRequestSchema.partial();
 
@@ -80,7 +121,6 @@ export const getMyRequestsSchema = z.object({
 
 export type GetMyRequestsInput = z.infer<typeof getMyRequestsSchema>;
 
-// Transition schema
 export const transitionSchema = z.object({
   requestId: z.string().uuid(),
   action: z.enum(["SUBMIT", "APPROVE", "REJECT", "REQUEST_CHANGE", "HOLD"]),

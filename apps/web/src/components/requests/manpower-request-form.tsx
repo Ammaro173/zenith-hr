@@ -1,10 +1,16 @@
 "use client";
 
-import * as React from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useManpowerRequestForm } from "@/hooks/use-manpower-request-form";
 import { cn } from "@/lib/utils";
-import { ManpowerRequestFormSimple } from "./manpower-request-form-simple";
-import { ManpowerRequestFormWizard } from "./manpower-request-form-wizard";
+import {
+  AdvancedOptionsSection,
+  ContractBudgetSection,
+  JustificationSection,
+  PositionDetailsSection,
+} from "./form-sections";
+import { ManpowerRequestFormProvider } from "./manpower-request-form-context";
 
 type ManpowerRequestFormProps = {
   mode?: "page" | "sheet";
@@ -17,8 +23,6 @@ export function ManpowerRequestForm({
   onSuccess,
   onCancel,
 }: ManpowerRequestFormProps) {
-  const [useWizard, setUseWizard] = React.useState(false);
-
   const { form, isPending, handleCancel } = useManpowerRequestForm({
     onSuccess,
     onCancel,
@@ -31,56 +35,47 @@ export function ManpowerRequestForm({
         mode === "sheet" ? "px-1" : "mx-auto max-w-3xl",
       )}
     >
-      <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-0.5">
-          <h2 className="font-semibold text-lg tracking-tight">
-            Form Experience
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            Choose your preferred way to fill out this request.
-          </p>
-        </div>
-        <div className="flex w-fit items-center gap-2 rounded-lg border bg-muted p-1">
-          <button
-            className={cn(
-              "rounded-md px-3 py-1.5 font-medium text-sm transition-all",
-              useWizard
-                ? "text-muted-foreground hover:text-foreground"
-                : "bg-background shadow-sm",
-            )}
-            onClick={() => setUseWizard(false)}
-            type="button"
-          >
-            Simple
-          </button>
-          <button
-            className={cn(
-              "rounded-md px-3 py-1.5 font-medium text-sm transition-all",
-              useWizard
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => setUseWizard(true)}
-            type="button"
-          >
-            Wizard
-          </button>
-        </div>
-      </div>
+      <form
+        className="space-y-8"
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+      >
+        <ManpowerRequestFormProvider form={form}>
+          <div className="space-y-10">
+            <PositionDetailsSection />
+            <ContractBudgetSection />
+            <JustificationSection />
+            <AdvancedOptionsSection />
+          </div>
+        </ManpowerRequestFormProvider>
 
-      {useWizard ? (
-        <ManpowerRequestFormWizard
-          form={form}
-          isPending={isPending}
-          onCancel={handleCancel}
-        />
-      ) : (
-        <ManpowerRequestFormSimple
-          form={form}
-          isPending={isPending}
-          onCancel={handleCancel}
-        />
-      )}
+        <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t pt-6 blur-bg-smoke/50 backdrop-blur-sm">
+          <Button onClick={handleCancel} type="button" variant="outline">
+            Cancel
+          </Button>
+          <form.Subscribe
+            selector={(state) => ({
+              canSubmit: state.canSubmit,
+              isSubmitting: state.isSubmitting,
+            })}
+          >
+            {({ canSubmit, isSubmitting }) => (
+              <Button
+                disabled={!canSubmit || isSubmitting || isPending}
+                type="submit"
+              >
+                {(isSubmitting || isPending) && (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                )}
+                Submit Request
+              </Button>
+            )}
+          </form.Subscribe>
+        </div>
+      </form>
     </div>
   );
 }

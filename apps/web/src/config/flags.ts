@@ -18,12 +18,5 @@ export const flagConfig = {
       tooltipTitle: "Command filter chips",
       tooltipDescription: "Linear like command palette for filtering rows.",
     },
-    {
-      label: "Wizard Manpower Request",
-      value: "wizardManpowerRequest" as const,
-      icon: CommandIcon,
-      tooltipTitle: "Wizard Form",
-      tooltipDescription: "Use a multi-step wizard for manpower requests.",
-    },
   ],
 };

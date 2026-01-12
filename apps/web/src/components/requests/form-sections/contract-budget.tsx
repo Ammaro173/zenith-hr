@@ -1,3 +1,4 @@
+import { CONTRACT_DURATIONS } from "@zenith-hr/api/modules/requests/requests.schema";
 import { FormField } from "@/components/shared/form-field";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -9,14 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CONTRACT_DURATIONS } from "../manpower-request-form.constants";
-import type { ManpowerRequestFormType } from "../types";
+import { useManpowerRequestFormContext } from "../manpower-request-form-context";
 
-type SectionProps = {
-  form: ManpowerRequestFormType;
-};
+export function ContractBudgetSection() {
+  const { form } = useManpowerRequestFormContext();
 
-export function ContractBudgetSection({ form }: SectionProps) {
   return (
     <section className="space-y-6">
       <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">
@@ -27,9 +25,9 @@ export function ContractBudgetSection({ form }: SectionProps) {
         {(field) => (
           <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
             <Checkbox
-              checked={field.state.value ?? false}
+              checked={field.state.value}
               id={field.name}
-              onCheckedChange={() => field.handleChange(true)}
+              onCheckedChange={(checked) => field.handleChange(!!checked)}
             />
             <div className="space-y-1 leading-none">
               <Label className="font-semibold" htmlFor={field.name}>

@@ -1,12 +1,10 @@
 import { FormField } from "@/components/shared/form-field";
 import { Textarea } from "@/components/ui/textarea";
-import type { ManpowerRequestFormType } from "../types";
+import { useManpowerRequestFormContext } from "../manpower-request-form-context";
 
-type SectionProps = {
-  form: ManpowerRequestFormType;
-};
+export function JustificationSection() {
+  const { form } = useManpowerRequestFormContext();
 
-export function JustificationSection({ form }: SectionProps) {
   return (
     <section className="space-y-4">
       <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">

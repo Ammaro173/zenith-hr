@@ -4,13 +4,11 @@ import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import type { ManpowerRequestFormType } from "../types";
+import { Show } from "@/utils";
+import { useManpowerRequestFormContext } from "../manpower-request-form-context";
 
-type SectionProps = {
-  form: ManpowerRequestFormType;
-};
-
-export function AdvancedOptionsSection({ form }: SectionProps) {
+export function AdvancedOptionsSection() {
+  const { form } = useManpowerRequestFormContext();
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
@@ -25,11 +23,14 @@ export function AdvancedOptionsSection({ form }: SectionProps) {
           <Settings2 className="size-4" />
           Advanced Options
         </div>
-        {isOpen ? (
-          <ChevronUp className="size-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="size-4 text-muted-foreground" />
-        )}
+        <Show>
+          <Show.When isTrue={isOpen}>
+            <ChevronUp className="size-4 text-muted-foreground" />
+          </Show.When>
+          <Show.Else>
+            <ChevronDown className="size-4 text-muted-foreground" />
+          </Show.Else>
+        </Show>
       </Button>
 
       {isOpen && (
