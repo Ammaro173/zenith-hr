@@ -16,7 +16,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,11 +139,16 @@ export default function RequestDetailPage() {
             <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
               Requester
             </span>
-            <span className="font-semibold">Ahmed Al-Farsi</span>
+            <span className="font-semibold">
+              {request.requester?.name || "Unknown"}
+            </span>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-            <User className="size-6 text-muted-foreground" />
-          </div>
+          <Avatar className="size-10">
+            <AvatarImage src={request.requester?.image ?? undefined} />
+            <AvatarFallback>
+              <User className="size-6 text-muted-foreground" />
+            </AvatarFallback>
+          </Avatar>
         </div>
       </div>
 
@@ -168,7 +173,7 @@ export default function RequestDetailPage() {
               <DetailItem
                 icon={<MapPin className="size-3" />}
                 label="LOCATION"
-                value={positionDetails.location || "Doha, Qatar"}
+                value={positionDetails.location || "Not specified"}
               />
               <DetailItem
                 icon={<Calendar className="size-3" />}
@@ -176,20 +181,20 @@ export default function RequestDetailPage() {
                 value={
                   positionDetails.startDate
                     ? format(new Date(positionDetails.startDate), "MMM d, yyyy")
-                    : "Jan 15, 2024"
+                    : "Not specified"
                 }
               />
               <DetailItem
                 label="REPLACEMENT FOR"
                 value={
                   request.requestType === "REPLACEMENT"
-                    ? "Existing Employee"
+                    ? request.replacementForUser?.name || "Existing Employee"
                     : "New Position (Growth)"
                 }
               />
               <DetailItem
                 label="REPORTING TO"
-                value={positionDetails.reportingTo || "Sarah Jenkins (CTO)"}
+                value={positionDetails.reportingTo || "Not specified"}
               />
 
               <div className="space-y-2 md:col-span-2">
@@ -228,19 +233,14 @@ export default function RequestDetailPage() {
                   {Number(request.salaryRangeMax).toLocaleString()}{" "}
                   {budgetDetails.currency}
                 </div>
-                <div className="text-[10px] text-muted-foreground">
-                  Monthly Basic + Allowance
-                </div>
               </div>
               <DetailItem
                 label="COST CENTER"
-                subValue="Software Development"
-                value={budgetDetails.costCenter || "ENG-QA-001"}
+                value={budgetDetails.costCenter || "Not specified"}
               />
               <DetailItem
                 label="BUDGET CODE"
-                subValue="Approved FY24"
-                value={budgetDetails.budgetCode || "BDG-2024-Q1"}
+                value={budgetDetails.budgetCode || "Not specified"}
               />
             </CardContent>
           </Card>
@@ -258,7 +258,7 @@ export default function RequestDetailPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm">
-                        HR Department
+                        {log.actor?.name || "System"}
                       </span>
                       <span className="text-muted-foreground text-xs">
                         {log.stepName} •{" "}
@@ -352,31 +352,36 @@ export default function RequestDetailPage() {
                   Approval Chain
                 </CardTitle>
                 <Badge className="text-[10px]" variant="secondary">
-                  STEP 3 OF 4
+                  STEP {getStepNumber(request.status)} OF 5
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="relative space-y-8 before:absolute before:top-2 before:bottom-2 before:left-3 before:w-px before:bg-muted">
                 <ChainStep
-                  actor="Ahmed Al-Farsi"
+                  actor={request.requester?.name}
                   label="Requester"
                   status="COMPLETED"
                 />
                 <ChainStep
-                  actor="Sarah Jenkins"
+                  isActive={request.status === "PENDING_MANAGER"}
                   label="Line Manager"
-                  status="COMPLETED"
+                  status={getChainStepStatus(request.status, "PENDING_MANAGER")}
+                />
+                <ChainStep
+                  isActive={request.status === "PENDING_HR"}
+                  label="HR"
+                  status={getChainStepStatus(request.status, "PENDING_HR")}
                 />
                 <ChainStep
                   isActive={request.status === "PENDING_FINANCE"}
                   label="Finance"
-                  status="PENDING"
+                  status={getChainStepStatus(request.status, "PENDING_FINANCE")}
                 />
                 <ChainStep
                   isActive={request.status === "PENDING_CEO"}
                   label="CEO"
-                  status="WAITING"
+                  status={getChainStepStatus(request.status, "PENDING_CEO")}
                 />
               </div>
             </CardContent>
@@ -400,6 +405,42 @@ export default function RequestDetailPage() {
       </div>
     </div>
   );
+}
+
+function getChainStepStatus(
+  currentStatus: string,
+  stepStatus: string,
+): "COMPLETED" | "PENDING" | "WAITING" {
+  const statuses = [
+    "DRAFT",
+    "PENDING_MANAGER",
+    "PENDING_HR",
+    "PENDING_FINANCE",
+    "PENDING_CEO",
+    "APPROVED_OPEN",
+  ];
+  const currentIndex = statuses.indexOf(currentStatus);
+  const stepIndex = statuses.indexOf(stepStatus);
+
+  if (currentIndex > stepIndex) {
+    return "COMPLETED";
+  }
+  if (currentIndex === stepIndex) {
+    return "PENDING";
+  }
+  return "WAITING";
+}
+
+function getStepNumber(status: string): number {
+  const mapping: Record<string, number> = {
+    DRAFT: 1,
+    PENDING_MANAGER: 2,
+    PENDING_HR: 3,
+    PENDING_FINANCE: 4,
+    PENDING_CEO: 5,
+    APPROVED_OPEN: 5,
+  };
+  return mapping[status] || 1;
 }
 
 function DetailItem({
