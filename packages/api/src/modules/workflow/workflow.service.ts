@@ -7,7 +7,7 @@ import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import { eq, sql } from "drizzle-orm";
-import type { NeonHttpQueryResultHKT } from "drizzle-orm/neon-http";
+import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type {
   ApprovalAction,
@@ -17,7 +17,7 @@ import type {
 
 // Type for transaction context - must match what Drizzle returns from db.transaction()
 type TransactionDB = PgTransaction<
-  NeonHttpQueryResultHKT,
+  NeonQueryResultHKT,
   typeof schema,
   ExtractTablesWithRelations<typeof schema>
 >;

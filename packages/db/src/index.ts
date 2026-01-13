@@ -1,5 +1,5 @@
-import { neon, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { neonConfig, Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import ws from "ws";
 import { env } from "./env";
 import * as schema from "./schema";
@@ -13,7 +13,7 @@ neonConfig.webSocketConstructor = ws;
 // Enable fetch-based queries for edge environments (Cloudflare Workers, Vercel Edge, etc.)
 // neonConfig.poolQueryViaFetch = true
 
-const sql = neon(env.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const db = drizzle(pool, { schema });
 export * from "./schema";
 export type DB = typeof db;
