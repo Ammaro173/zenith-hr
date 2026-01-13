@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { protectedProcedure } from "../../shared/middleware";
+import { o, protectedProcedure } from "../../shared/middleware";
 import {
   getCandidatesSchema,
   selectCandidateSchema,
@@ -14,7 +14,7 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-export const candidatesRouter = {
+export const candidatesRouter = o.router({
   uploadCV: protectedProcedure
     .input(uploadCvSchema)
     .handler(async ({ input, context }) => {
@@ -60,4 +60,4 @@ export const candidatesRouter = {
       async ({ input, context }) =>
         await context.services.candidates.getCandidates(input.requestId),
     ),
-};
+});

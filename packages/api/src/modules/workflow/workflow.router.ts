@@ -1,8 +1,8 @@
 import { ORPCError } from "@orpc/server";
-import { protectedProcedure, requireRoles } from "../../shared/middleware";
+import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import { requestIdSchema, transitionSchema } from "./workflow.schema";
 
-export const workflowRouter = {
+export const workflowRouter = o.router({
   transition: requireRoles([
     "REQUESTER",
     "MANAGER",
@@ -63,4 +63,4 @@ export const workflowRouter = {
     .handler(async ({ input, context }) =>
       context.services.workflow.getRequestHistory(input.id),
     ),
-};
+});

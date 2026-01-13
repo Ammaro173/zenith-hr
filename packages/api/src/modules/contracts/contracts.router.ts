@@ -1,12 +1,12 @@
 import { ORPCError } from "@orpc/server";
-import { protectedProcedure } from "../../shared/middleware";
+import { o, protectedProcedure } from "../../shared/middleware";
 import {
   contractIdSchema,
   generateContractSchema,
   updateContractSchema,
 } from "./contracts.schema";
 
-export const contractsRouter = {
+export const contractsRouter = o.router({
   generate: protectedProcedure
     .input(generateContractSchema)
     .handler(async ({ input, context }) => {
@@ -78,4 +78,4 @@ export const contractsRouter = {
         throw error;
       }
     }),
-};
+});

@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { protectedProcedure, requireRoles } from "../../shared/middleware";
+import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   addExpenseSchema,
   createTripSchema,
@@ -8,98 +8,113 @@ import {
   tripActionSchema,
 } from "./business-trips.schema";
 
-export const businessTripsRouter = {
-  create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
-    .input(createTripSchema)
-    .handler(
-      async ({ input, context }) =>
-        await context.services.businessTrips.create(
-          input,
-          context.session.user.id,
-        ),
-    ),
+const create = requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
+  .input(createTripSchema)
+  .handler(
+    async ({ input, context }) =>
+      await context.services.businessTrips.create(
+        input,
+        context.session.user.id,
+      ),
+  );
 
-  getById: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
-    .handler(async ({ input, context }) => {
-      const trip = await context.services.businessTrips.getById(input.id);
-      if (!trip) {
+const getById = protectedProcedure
+  .input(z.object({ id: z.string().uuid() }))
+  .handler(async ({ input, context }) => {
+    const trip = await context.services.businessTrips.getById(input.id);
+    if (!trip) {
+      throw new ORPCError("NOT_FOUND");
+    }
+    return trip;
+  });
+
+const getMyTrips = protectedProcedure
+  .input(getMyTripsSchema)
+  .handler(
+    async ({ input, context }) =>
+      await context.services.businessTrips.getByRequester(
+        context.session.user.id,
+        input,
+      ),
+  );
+
+const getPendingApprovals = requireRoles([
+  "MANAGER",
+  "HR",
+  "FINANCE",
+  "ADMIN",
+]).handler(async ({ context }) =>
+  context.services.businessTrips.getPendingApprovals(context.session.user.id),
+);
+
+const transition = requireRoles([
+  "REQUESTER",
+  "MANAGER",
+  "HR",
+  "FINANCE",
+  "ADMIN",
+])
+  .input(tripActionSchema)
+  .handler(async ({ input, context }) => {
+    try {
+      return await context.services.businessTrips.transition(
+        input,
+        context.session.user.id,
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message === "NOT_FOUND") {
         throw new ORPCError("NOT_FOUND");
       }
-      return trip;
-    }),
-
-  getMyTrips: protectedProcedure
-    .input(getMyTripsSchema)
-    .handler(
-      async ({ input, context }) =>
-        await context.services.businessTrips.getByRequester(
-          context.session.user.id,
-          input,
-        ),
-    ),
-
-  getPendingApprovals: requireRoles([
-    "MANAGER",
-    "HR",
-    "FINANCE",
-    "ADMIN",
-  ]).handler(async ({ context }) =>
-    context.services.businessTrips.getPendingApprovals(context.session.user.id),
-  ),
-
-  transition: requireRoles(["REQUESTER", "MANAGER", "HR", "FINANCE", "ADMIN"])
-    .input(tripActionSchema)
-    .handler(async ({ input, context }) => {
-      try {
-        return await context.services.businessTrips.transition(
-          input,
-          context.session.user.id,
-        );
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message === "NOT_FOUND") {
-          throw new ORPCError("NOT_FOUND");
-        }
-        if (message === "FORBIDDEN") {
-          throw new ORPCError("FORBIDDEN");
-        }
-        if (message === "INVALID_TRANSITION") {
-          throw new ORPCError("BAD_REQUEST", {
-            message: "Invalid status transition",
-          });
-        }
-        throw error;
+      if (message === "FORBIDDEN") {
+        throw new ORPCError("FORBIDDEN");
       }
+      if (message === "INVALID_TRANSITION") {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Invalid status transition",
+        });
+      }
+      throw error;
+    }
+  });
+
+const addExpense = protectedProcedure
+  .input(addExpenseSchema)
+  .handler(
+    async ({ input, context }) =>
+      await context.services.businessTrips.addExpense(input),
+  );
+
+const getExpenses = protectedProcedure
+  .input(z.object({ tripId: z.string().uuid() }))
+  .handler(
+    async ({ input, context }) =>
+      await context.services.businessTrips.getExpenses(input.tripId),
+  );
+
+const calculateAllowance = protectedProcedure
+  .input(
+    z.object({
+      perDiem: z.number().positive(),
+      startDate: z.coerce.date(),
+      endDate: z.coerce.date(),
     }),
-
-  addExpense: protectedProcedure
-    .input(addExpenseSchema)
-    .handler(
-      async ({ input, context }) =>
-        await context.services.businessTrips.addExpense(input),
+  )
+  .handler(async ({ input, context }) =>
+    context.services.businessTrips.calculateAllowance(
+      input.perDiem,
+      input.startDate,
+      input.endDate,
     ),
+  );
 
-  getExpenses: protectedProcedure
-    .input(z.object({ tripId: z.string().uuid() }))
-    .handler(
-      async ({ input, context }) =>
-        await context.services.businessTrips.getExpenses(input.tripId),
-    ),
-
-  calculateAllowance: protectedProcedure
-    .input(
-      z.object({
-        perDiem: z.number().positive(),
-        startDate: z.coerce.date(),
-        endDate: z.coerce.date(),
-      }),
-    )
-    .handler(async ({ input, context }) =>
-      context.services.businessTrips.calculateAllowance(
-        input.perDiem,
-        input.startDate,
-        input.endDate,
-      ),
-    ),
-};
+export const businessTripsRouter = o.router({
+  create,
+  getById,
+  getMyTrips,
+  getPendingApprovals,
+  transition,
+  addExpense,
+  getExpenses,
+  calculateAllowance,
+});

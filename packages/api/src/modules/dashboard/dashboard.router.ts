@@ -1,6 +1,6 @@
-import { protectedProcedure } from "../../shared/middleware";
+import { o, protectedProcedure } from "../../shared/middleware";
 
-export const dashboardRouter = {
+export const dashboardRouter = o.router({
   getStats: protectedProcedure.handler(async ({ context }) => {
     const { cache } = context;
 
@@ -58,4 +58,4 @@ export const dashboardRouter = {
 
     return { averageDays: averageTimeToHire };
   }),
-};
+});

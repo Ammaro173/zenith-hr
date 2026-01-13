@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, requireRoles } from "../../shared/middleware";
+import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createSeparationSchema,
   startClearanceSchema,
@@ -7,7 +7,7 @@ import {
   updateSeparationSchema,
 } from "./separations.schema";
 
-export const separationsRouter = {
+export const separationsRouter = o.router({
   create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
     .input(createSeparationSchema)
     .handler(
@@ -54,4 +54,4 @@ export const separationsRouter = {
   getSeparations: protectedProcedure.handler(
     async ({ context }) => await context.services.separations.getAll(),
   ),
-};
+});

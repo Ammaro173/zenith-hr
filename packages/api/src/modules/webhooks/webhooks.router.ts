@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { publicProcedure } from "../../shared/middleware";
+import { o, publicProcedure } from "../../shared/middleware";
 
-export const webhooksRouter = {
+export const webhooksRouter = o.router({
   docusign: publicProcedure
     .input(
       z.object({
@@ -24,4 +24,4 @@ export const webhooksRouter = {
         status,
       );
     }),
-};
+});

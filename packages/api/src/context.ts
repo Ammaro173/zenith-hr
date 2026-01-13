@@ -1,5 +1,5 @@
 import { auth } from "@zenith-hr/auth";
-import { db } from "@zenith-hr/db";
+import { type DB, db } from "@zenith-hr/db";
 import type { Context as ElysiaContext } from "elysia";
 import pino from "pino";
 import { env } from "./env";
@@ -67,7 +67,7 @@ export async function createContext({ context }: CreateContextOptions) {
   return {
     session,
     request: context.request,
-    db,
+    db: db as DB,
     storage,
     pdf,
     cache,

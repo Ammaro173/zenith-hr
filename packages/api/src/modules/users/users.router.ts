@@ -1,11 +1,11 @@
-import { protectedProcedure, requireRoles } from "../../shared/middleware";
+import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   getHierarchySchema,
   listUsersSchema,
   searchUsersSchema,
 } from "./users.schema";
 
-export const usersRouter = {
+export const usersRouter = o.router({
   // Search users for autocomplete (all authenticated users)
   search: protectedProcedure
     .input(searchUsersSchema)
@@ -50,4 +50,4 @@ export const usersRouter = {
         input.scope,
       );
     }),
-};
+});

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, requireRoles } from "../../shared/middleware";
+import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createCycleSchema,
   createGoalSchema,
@@ -8,7 +8,7 @@ import {
   updateReviewSchema,
 } from "./performance.schema";
 
-export const performanceRouter = {
+export const performanceRouter = o.router({
   createCycle: requireRoles(["HR", "ADMIN"])
     .input(createCycleSchema)
     .handler(
@@ -64,4 +64,4 @@ export const performanceRouter = {
       async ({ input, context }) =>
         await context.services.performance.updateGoal(input),
     ),
-};
+});
