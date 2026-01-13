@@ -1,5 +1,9 @@
 import { protectedProcedure, requireRoles } from "../../shared/middleware";
-import { listUsersSchema, searchUsersSchema } from "./users.schema";
+import {
+  getHierarchySchema,
+  listUsersSchema,
+  searchUsersSchema,
+} from "./users.schema";
 
 export const usersRouter = {
   // Search users for autocomplete (all authenticated users)
@@ -32,4 +36,18 @@ export const usersRouter = {
   ]).handler(
     async ({ context }) => await context.services.users.getDepartments(),
   ),
+
+  // Get organizational hierarchy for org chart
+  getHierarchy: protectedProcedure
+    .input(getHierarchySchema)
+    .handler(async ({ input, context }) => {
+      const currentUser = {
+        id: context.session.user.id,
+        role: (context.session.user as { role?: string }).role ?? "REQUESTER",
+      };
+      return await context.services.users.getHierarchy(
+        currentUser,
+        input.scope,
+      );
+    }),
 };

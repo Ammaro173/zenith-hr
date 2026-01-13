@@ -12,7 +12,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import type { ListUsersInput } from "./users.schema";
+import type { HierarchyNode, ListUsersInput } from "./users.schema";
 
 // Roles that can see all users
 const FULL_ACCESS_ROLES = ["ADMIN", "HR", "CEO", "IT", "FINANCE"];
@@ -205,6 +205,109 @@ export const createUsersService = (db: typeof _db) => ({
       })
       .from(department)
       .orderBy(asc(department.name));
+  },
+
+  /**
+   * Get organizational hierarchy for org chart
+   * Returns users in a nested tree structure
+   */
+  async getHierarchy(
+    currentUser: CurrentUser,
+    scope: "team" | "organization",
+  ): Promise<HierarchyNode[]> {
+    // Determine which users to include based on role and scope
+    const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
+
+    // Fetch all relevant users with their department names
+    const allUsers = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        sapNo: user.sapNo,
+        role: user.role,
+        status: user.status,
+        departmentName: department.name,
+        reportsToManagerId: user.reportsToManagerId,
+      })
+      .from(user)
+      .leftJoin(department, eq(user.departmentId, department.id))
+      .where(eq(user.status, "ACTIVE"));
+
+    // Build a map for quick lookup
+    const userMap = new Map<string, (typeof allUsers)[0]>();
+    for (const u of allUsers) {
+      userMap.set(u.id, u);
+    }
+
+    // Build hierarchical structure
+    const buildNode = (u: (typeof allUsers)[0]): HierarchyNode => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      sapNo: u.sapNo,
+      role: u.role,
+      status: u.status,
+      departmentName: u.departmentName,
+      children: [],
+    });
+
+    // Find all children for each user
+    const childrenMap = new Map<string | null, (typeof allUsers)[0][]>();
+    for (const u of allUsers) {
+      const managerId = u.reportsToManagerId;
+      const existing = childrenMap.get(managerId);
+      if (existing) {
+        existing.push(u);
+      } else {
+        childrenMap.set(managerId, [u]);
+      }
+    }
+
+    // Recursively build tree from a root user
+    const buildTree = (userId: string): HierarchyNode | null => {
+      const userData = userMap.get(userId);
+      if (!userData) {
+        return null;
+      }
+
+      const node = buildNode(userData);
+      const children = childrenMap.get(userId) ?? [];
+      node.children = children
+        .map((child) => buildTree(child.id))
+        .filter((n): n is HierarchyNode => n !== null)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return node;
+    };
+
+    // For organization scope (full access roles only)
+    if (scope === "organization" && isFullAccessRole) {
+      // Find all root users (no manager)
+      const roots = childrenMap.get(null) ?? [];
+      return roots
+        .map((u) => buildTree(u.id))
+        .filter((n): n is HierarchyNode => n !== null)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // For team scope or non-full-access roles
+    if (currentUser.role === "MANAGER") {
+      // Manager sees themselves as root with their reports
+      const managerTree = buildTree(currentUser.id);
+      return managerTree ? [managerTree] : [];
+    }
+
+    // For REQUESTER or other roles: show their manager and peers
+    const currentUserData = userMap.get(currentUser.id);
+    if (!currentUserData?.reportsToManagerId) {
+      // No manager - show just themselves
+      const selfNode = currentUserData ? buildNode(currentUserData) : null;
+      return selfNode ? [selfNode] : [];
+    }
+
+    // Show manager's tree (which includes the current user as a child)
+    const managerTree = buildTree(currentUserData.reportsToManagerId);
+    return managerTree ? [managerTree] : [];
   },
 });
 

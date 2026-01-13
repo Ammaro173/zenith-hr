@@ -3,6 +3,7 @@ import {
   Goal,
   LayoutDashboard,
   LogOut,
+  Network,
   Plane,
   Settings,
   Users,
@@ -52,6 +53,12 @@ export const protectedNavigationItems: {
     icon: UsersRound,
     description: "View organization users",
     allowedRoles: ["ADMIN", "HR", "CEO", "IT", "FINANCE", "MANAGER"],
+  },
+  {
+    title: "Organization Chart",
+    href: "/org-chart",
+    icon: Network,
+    description: "Visualize team hierarchy",
   },
   {
     title: "Business Trips",

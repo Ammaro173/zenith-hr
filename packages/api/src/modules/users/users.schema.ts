@@ -26,3 +26,22 @@ export const listUsersSchema = z.object({
 });
 
 export type ListUsersInput = z.infer<typeof listUsersSchema>;
+
+// Schema for getting organizational hierarchy
+export const getHierarchySchema = z.object({
+  scope: z.enum(["team", "organization"]).default("team"),
+});
+
+export type GetHierarchyInput = z.infer<typeof getHierarchySchema>;
+
+// Hierarchical node structure for org chart
+export interface HierarchyNode {
+  id: string;
+  name: string;
+  email: string;
+  sapNo: string;
+  role: string;
+  status: string;
+  departmentName: string | null;
+  children: HierarchyNode[];
+}

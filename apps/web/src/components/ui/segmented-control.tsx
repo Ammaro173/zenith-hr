@@ -7,7 +7,7 @@ import { For } from "@/utils";
 import { Button } from "./button";
 
 interface SegmentedControlOption<Value extends string> {
-  label: string;
+  label: React.ReactNode;
   value: Value;
 }
 

@@ -24,6 +24,18 @@ export interface UserListItem {
   createdAt: string | Date;
 }
 
+// Hierarchical node structure for org chart
+export interface HierarchyNode {
+  id: string;
+  name: string;
+  email: string;
+  sapNo: string;
+  role: UserRole;
+  status: UserStatus;
+  departmentName: string | null;
+  children: HierarchyNode[];
+}
+
 // Role display configuration
 export const ROLE_VARIANTS: Record<
   UserRole,
