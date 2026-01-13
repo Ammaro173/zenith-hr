@@ -2,19 +2,21 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   decimal,
+  integer,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth";
+import { user, userRoleEnum } from "./auth";
 
 export const tripStatusEnum = pgEnum("trip_status", [
   "DRAFT",
   "PENDING_MANAGER",
   "PENDING_HR",
   "PENDING_FINANCE",
+  "PENDING_CEO",
   "APPROVED",
   "REJECTED",
   "COMPLETED",
@@ -40,6 +42,15 @@ export const businessTrip = pgTable("business_trip", {
   needsHotelBooking: boolean("needs_hotel_booking").notNull().default(false),
   perDiemAllowance: decimal("per_diem_allowance", { precision: 10, scale: 2 }),
   status: tripStatusEnum("status").default("DRAFT").notNull(),
+
+  // Approval Workflow Fields
+  currentApproverId: text("current_approver_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  currentApproverRole: userRoleEnum("current_approver_role"),
+  revisionVersion: integer("revision_version").notNull().default(0),
+  version: integer("version").notNull().default(0), // For optimistic locking
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

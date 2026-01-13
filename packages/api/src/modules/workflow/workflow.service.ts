@@ -34,6 +34,9 @@ export const createWorkflowService = (db: typeof _db) => {
       HIRING_IN_PROGRESS: "Hiring",
       REJECTED: "Rejected",
       ARCHIVED: "Archived",
+      APPROVED: "Approved",
+      COMPLETED: "Completed",
+      CANCELLED: "Cancelled",
     };
     return stepMap[status] || status;
   };

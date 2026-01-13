@@ -4,6 +4,7 @@ import { protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   addExpenseSchema,
   createTripSchema,
+  getMyTripsSchema,
   tripActionSchema,
 } from "./business-trips.schema";
 
@@ -28,12 +29,15 @@ export const businessTripsRouter = {
       return trip;
     }),
 
-  getMyTrips: protectedProcedure.handler(
-    async ({ context }) =>
-      await context.services.businessTrips.getByRequester(
-        context.session.user.id,
-      ),
-  ),
+  getMyTrips: protectedProcedure
+    .input(getMyTripsSchema)
+    .handler(
+      async ({ input, context }) =>
+        await context.services.businessTrips.getByRequester(
+          context.session.user.id,
+          input,
+        ),
+    ),
 
   getPendingApprovals: requireRoles([
     "MANAGER",

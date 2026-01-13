@@ -10,7 +10,7 @@ const parsedOrigins = env.CORS_ORIGIN.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-export const corsPlugin = cors({
+export const corsPlugin: ReturnType<typeof cors> = cors({
   origin: parsedOrigins.length > 1 ? parsedOrigins : parsedOrigins[0],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [

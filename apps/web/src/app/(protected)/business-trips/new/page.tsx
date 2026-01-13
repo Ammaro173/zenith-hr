@@ -1,333 +1,40 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-// import { createTripSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+import { History } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { orpc } from "@/utils/orpc";
+import { BusinessTripForm } from "@/features/business-trips";
 
 export default function NewBusinessTripPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-
-  const { mutateAsync: createTrip } = useMutation(
-    orpc.businessTrips.create.mutationOptions({
-      onSuccess: () => {
-        toast.success("Business trip request created successfully");
-        queryClient.invalidateQueries({
-          queryKey: orpc.businessTrips.getMyTrips.key(),
-        });
-        router.push("/business-trips");
-      },
-      onError: (error: Error) => {
-        toast.error(`Failed to create request: ${error.message}`);
-      },
-    }),
-  );
-
-  const form = useForm({
-    defaultValues: {
-      destination: "",
-      purpose: "",
-      startDate: "",
-      endDate: "",
-      delegatedUserId: "",
-      visaRequired: false,
-      needsFlightBooking: false,
-      needsHotelBooking: false,
-      perDiemAllowance: "",
-      estimatedCost: "",
-      currency: "USD",
-    },
-    //TODO
-    // validators
-    onSubmit: async ({ value }) => {
-      await createTrip({
-        ...value,
-        perDiemAllowance: value.perDiemAllowance
-          ? Number(value.perDiemAllowance)
-          : undefined,
-        estimatedCost: value.estimatedCost
-          ? Number(value.estimatedCost)
-          : undefined,
-      });
-    },
-  });
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>New Business Trip Request</CardTitle>
-          <CardDescription>
-            Submit a request for an upcoming business trip.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="space-y-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <form.Field name="destination">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>Destination</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. London, UK"
-                    value={field.state.value}
-                  />
-                  {field.state.meta.errors ? (
-                    <p className="text-destructive text-sm">
-                      {field.state.meta.errors.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            </form.Field>
+    <div className="container max-w-4xl space-y-8 py-10">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <h1 className="font-bold text-3xl tracking-tight">
+            Create Business Trip
+          </h1>
+          <p className="text-muted-foreground">
+            Fill out the form below to submit a new business trip request.
+          </p>
+        </div>
+        <Button className="h-9 gap-2" size="sm" variant="outline">
+          <History className="size-4" />
+          View History
+        </Button>
+      </div>
 
-            <form.Field name="purpose">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>Purpose</Label>
-                  <Textarea
-                    id={field.name}
-                    name={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Reason for the trip..."
-                    value={field.state.value}
-                  />
-                  {field.state.meta.errors ? (
-                    <p className="text-destructive text-sm">
-                      {field.state.meta.errors.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            </form.Field>
-
-            <form.Field name="delegatedUserId">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor={field.name}>
-                    Delegate (Replacement) User ID
-                  </Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="UUID of delegate while traveling"
-                    value={field.state.value}
-                  />
-                  {field.state.meta.errors ? (
-                    <p className="text-destructive text-sm">
-                      {field.state.meta.errors.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-            </form.Field>
-
-            <div className="grid grid-cols-2 gap-4">
-              <form.Field name="startDate">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>Start Date</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      type="date"
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors ? (
-                      <p className="text-destructive text-sm">
-                        {field.state.meta.errors.join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field name="endDate">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>End Date</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      type="date"
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors ? (
-                      <p className="text-destructive text-sm">
-                        {field.state.meta.errors.join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <form.Field name="perDiemAllowance">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>Per Diem Allowance</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="0.00"
-                      type="number"
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors ? (
-                      <p className="text-destructive text-sm">
-                        {field.state.meta.errors.join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field name="estimatedCost">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>Estimated Cost</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="0.00"
-                      type="number"
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors ? (
-                      <p className="text-destructive text-sm">
-                        {field.state.meta.errors.join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field name="currency">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>Currency</Label>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="USD"
-                      value={field.state.value}
-                    />
-                    {field.state.meta.errors ? (
-                      <p className="text-destructive text-sm">
-                        {field.state.meta.errors.join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <form.Field name="visaRequired">
-                {(field) => (
-                  <label className="flex items-center gap-2">
-                    <input
-                      checked={field.state.value}
-                      id={field.name}
-                      name={field.name}
-                      onChange={(e) => field.handleChange(e.target.checked)}
-                      type="checkbox"
-                    />
-                    <span>Visa Required</span>
-                  </label>
-                )}
-              </form.Field>
-
-              <form.Field name="needsFlightBooking">
-                {(field) => (
-                  <label className="flex items-center gap-2">
-                    <input
-                      checked={field.state.value}
-                      id={field.name}
-                      name={field.name}
-                      onChange={(e) => field.handleChange(e.target.checked)}
-                      type="checkbox"
-                    />
-                    <span>Flight Booking</span>
-                  </label>
-                )}
-              </form.Field>
-
-              <form.Field name="needsHotelBooking">
-                {(field) => (
-                  <label className="flex items-center gap-2">
-                    <input
-                      checked={field.state.value}
-                      id={field.name}
-                      name={field.name}
-                      onChange={(e) => field.handleChange(e.target.checked)}
-                      type="checkbox"
-                    />
-                    <span>Hotel Booking</span>
-                  </label>
-                )}
-              </form.Field>
-            </div>
-
-            <div className="flex justify-end gap-4">
-              <Button
-                onClick={() => router.back()}
-                type="button"
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <form.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
-              >
-                {([canSubmit, isSubmitting]) => (
-                  <Button disabled={!canSubmit || isSubmitting} type="submit">
-                    {isSubmitting ? "Submitting..." : "Submit Request"}
-                  </Button>
-                )}
-              </form.Subscribe>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <BusinessTripForm
+          mode="page"
+          onCancel={() => router.push("/business-trips")}
+          onSuccess={() => {
+            router.push("/business-trips");
+            router.refresh();
+          }}
+        />
+      </div>
     </div>
   );
 }

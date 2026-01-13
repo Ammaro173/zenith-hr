@@ -6,6 +6,7 @@
     "dev": "next dev --port=3001",
     "build": "next build",
     "start": "next start --port=3001",
+    "check-types": "tsc --noEmit",
     "clean": "rimraf --glob \".next\" \".open-next\" \".vercel\" \".netlify\" \".wrangler\" \".vinxi\" \".output\" \".react-router\" \".tanstack\" \".nitro\" \"out\" \"build\" \"dist\" \"dev-dist\" \"coverage\" \".cache\" \"node_modules\" \"**/*.tsbuildinfo\""
   },
   "dependencies": {

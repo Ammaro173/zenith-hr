@@ -16,7 +16,10 @@ export type RequestStatus =
   | "APPROVED_OPEN"
   | "HIRING_IN_PROGRESS"
   | "REJECTED"
-  | "ARCHIVED";
+  | "ARCHIVED"
+  | "APPROVED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export type ApprovalAction =
   | "SUBMIT"
@@ -24,7 +27,8 @@ export type ApprovalAction =
   | "REJECT"
   | "REQUEST_CHANGE"
   | "HOLD"
-  | "ARCHIVE";
+  | "ARCHIVE"
+  | "CANCEL";
 
 export type ContractStatus =
   | "DRAFT"

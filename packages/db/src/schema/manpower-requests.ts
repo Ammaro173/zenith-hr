@@ -21,6 +21,9 @@ export const requestStatusEnum = pgEnum("request_status", [
   "HIRING_IN_PROGRESS",
   "REJECTED",
   "ARCHIVED",
+  "APPROVED",
+  "COMPLETED",
+  "CANCELLED",
 ]);
 
 export const requestTypeEnum = pgEnum("request_type", [

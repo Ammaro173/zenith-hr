@@ -1,5 +1,5 @@
 import { google } from "@ai-sdk/google";
-import { type CoreMessage, streamText } from "ai";
+import { streamText } from "ai";
 import type { Context } from "elysia";
 import { z } from "zod";
 
@@ -43,7 +43,7 @@ export async function aiRouteHandler(context: Context) {
     const { messages, model } = parseResult.data;
 
     // Convert validated messages to CoreMessage format
-    const coreMessages: CoreMessage[] = messages.map((msg) => ({
+    const coreMessages = messages.map((msg) => ({
       role: msg.role,
       content: msg.content,
     }));
