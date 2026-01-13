@@ -326,7 +326,7 @@ export function DataTableFilterList<TData>({
   );
 }
 
-type DataTableFilterItemProps<TData> = {
+interface DataTableFilterItemProps<TData> {
   filter: ExtendedColumnFilter<TData>;
   index: number;
   filterItemId: string;
@@ -338,7 +338,7 @@ type DataTableFilterItemProps<TData> = {
     updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
   ) => void;
   onFilterRemove: (filterId: string) => void;
-};
+}
 
 function JoinOperatorDisplay({
   index,

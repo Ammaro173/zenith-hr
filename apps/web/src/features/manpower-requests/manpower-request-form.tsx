@@ -12,11 +12,11 @@ import {
 import { ManpowerRequestFormProvider } from "./manpower-request-form-context";
 import { useManpowerRequestForm } from "./use-manpower-request-form";
 
-type ManpowerRequestFormProps = {
+interface ManpowerRequestFormProps {
   mode?: "page" | "sheet";
   onSuccess?: () => void;
   onCancel?: () => void;
-};
+}
 
 export function ManpowerRequestForm({
   mode = "page",

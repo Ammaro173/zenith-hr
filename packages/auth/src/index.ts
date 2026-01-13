@@ -18,6 +18,11 @@ export const auth = betterAuth<BetterAuthOptions>({
         required: true,
         unique: true,
       },
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "REQUESTER",
+      },
     },
   },
   emailAndPassword: {

@@ -2,7 +2,7 @@
  * Storage Service Type
  * Abstraction for file storage operations (S3, local filesystem, etc.)
  */
-export type StorageService = {
+export interface StorageService {
   /**
    * Upload a file to storage
    * @param key - The storage key/path for the file
@@ -42,17 +42,17 @@ export type StorageService = {
    * @param key - The storage key/path of the file
    */
   getMetadata?: (key: string) => Promise<FileMetadata>;
-};
+}
 
-export type UploadOptions = {
+export interface UploadOptions {
   contentType?: string;
   metadata?: Record<string, string>;
   acl?: "private" | "public-read";
-};
+}
 
-export type FileMetadata = {
+export interface FileMetadata {
   size: number;
   contentType: string;
   lastModified: Date;
   metadata?: Record<string, string>;
-};
+}

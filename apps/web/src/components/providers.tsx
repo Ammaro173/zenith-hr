@@ -14,10 +14,10 @@ import { CommandMenu } from "./command-menu";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
 
-type ProvidersProps = {
+interface ProvidersProps {
   children: React.ReactNode;
   dehydratedState?: DehydratedState;
-};
+}
 
 const queryStateOptions: Options = {
   history: "replace",

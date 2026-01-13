@@ -6,6 +6,7 @@ import {
   Plane,
   Settings,
   Users,
+  UsersRound,
 } from "lucide-react";
 import type { Route } from "next";
 
@@ -44,6 +45,13 @@ export const protectedNavigationItems: {
     icon: Users,
     description: "Inbox for pending approvals",
     allowedRoles: ["MANAGER", "HR", "FINANCE", "CEO", "ADMIN"],
+  },
+  {
+    title: "User Directory",
+    href: "/users",
+    icon: UsersRound,
+    description: "View organization users",
+    allowedRoles: ["ADMIN", "HR", "CEO", "IT", "FINANCE", "MANAGER"],
   },
   {
     title: "Business Trips",

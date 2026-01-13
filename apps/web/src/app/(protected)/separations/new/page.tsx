@@ -17,12 +17,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { orpc } from "@/utils/orpc";
 
-type SeparationForm = {
+interface SeparationForm {
   type: "RESIGNATION" | "TERMINATION" | "RETIREMENT" | "END_OF_CONTRACT";
   reason: string;
   lastWorkingDay: string;
   noticePeriodWaived: boolean;
-};
+}
 
 const defaultValues: SeparationForm = {
   type: "RESIGNATION",

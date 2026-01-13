@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import type { UserRole } from "@/config/navigation";
 import { client } from "@/utils/orpc";
 
-type ImportResult = { email: string; status: "inserted" | "skipped" };
+interface ImportResult {
+  email: string;
+  status: "inserted" | "skipped";
+}
 
 const LINE_BREAK_REGEX = /\r?\n/;
 

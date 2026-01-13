@@ -13,12 +13,12 @@ import type {
   UploadOptions,
 } from "../interfaces/storage.interface";
 
-export type S3StorageConfig = {
+export interface S3StorageConfig {
   region?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
   bucketName?: string;
-};
+}
 
 /**
  * S3-based implementation of the StorageService interface

@@ -2,10 +2,10 @@
 
 import { useLayoutEffect, useState } from "react";
 
-type ClientOnlyProps = {
+interface ClientOnlyProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-};
+}
 
 function ClientOnly({ children, fallback = null }: ClientOnlyProps) {
   const [mounted, setMounted] = useState(false);

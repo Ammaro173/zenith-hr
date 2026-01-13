@@ -10,10 +10,10 @@ import { client } from "@/utils/orpc";
 
 export type FormValues = z.infer<typeof createRequestSchema>;
 
-type UseManpowerRequestFormProps = {
+interface UseManpowerRequestFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-};
+}
 
 export function useManpowerRequestForm({
   onSuccess,

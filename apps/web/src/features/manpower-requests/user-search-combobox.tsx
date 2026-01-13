@@ -20,18 +20,18 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
 import { client } from "@/utils/orpc";
 
-type UserOption = {
+interface UserOption {
   id: string;
   name: string;
   sapNo: string;
   departmentName: string | null;
-};
+}
 
-type UserSearchComboboxProps = {
+interface UserSearchComboboxProps {
   value?: string;
   onChange: (val?: string) => void;
   placeholder?: string;
-};
+}
 
 export function UserSearchCombobox({
   value,

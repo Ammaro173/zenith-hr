@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 import { Image } from "@/utils/image";
 import { Show } from "@/utils/Show";
 
-type OnboardingShellProps = {
+interface OnboardingShellProps {
   children: React.ReactNode;
   className?: string;
   variant?: "member" | "staff";
-};
+}
 
 export function OnboardingShell({
   children,

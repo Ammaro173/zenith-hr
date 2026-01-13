@@ -141,7 +141,7 @@ function SelectContent({
         className={cn(
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-y-auto overflow-x-hidden rounded-md border border-border bg-popover text-popeover-foreground shadow-black/5 shadow-md data-[state=closed]:animate-out data-[state=open]:animate-in",
           position === "popper" &&
-            "data-[side=left]:-translate-x-1.5 data-[side=top]:-translate-y-1.5 data-[side=right]:translate-x-1.5 data-[side=bottom]:translate-y-1.5",
+            "data-[side=left]:-translate-x-1.5 data-[side=right]:translate-x-1.5 data-[side=bottom]:translate-y-1.5 data-[side=top]:-translate-y-1.5",
           className,
         )}
         data-slot="select-content"
@@ -228,7 +228,7 @@ function SelectIndicator({
   return (
     <span
       className={cn(
-        "-translate-y-1/2 absolute top-1/2 flex items-center justify-center",
+        "absolute top-1/2 flex -translate-y-1/2 items-center justify-center",
         indicatorPosition === "left" ? "start-2" : "end-2",
         className,
       )}
@@ -247,7 +247,7 @@ function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       className={cn(
-        "-mx-1.5 pointer-events-none my-1.5 h-px bg-border",
+        "pointer-events-none -mx-1.5 my-1.5 h-px bg-border",
         className,
       )}
       data-slot="select-separator"

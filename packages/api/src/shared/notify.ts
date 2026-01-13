@@ -1,7 +1,7 @@
-export type NotificationPayload = {
+export interface NotificationPayload {
   userId: string;
   message: string;
-};
+}
 
 // Placeholder notification hook - replace with email/in-app provider
 export function notifyUser(payload: NotificationPayload): void {

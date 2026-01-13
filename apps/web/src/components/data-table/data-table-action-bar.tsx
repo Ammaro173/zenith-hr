@@ -128,9 +128,9 @@ function DataTableActionBarAction({
   );
 }
 
-type DataTableActionBarSelectionProps<TData> = {
+interface DataTableActionBarSelectionProps<TData> {
   table: Table<TData>;
-};
+}
 
 function DataTableActionBarSelection<TData>({
   table,

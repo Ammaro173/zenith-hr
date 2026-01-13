@@ -16,9 +16,9 @@ export type ChartConfig = {
   );
 };
 
-type ChartContextProps = {
+interface ChartContextProps {
   config: ChartConfig;
-};
+}
 
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
@@ -102,14 +102,14 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
-type ChartTooltipPayload = {
+interface ChartTooltipPayload {
   name?: string;
   value?: number;
   dataKey?: string;
   color?: string;
   type?: string;
   payload?: Record<string, unknown>;
-};
+}
 
 type ChartTooltipProps = React.ComponentProps<"div"> & {
   active?: boolean;
@@ -276,13 +276,13 @@ function ChartTooltipContent({
 
 const ChartLegend = RechartsPrimitive.Legend;
 
-type ChartLegendPayload = {
+interface ChartLegendPayload {
   value?: string | number;
   color?: string;
   type?: string;
   dataKey?: string;
   payload?: Record<string, unknown>;
-};
+}
 
 type ChartLegendProps = React.ComponentProps<"div"> & {
   payload?: ChartLegendPayload[];

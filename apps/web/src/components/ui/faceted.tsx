@@ -24,11 +24,11 @@ type FacetedValue<Multiple extends boolean> = Multiple extends true
   ? string[]
   : string;
 
-type FacetedContextValue<Multiple extends boolean = boolean> = {
+interface FacetedContextValue<Multiple extends boolean = boolean> {
   value?: FacetedValue<Multiple>;
   onItemSelect?: (value: string) => void;
   multiple?: Multiple;
-};
+}
 
 const FacetedContext = React.createContext<FacetedContextValue<boolean> | null>(
   null,

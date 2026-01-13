@@ -2,16 +2,16 @@
  * PDF Service Type
  * Abstraction for PDF generation and manipulation
  */
-export type PdfService = {
+export interface PdfService {
   /**
    * Generate a contract PDF document
    * @param params - Contract details for PDF generation
    * @returns The generated PDF as a Buffer
    */
   generateContractPdf: (params: GenerateContractParams) => Promise<Buffer>;
-};
+}
 
-export type GenerateContractParams = {
+export interface GenerateContractParams {
   requestCode: string;
   positionTitle: string;
   salary: number;
@@ -20,4 +20,4 @@ export type GenerateContractParams = {
   candidateEmail: string;
   candidateAddress?: string;
   startDate: string;
-};
+}

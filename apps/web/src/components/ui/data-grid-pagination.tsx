@@ -12,7 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-type DataGridPaginationProps = {
+interface DataGridPaginationProps {
   sizes?: number[];
   sizesInfo?: string;
   sizesLabel?: string;
@@ -27,7 +27,7 @@ type DataGridPaginationProps = {
   previousPageLabel?: string;
   nextPageLabel?: string;
   ellipsisText?: string;
-};
+}
 
 function DataGridPagination(props: DataGridPaginationProps) {
   const { table, recordCount, isLoading } = useDataGrid();

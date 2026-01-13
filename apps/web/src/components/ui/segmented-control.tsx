@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 import { For } from "@/utils";
 import { Button } from "./button";
 
-type SegmentedControlOption<Value extends string> = {
+interface SegmentedControlOption<Value extends string> {
   label: string;
   value: Value;
-};
+}
 
 interface SegmentedControlProps<Value extends string>
   extends React.ComponentProps<"div"> {

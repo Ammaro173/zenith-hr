@@ -1,6 +1,6 @@
 import type { GetMyRequestsInput } from "@zenith-hr/api/modules/requests/requests.schema";
 
-export type ManpowerRequest = {
+export interface ManpowerRequest {
   id: string;
   requestCode: string;
   requestType: "NEW_POSITION" | "REPLACEMENT";
@@ -31,7 +31,7 @@ export type ManpowerRequest = {
     id: string;
     name: string;
   } | null;
-};
+}
 
 export type RequestStatus = GetMyRequestsInput["status"] extends
   | (infer T)[]

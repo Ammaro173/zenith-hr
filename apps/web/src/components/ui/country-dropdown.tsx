@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type Country = {
+export interface Country {
   alpha2: string;
   alpha3: string;
   countryCallingCodes: string[];
@@ -37,16 +37,16 @@ export type Country = {
   languages: string[];
   name: string;
   status: string;
-};
+}
 
-type CountryDropdownProps = {
+interface CountryDropdownProps {
   options?: Country[];
   onChange?: (countryName: string) => void;
   defaultValue?: string;
   disabled?: boolean;
   placeholder?: string;
   slim?: boolean;
-};
+}
 
 const CountryDropdownComponent = (
   {

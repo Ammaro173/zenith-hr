@@ -3,9 +3,13 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
-type HighlightPart = { text: string; highlight: boolean; id: string };
+interface HighlightPart {
+  text: string;
+  highlight: boolean;
+  id: string;
+}
 
-type HighlightProps = {
+interface HighlightProps {
   text: string;
   query: string | string[];
   exactMatch?: boolean;
@@ -13,7 +17,7 @@ type HighlightProps = {
   matchAll?: boolean;
   className?: string;
   markClassName?: string;
-};
+}
 
 function buildPattern(queries: string[], exactMatch: boolean): string {
   const safeQueries = queries

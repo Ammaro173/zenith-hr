@@ -2,7 +2,7 @@
  * Cache Service Type
  * Abstraction for caching operations (in-memory, Redis, etc.)
  */
-export type CacheService = {
+export interface CacheService {
   /**
    * Get a value from the cache
    * @param key - The cache key
@@ -49,4 +49,4 @@ export type CacheService = {
   setMany?: <T>(
     entries: Array<{ key: string; value: T; ttlSeconds: number }>,
   ) => Promise<void>;
-};
+}

@@ -493,7 +493,7 @@ function ChainStep({
         )}
       >
         {status === "COMPLETED" && (
-          <CheckCircle2 className="-left-px -top-px absolute size-3 text-white" />
+          <CheckCircle2 className="absolute -top-px -left-px size-3 text-white" />
         )}
       </div>
       <div className="space-y-0.5">

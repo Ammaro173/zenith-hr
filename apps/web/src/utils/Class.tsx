@@ -1,7 +1,7 @@
 // biome-ignore lint/style/useFilenamingConvention: legacy utility name
 import type { ElementType, ReactNode } from "react";
 
-type ClassProps = {
+interface ClassProps {
   className?: string;
   condition?: boolean;
   toggleClass?: string;
@@ -9,7 +9,7 @@ type ClassProps = {
   as?: ElementType;
   // biome-ignore lint/suspicious/noExplicitAny: <//TODO double check>
   [key: string]: any;
-};
+}
 
 /**
  * Class component that conditionally applies a class name to a specified HTML element.

@@ -42,7 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // i18n Configuration Interface
-export type FilterI18nConfig = {
+export interface FilterI18nConfig {
   // UI Labels
   addFilter: string;
   searchFields: string;
@@ -113,7 +113,7 @@ export type FilterI18nConfig = {
     invalidTel: string;
     invalid: string;
   };
-};
+}
 
 // Default English i18n configuration
 export const DEFAULT_I18N: FilterI18nConfig = {
@@ -190,7 +190,7 @@ export const DEFAULT_I18N: FilterI18nConfig = {
 };
 
 // Context for all Filter component props
-type FilterContextValue = {
+interface FilterContextValue {
   variant: "solid" | "outline";
   size: "sm" | "md" | "lg";
   radius: "md" | "full";
@@ -205,7 +205,7 @@ type FilterContextValue = {
   showSearchInput?: boolean;
   trigger?: React.ReactNode;
   allowMultiple?: boolean;
-};
+}
 
 const FilterContext = createContext<FilterContextValue>({
   variant: "outline",
@@ -655,7 +655,7 @@ function FilterInput<T = unknown>({
         {!isValid && validationMessage && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="-translate-y-1/2 absolute top-1/2 right-2 flex items-center">
+              <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center">
                 <AlertCircle className="size-3.5 text-destructive" />
               </div>
             </TooltipTrigger>
@@ -716,39 +716,39 @@ function FilterRemoveButton({
 }
 
 // Generic types for flexible filter system
-export type FilterOption<T = unknown> = {
+export interface FilterOption<T = unknown> {
   value: T;
   label: string;
   icon?: React.ReactNode;
   metadata?: Record<string, unknown>;
-};
+}
 
-export type FilterOperator = {
+export interface FilterOperator {
   value: string;
   label: string;
   supportsMultiple?: boolean;
-};
+}
 
 // Custom renderer props interface
-export type CustomRendererProps<T = unknown> = {
+export interface CustomRendererProps<T = unknown> {
   field: FilterFieldConfig<T>;
   values: T[];
   onChange: (values: T[]) => void;
   operator: string;
-};
+}
 
 // Grouped field configuration interface
-export type FilterFieldGroup<T = unknown> = {
+export interface FilterFieldGroup<T = unknown> {
   group?: string;
   fields: FilterFieldConfig<T>[];
-};
+}
 
 // Union type for both flat and grouped field configurations
 export type FilterFieldsConfig<T = unknown> =
   | FilterFieldConfig<T>[]
   | FilterFieldGroup<T>[];
 
-export type FilterFieldConfig<T = unknown> = {
+export interface FilterFieldConfig<T = unknown> {
   key?: string;
   label?: string;
   icon?: React.ReactNode;
@@ -805,7 +805,7 @@ export type FilterFieldConfig<T = unknown> = {
   // Controlled values support for this field
   value?: T[];
   onValueChange?: (values: T[]) => void;
-};
+}
 
 // Helper functions to handle both flat and grouped field configurations
 const isFieldGroup = <T = unknown>(
@@ -988,12 +988,12 @@ const getOperatorsForField = <T = unknown>(
   return operators[fieldType] || operators.select;
 };
 
-type FilterOperatorDropdownProps<T = unknown> = {
+interface FilterOperatorDropdownProps<T = unknown> {
   field: FilterFieldConfig<T>;
   operator: string;
   values: T[];
   onChange: (operator: string) => void;
-};
+}
 
 function FilterOperatorDropdown<T = unknown>({
   field,
@@ -1045,14 +1045,14 @@ function FilterOperatorDropdown<T = unknown>({
   );
 }
 
-type FilterValueSelectorProps<T = unknown> = {
+interface FilterValueSelectorProps<T = unknown> {
   field: FilterFieldConfig<T>;
   values: T[];
   onChange: (values: T[]) => void;
   operator: string;
-};
+}
 
-type SelectOptionsPopoverProps<T = unknown> = {
+interface SelectOptionsPopoverProps<T = unknown> {
   field: FilterFieldConfig<T>;
   values: T[];
   onChange: (values: T[]) => void;
@@ -1060,7 +1060,7 @@ type SelectOptionsPopoverProps<T = unknown> = {
   showBackButton?: boolean;
   onBack?: () => void;
   inline?: boolean;
-};
+}
 
 function SelectOptionsPopover<T = unknown>({
   field,
@@ -1217,7 +1217,7 @@ function SelectOptionsPopover<T = unknown>({
               {selectedOptions.length > 0 && (
                 <div
                   className={cn(
-                    "-space-x-1.5 flex items-center",
+                    "flex items-center -space-x-1.5",
                     field.selectedOptionsClassName,
                   )}
                 >
@@ -1685,7 +1685,7 @@ function FilterValueSelector<T = unknown>({
           ) : (
             <>
               {selectedOptions.length > 0 && (
-                <div className="-space-x-1.5 flex items-center">
+                <div className="flex items-center -space-x-1.5">
                   {selectedOptions.slice(0, 3).map((option) => (
                     <div key={String(option.value)}>{option.icon}</div>
                   ))}
@@ -1788,26 +1788,26 @@ function FilterValueSelector<T = unknown>({
   );
 }
 
-export type Filter<T = unknown> = {
+export interface Filter<T = unknown> {
   id: string;
   field: string;
   operator: string;
   values: T[];
-};
+}
 
-export type FilterGroup<T = unknown> = {
+export interface FilterGroup<T = unknown> {
   id: string;
   label?: string;
   filters: Filter<T>[];
   fields: FilterFieldConfig<T>[];
-};
+}
 
 // FiltersContent component for the filter panel content
-type FiltersContentProps<T = unknown> = {
+interface FiltersContentProps<T = unknown> {
   filters: Filter<T>[];
   fields: FilterFieldsConfig<T>;
   onChange: (filters: Filter<T>[]) => void;
-};
+}
 
 export const FiltersContent = <T = unknown>({
   filters,
@@ -1905,7 +1905,7 @@ export const FiltersContent = <T = unknown>({
   );
 };
 
-type FiltersProps<T = unknown> = {
+interface FiltersProps<T = unknown> {
   filters: Filter<T>[];
   fields: FilterFieldsConfig<T>;
   onChange: (filters: Filter<T>[]) => void;
@@ -1924,7 +1924,7 @@ type FiltersProps<T = unknown> = {
   trigger?: React.ReactNode;
   allowMultiple?: boolean;
   popoverContentClassName?: string;
-};
+}
 
 export function Filters<T = unknown>({
   filters,

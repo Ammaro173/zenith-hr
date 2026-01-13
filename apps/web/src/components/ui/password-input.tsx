@@ -58,7 +58,7 @@ export function PasswordInput({
             value={value}
           />
           <Button
-            className="-translate-y-1/2 absolute inset-y-1/2 right-1 size-7 cursor-pointer"
+            className="absolute inset-y-1/2 right-1 size-7 -translate-y-1/2 cursor-pointer"
             onClick={() => setShowPassword((p) => !p)}
             size="icon"
             type="button"

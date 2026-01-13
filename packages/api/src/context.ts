@@ -34,9 +34,9 @@ const logger = pino({
   level: env.LOG_LEVEL,
 });
 
-export type CreateContextOptions = {
+export interface CreateContextOptions {
   context: ElysiaContext;
-};
+}
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
 

@@ -1,9 +1,9 @@
 import type { CacheService } from "../interfaces/cache.interface";
 
-type CacheEntry<T> = {
+interface CacheEntry<T> {
   value: T;
   expiresAt: number;
-};
+}
 
 /**
  * In-memory implementation of CacheService

@@ -15,7 +15,7 @@ import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-type IData = {
+interface IData {
   id: string;
   name: string;
   availability: "online" | "away" | "busy" | "offline";
@@ -28,7 +28,7 @@ type IData = {
   joined: string;
   location: string;
   balance: number;
-};
+}
 
 const demoData: IData[] = [
   {

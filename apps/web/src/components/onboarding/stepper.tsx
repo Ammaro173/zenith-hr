@@ -19,7 +19,7 @@ import {
 import { For, If, Show } from "@/utils";
 import { Image } from "@/utils/image";
 
-export type Step = {
+export interface Step {
   id: string;
   title: string;
   subtitle?: string;
@@ -28,9 +28,9 @@ export type Step = {
   canNext?: boolean;
   hideContent?: boolean;
   hideSubtitle?: boolean;
-};
+}
 
-type StepperProps = {
+interface StepperProps {
   steps: Step[];
   onSubmit: () => Promise<void> | void;
   isSubmitting?: boolean;
@@ -39,7 +39,7 @@ type StepperProps = {
   backLabel?: string;
   logo?: string;
   startLabel?: string;
-};
+}
 
 export function Stepper({
   steps,

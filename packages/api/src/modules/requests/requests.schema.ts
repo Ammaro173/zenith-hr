@@ -35,19 +35,22 @@ export const CONTRACT_DURATIONS = [
   { value: "CONSULTANT", label: "Consultant" },
 ] as const;
 
-export const createRequestSchema = z
-  .object({
-    requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
-    isBudgeted: z.boolean(),
-    replacementForUserId: z.string().uuid().optional(),
-    contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
-    justificationText: z.string().min(1),
-    salaryRangeMin: z.number().positive(),
-    salaryRangeMax: z.number().positive(),
-    positionDetails: positionDetailsSchema,
-    budgetDetails: budgetDetailsSchema,
-    approverId: z.string().uuid().optional(),
-  })
+// Base schema without refinements (needed for .partial() in Zod v4)
+const baseRequestSchema = z.object({
+  requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
+  isBudgeted: z.boolean(),
+  replacementForUserId: z.string().uuid().optional(),
+  contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
+  justificationText: z.string().min(1),
+  salaryRangeMin: z.number().positive(),
+  salaryRangeMax: z.number().positive(),
+  positionDetails: positionDetailsSchema,
+  budgetDetails: budgetDetailsSchema,
+  approverId: z.string().uuid().optional(),
+});
+
+// Create schema with refinements
+export const createRequestSchema = baseRequestSchema
   .refine(
     (data) =>
       data.requestType === "NEW_POSITION" ||
@@ -81,7 +84,8 @@ export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
   },
 };
 
-export const updateRequestSchema = createRequestSchema.partial();
+// Update schema uses partial of the base (without refinement)
+export const updateRequestSchema = baseRequestSchema.partial();
 
 export const getMyRequestsSchema = z.object({
   page: z.number().min(1).default(1),

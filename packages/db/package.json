@@ -36,7 +36,7 @@
     "@neondatabase/serverless": "^1.0.2",
     "@t3-oss/env-core": "catalog:",
     "drizzle-orm": "catalog:",
-    "ws": "^8.18.3",
+    "ws": "^8.19.0",
     "zod": "catalog:"
   }
 }

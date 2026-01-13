@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 import { Label } from "@/components/ui/label";
 import FieldInfo from "./field-info";
 
-type FormFieldProps = {
+interface FormFieldProps {
   field: AnyFieldApi;
   label?: string;
   description?: string;
   required?: boolean;
   children: ReactNode;
-};
+}
 
 export function FormField({
   field,

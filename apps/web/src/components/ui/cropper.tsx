@@ -12,10 +12,10 @@ const IMAGE_NAME = "CropperImage";
 const VIDEO_NAME = "CropperVideo";
 const AREA_NAME = "CropperArea";
 
-type Point = {
+interface Point {
   x: number;
   y: number;
-};
+}
 
 interface GestureEvent extends UIEvent {
   rotation: number;
@@ -24,24 +24,24 @@ interface GestureEvent extends UIEvent {
   clientY: number;
 }
 
-type Size = {
+interface Size {
   width: number;
   height: number;
-};
+}
 
-type Area = {
+interface Area {
   width: number;
   height: number;
   x: number;
   y: number;
-};
+}
 
-type MediaSize = {
+interface MediaSize {
   width: number;
   height: number;
   naturalWidth: number;
   naturalHeight: number;
-};
+}
 
 type Shape = "rectangle" | "circle";
 type ObjectFit = "contain" | "cover" | "horizontal-cover" | "vertical-cover";
@@ -329,7 +329,7 @@ function useLazyRef<T>(fn: () => T) {
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
-type StoreState = {
+interface StoreState {
   crop: Point;
   zoom: number;
   rotation: number;
@@ -337,15 +337,15 @@ type StoreState = {
   cropSize: Size | null;
   isDragging: boolean;
   isWheelZooming: boolean;
-};
+}
 
-type Store = {
+interface Store {
   subscribe: (callback: () => void) => () => void;
   getState: () => StoreState;
   setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
   notify: () => void;
   batch: (fn: () => void) => void;
-};
+}
 
 function createStore(
   listenersRef: React.RefObject<Set<() => void>>,
@@ -526,7 +526,7 @@ function useStore<T>(selector: (state: StoreState) => T): T {
 
 type RootElement = React.ComponentRef<typeof CropperRootImpl>;
 
-type CropperContextValue = {
+interface CropperContextValue {
   aspectRatio: number;
   minZoom: number;
   maxZoom: number;
@@ -538,7 +538,7 @@ type CropperContextValue = {
   allowOverflow: boolean;
   preventScrollZoom: boolean;
   withGrid: boolean;
-};
+}
 
 const CropperContext = React.createContext<CropperContextValue | null>(null);
 
@@ -1372,13 +1372,15 @@ const cropperMediaVariants = cva("will-change-transform", {
   },
 });
 
-type UseMediaComputationProps<T extends HTMLImageElement | HTMLVideoElement> = {
+interface UseMediaComputationProps<
+  T extends HTMLImageElement | HTMLVideoElement,
+> {
   mediaRef: React.RefObject<T | null>;
   context: CropperContextValue;
   store: Store;
   rotation: number;
   getNaturalDimensions: (media: T) => Size;
-};
+}
 
 function useMediaComputation<T extends HTMLImageElement | HTMLVideoElement>({
   mediaRef,
@@ -1781,7 +1783,7 @@ function CropperVideo(props: CropperVideoProps) {
 }
 
 const cropperAreaVariants = cva(
-  "-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 box-border overflow-hidden border border-[2.5px] border-white/90 shadow-[0_0_0_9999em_rgba(0,0,0,0.5)]",
+  "absolute top-1/2 left-1/2 box-border -translate-x-1/2 -translate-y-1/2 overflow-hidden border border-[2.5px] border-white/90 shadow-[0_0_0_9999em_rgba(0,0,0,0.5)]",
   {
     variants: {
       shape: {

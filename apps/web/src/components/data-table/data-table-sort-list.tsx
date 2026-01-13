@@ -272,14 +272,14 @@ export function DataTableSortList<TData>({
   );
 }
 
-type DataTableSortItemProps = {
+interface DataTableSortItemProps {
   sort: ColumnSort;
   sortItemId: string;
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   onSortUpdate: (sortId: string, updates: Partial<ColumnSort>) => void;
   onSortRemove: (sortId: string) => void;
-};
+}
 
 function DataTableSortItem({
   sort,

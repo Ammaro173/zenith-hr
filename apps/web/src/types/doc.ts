@@ -9,9 +9,9 @@ export type EmptyProps<T extends React.ElementType> = Omit<
   keyof React.ComponentProps<T>
 >;
 
-export type SearchParams = {
+export interface SearchParams {
   [key: string]: string | string[] | undefined;
-};
+}
 
 export type Prettify<T> = {
   [K in keyof T]: T[K];
@@ -124,7 +124,7 @@ export interface DataTableColumnHeaderProps<TData, TValue>
   title: string;
 }
 
-export type DataTableDateFilterProps<TData> = {
+export interface DataTableDateFilterProps<TData> {
   /** The column instance. */
   column: Column<TData, unknown>;
 
@@ -133,9 +133,9 @@ export type DataTableDateFilterProps<TData> = {
 
   /** Whether to enable range selection. */
   multiple?: boolean;
-};
+}
 
-export type DataTableFacetedFilterProps<TData, TValue> = {
+export interface DataTableFacetedFilterProps<TData, TValue> {
   /** The column instance. */
   column?: Column<TData, TValue>;
 
@@ -147,15 +147,15 @@ export type DataTableFacetedFilterProps<TData, TValue> = {
 
   /** Whether to enable multiple selection. */
   multiple?: boolean;
-};
+}
 
-export type DataTableSliderFilterProps<TData> = {
+export interface DataTableSliderFilterProps<TData> {
   /** The column instance. */
   column: Column<TData, unknown>;
 
   /** The title of the slider filter. */
   title?: string;
-};
+}
 
 export interface DataTableRangeFilterProps<TData> extends EmptyProps<"div"> {
   /** The extended column filter. */
@@ -174,7 +174,7 @@ export interface DataTableRangeFilterProps<TData> extends EmptyProps<"div"> {
   ) => void;
 }
 
-export type DataTableFilterListProps<TData> = {
+export interface DataTableFilterListProps<TData> {
   /** The table instance. */
   table: Table<TData>;
 
@@ -197,7 +197,7 @@ export type DataTableFilterListProps<TData> = {
    * @default true
    */
   shallow?: boolean;
-};
+}
 
 export interface DataTableFilterMenuProps<TData>
   extends DataTableFilterListProps<TData> {}
@@ -216,10 +216,10 @@ export interface DataTablePaginationProps<TData> extends EmptyProps<"div"> {
   pageSizeOptions?: number[];
 }
 
-export type DataTableViewOptionsProps<TData> = {
+export interface DataTableViewOptionsProps<TData> {
   /** The table instance. */
   table: Table<TData>;
-};
+}
 
 export interface DataTableSkeletonProps extends EmptyProps<"div"> {
   /** The number of columns in the table. */

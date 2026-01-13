@@ -43,18 +43,18 @@ function useDirection(dirProp?: Direction): Direction {
   return dirProp ?? contextDir ?? "ltr";
 }
 
-type FileState = {
+interface FileState {
   file: File;
   progress: number;
   error?: string;
   status: "idle" | "uploading" | "error" | "success";
-};
+}
 
-type StoreState = {
+interface StoreState {
   files: Map<File, FileState>;
   dragOver: boolean;
   invalid: boolean;
-};
+}
 
 type StoreAction =
   | { type: "ADD_FILES"; files: File[] }
@@ -262,7 +262,7 @@ function useStore<T>(selector: (state: StoreState) => T): T {
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
-type FileUploadContextValue = {
+interface FileUploadContextValue {
   inputId: string;
   dropzoneId: string;
   listId: string;
@@ -271,7 +271,7 @@ type FileUploadContextValue = {
   dir: Direction;
   inputRef: React.RefObject<HTMLInputElement | null>;
   urlCache: WeakMap<File, string>;
-};
+}
 
 const FileUploadContext = React.createContext<FileUploadContextValue | null>(
   null,
@@ -935,14 +935,14 @@ function FileUploadList(props: FileUploadListProps) {
   );
 }
 
-type FileUploadItemContextValue = {
+interface FileUploadItemContextValue {
   id: string;
   fileState: FileState | undefined;
   nameId: string;
   sizeId: string;
   statusId: string;
   messageId: string;
-};
+}
 
 const FileUploadItemContext =
   React.createContext<FileUploadItemContextValue | null>(null);
@@ -1272,7 +1272,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
           role="progressbar"
           {...progressProps}
           className={cn(
-            "-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2",
+            "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
             className,
           )}
         >

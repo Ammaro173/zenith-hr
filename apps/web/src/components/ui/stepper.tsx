@@ -162,18 +162,18 @@ function useDirection(dirProp?: Direction): Direction {
   return dirProp ?? contextDir ?? "ltr";
 }
 
-type StepState = {
+interface StepState {
   value: string;
   completed: boolean;
   disabled: boolean;
-};
+}
 
-type StoreState = {
+interface StoreState {
   steps: Map<string, StepState>;
   value?: string;
-};
+}
 
-type Store = {
+interface Store {
   subscribe: (callback: () => void) => () => void;
   getState: () => StoreState;
   setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
@@ -186,7 +186,7 @@ type Store = {
   addStep: (value: string, completed: boolean, disabled: boolean) => void;
   removeStep: (value: string) => void;
   setStep: (value: string, completed: boolean, disabled: boolean) => void;
-};
+}
 
 function createStore(
   listenersRef: React.RefObject<Set<() => void>>,
@@ -322,15 +322,15 @@ function useStore<T>(selector: (state: StoreState) => T): T {
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
-type ItemData = {
+interface ItemData {
   id: string;
   ref: React.RefObject<TriggerElement | null>;
   value: string;
   active: boolean;
   disabled: boolean;
-};
+}
 
-type StepperContextValue = {
+interface StepperContextValue {
   id: string;
   dir: Direction;
   orientation: Orientation;
@@ -338,7 +338,7 @@ type StepperContextValue = {
   disabled: boolean;
   nonInteractive: boolean;
   loop: boolean;
-};
+}
 
 const StepperContext = React.createContext<StepperContextValue | null>(null);
 
@@ -466,7 +466,7 @@ function StepperRoot(props: StepperRootProps) {
   );
 }
 
-type FocusContextValue = {
+interface FocusContextValue {
   tabStopId: string | null;
   onItemFocus: (tabStopId: string) => void;
   onItemShiftTab: () => void;
@@ -475,7 +475,7 @@ type FocusContextValue = {
   onItemRegister: (item: ItemData) => void;
   onItemUnregister: (id: string) => void;
   getItems: () => ItemData[];
-};
+}
 
 const FocusContext = React.createContext<FocusContextValue | null>(null);
 
@@ -677,10 +677,10 @@ function StepperList(props: StepperListProps) {
   );
 }
 
-type StepperItemContextValue = {
+interface StepperItemContextValue {
   value: string;
   stepState: StepState | undefined;
-};
+}
 
 const StepperItemContext = React.createContext<StepperItemContextValue | null>(
   null,

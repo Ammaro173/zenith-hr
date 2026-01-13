@@ -1,17 +1,14 @@
+/** biome-ignore-all lint/correctness/noUnusedVariables: biome is dumb */
 import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import type { DataTableConfig } from "@/config/data-table";
 import type { FilterItemSchema } from "@/lib/parsers";
 
 declare module "@tanstack/react-table" {
-  // biome-ignore lint/style/useConsistentTypeDefinitions: TData is used in the TableMeta interface
-  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     queryKeys?: QueryKeys;
   }
 
-  // biome-ignore lint/style/useConsistentTypeDefinitions: TData and TValue are used in the ColumnMeta interface
-  // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
     placeholder?: string;
@@ -28,7 +25,6 @@ declare module "@tanstack/react-table" {
   }
 }
 
-// biome-ignore lint/style/useConsistentTypeDefinitions: QueryKeys is an interface
 export interface QueryKeys {
   page: string;
   perPage: string;
@@ -37,7 +33,6 @@ export interface QueryKeys {
   joinOperator: string;
 }
 
-// biome-ignore lint/style/useConsistentTypeDefinitions: Option is an interface
 export interface Option {
   label: string;
   value: string;
@@ -57,7 +52,6 @@ export interface ExtendedColumnFilter<TData> extends FilterItemSchema {
   id: Extract<keyof TData, string>;
 }
 
-// biome-ignore lint/style/useConsistentTypeDefinitions: DataTableRowAction is an interface
 export interface DataTableRowAction<TData> {
   row: Row<TData>;
   variant: "update" | "delete";

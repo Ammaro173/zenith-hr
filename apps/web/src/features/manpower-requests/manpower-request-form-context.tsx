@@ -3,9 +3,9 @@
 import { createContext, useContext } from "react";
 import type { ManpowerRequestFormType } from "./types";
 
-type ManpowerRequestFormContextValue = {
+interface ManpowerRequestFormContextValue {
   form: ManpowerRequestFormType;
-};
+}
 
 const ManpowerRequestFormContext =
   createContext<ManpowerRequestFormContextValue | null>(null);

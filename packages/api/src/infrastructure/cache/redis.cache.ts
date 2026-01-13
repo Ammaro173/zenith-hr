@@ -3,16 +3,16 @@ import type { CacheService } from "../interfaces/cache.interface";
 /**
  * Redis configuration options
  */
-export type RedisCacheConfig = {
+export interface RedisCacheConfig {
   url: string;
   token?: string;
-};
+}
 
 /**
  * Type definition for Upstash Redis client
  * This allows us to use dynamic imports without TypeScript errors
  */
-type UpstashRedisClient = {
+interface UpstashRedisClient {
   get: <T>(key: string) => Promise<T | null>;
   set: (
     key: string,
@@ -27,7 +27,7 @@ type UpstashRedisClient = {
     set: (key: string, value: unknown, options?: { ex?: number }) => unknown;
     exec: () => Promise<unknown>;
   };
-};
+}
 
 /**
  * Factory function to create a Redis cache with Upstash

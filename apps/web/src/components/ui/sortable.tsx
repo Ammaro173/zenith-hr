@@ -66,7 +66,7 @@ const ITEM_NAME = "SortableItem";
 const ITEM_HANDLE_NAME = "SortableItemHandle";
 const OVERLAY_NAME = "SortableOverlay";
 
-type SortableRootContextValue<T> = {
+interface SortableRootContextValue<T> {
   id: string;
   items: UniqueIdentifier[];
   modifiers: DndContextProps["modifiers"];
@@ -75,7 +75,7 @@ type SortableRootContextValue<T> = {
   setActiveId: (id: UniqueIdentifier | null) => void;
   getItemValue: (item: T) => UniqueIdentifier;
   flatCursor: boolean;
-};
+}
 
 const SortableRootContext =
   React.createContext<SortableRootContextValue<unknown> | null>(null);
@@ -88,13 +88,13 @@ function useSortableContext(consumerName: string) {
   return context;
 }
 
-type GetItemValue<T> = {
+interface GetItemValue<T> {
   /**
    * Callback that returns a unique identifier for each sortable item. Required for array of objects.
    * @example getItemValue={(item) => item.id}
    */
   getItemValue: (item: T) => UniqueIdentifier;
-};
+}
 
 type SortableRootProps<T> = DndContextProps &
   (T extends object ? GetItemValue<T> : Partial<GetItemValue<T>>) & {
@@ -365,14 +365,14 @@ function SortableContent(props: SortableContentProps) {
   );
 }
 
-type SortableItemContextValue = {
+interface SortableItemContextValue {
   id: string;
   attributes: DraggableAttributes;
   listeners: DraggableSyntheticListeners | undefined;
   setActivatorNodeRef: (node: HTMLElement | null) => void;
   isDragging?: boolean;
   disabled?: boolean;
-};
+}
 
 const SortableItemContext =
   React.createContext<SortableItemContextValue | null>(null);

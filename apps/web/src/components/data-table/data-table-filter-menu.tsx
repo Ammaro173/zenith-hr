@@ -337,7 +337,7 @@ export function DataTableFilterMenu<TData>({
   );
 }
 
-type DataTableFilterItemProps<TData> = {
+interface DataTableFilterItemProps<TData> {
   filter: ExtendedColumnFilter<TData>;
   filterItemId: string;
   columns: Column<TData>[];
@@ -346,7 +346,7 @@ type DataTableFilterItemProps<TData> = {
     updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
   ) => void;
   onFilterRemove: (filterId: string) => void;
-};
+}
 
 function DataTableFilterItem<TData>({
   filter,
@@ -520,11 +520,11 @@ function DataTableFilterItem<TData>({
   );
 }
 
-type FilterValueSelectorProps<TData> = {
+interface FilterValueSelectorProps<TData> {
   column: Column<TData>;
   value: string;
   onSelect: (value: string) => void;
-};
+}
 
 function FilterValueSelector<TData>({
   column,
@@ -735,7 +735,7 @@ function onFilterInputRender<TData>({
                 placeholder
               ) : (
                 <>
-                  <div className="-space-x-2 flex items-center rtl:space-x-reverse">
+                  <div className="flex items-center -space-x-2 rtl:space-x-reverse">
                     {selectedOptions.map((selectedOption) =>
                       selectedOption.icon ? (
                         <div

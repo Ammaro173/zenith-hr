@@ -16,14 +16,14 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getRoleFromSessionUser } from "@/config/navigation";
 import { authClient } from "@/lib/auth-client";
 
-type AppHeaderProps = {
+interface AppHeaderProps {
   user: {
     id: string;
     name: string;
     email: string;
     role?: string | null;
   };
-};
+}
 
 export function AppHeader({ user }: AppHeaderProps) {
   const router = useRouter();
@@ -57,7 +57,7 @@ export function AppHeader({ user }: AppHeaderProps) {
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="-bottom-0.5 -right-0.5 absolute size-3 animate-pulse rounded-full border-2 border-white bg-green-500" />
+                  <div className="absolute -right-0.5 -bottom-0.5 size-3 animate-pulse rounded-full border-2 border-white bg-green-500" />
                 </div>
                 <div className="hidden gap-0.5 text-left sm:flex sm:flex-col">
                   <span className="font-medium text-sm leading-none transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground">

@@ -2,15 +2,15 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 
-type Admin = {
+interface Admin {
   role: string | null;
   [key: string]: unknown;
-};
+}
 
-type CurrentAdminContextValue = {
+interface CurrentAdminContextValue {
   initialAdmin: Admin | null;
   setRole: (role: Admin["role"]) => void;
-};
+}
 
 const CurrentAdminContext = createContext<CurrentAdminContextValue | null>(
   null,

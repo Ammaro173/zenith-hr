@@ -412,7 +412,7 @@ function DataGridTableLoader() {
   const { props } = useDataGrid();
 
   return (
-    <div className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2">
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
       <div className="flex items-center gap-2 rounded-md border bg-card px-4 py-2 font-medium text-muted-foreground text-sm leading-none shadow-xs">
         <svg
           className="-ml-1 h-5 w-5 animate-spin text-muted-foreground"
@@ -544,7 +544,7 @@ function DataGridTable<TData>() {
             <td className="p-8" colSpan={table.getVisibleFlatColumns().length}>
               <div className="flex items-center justify-center">
                 <svg
-                  className="-ml-1 mr-3 h-5 w-5 animate-spin text-muted-foreground"
+                  className="mr-3 -ml-1 h-5 w-5 animate-spin text-muted-foreground"
                   fill="none"
                   viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"

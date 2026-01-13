@@ -2,16 +2,16 @@
 
 import { useCallback, useState } from "react";
 
-type UploadResponse = {
+interface UploadResponse {
   fileName: string;
   fileUrl: string;
   key: string;
-};
+}
 
-type UploadState = {
+interface UploadState {
   files: File[];
   isUploading: boolean;
-};
+}
 
 export function useFileUpload() {
   const [state, setState] = useState<UploadState>({

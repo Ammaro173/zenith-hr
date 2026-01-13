@@ -4,14 +4,14 @@ import { Children, type ReactElement, type ReactNode } from "react";
 import { If } from "./If";
 
 type ShowChild = ReactElement<{ isTrue?: boolean }>;
-type Props = {
+interface Props {
   children: ShowChild | ShowChild[];
-};
+}
 
-type ElseProps = {
+interface ElseProps {
   render?: () => ReactNode;
   children?: ReactNode;
-};
+}
 
 export const Show = ({ children }: Props) => {
   let when: ReactNode | null = null;
