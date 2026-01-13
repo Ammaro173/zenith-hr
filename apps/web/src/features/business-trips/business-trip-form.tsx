@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,8 +68,7 @@ export function BusinessTripForm({
               <CardContent className="grid gap-6">
                 <form.Field name="destination">
                   {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name}>Destination</Label>
+                    <FormField field={field} label="Destination">
                       <Input
                         id={field.name}
                         onBlur={field.handleBlur}
@@ -76,19 +76,13 @@ export function BusinessTripForm({
                         placeholder="City, Country"
                         value={field.state.value}
                       />
-                      {field.state.meta.errors && (
-                        <p className="text-destructive text-sm">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
+                    </FormField>
                   )}
                 </form.Field>
 
                 <form.Field name="purpose">
                   {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name}>Purpose</Label>
+                    <FormField field={field} label="Purpose">
                       <Textarea
                         id={field.name}
                         onBlur={field.handleBlur}
@@ -96,20 +90,14 @@ export function BusinessTripForm({
                         placeholder="Reason for the trip..."
                         value={field.state.value}
                       />
-                      {field.state.meta.errors && (
-                        <p className="text-destructive text-sm">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
+                    </FormField>
                   )}
                 </form.Field>
 
                 <div className="grid grid-cols-2 gap-4">
                   <form.Field name="startDate">
                     {(field) => (
-                      <div className="space-y-2">
-                        <Label>Start Date</Label>
+                      <FormField field={field} label="Start Date">
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -140,19 +128,13 @@ export function BusinessTripForm({
                             />
                           </PopoverContent>
                         </Popover>
-                        {field.state.meta.errors && (
-                          <p className="text-destructive text-sm">
-                            {field.state.meta.errors.join(", ")}
-                          </p>
-                        )}
-                      </div>
+                      </FormField>
                     )}
                   </form.Field>
 
                   <form.Field name="endDate">
                     {(field) => (
-                      <div className="space-y-2">
-                        <Label>End Date</Label>
+                      <FormField field={field} label="End Date">
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -183,12 +165,7 @@ export function BusinessTripForm({
                             />
                           </PopoverContent>
                         </Popover>
-                        {field.state.meta.errors && (
-                          <p className="text-destructive text-sm">
-                            {field.state.meta.errors.join(", ")}
-                          </p>
-                        )}
-                      </div>
+                      </FormField>
                     )}
                   </form.Field>
                 </div>
@@ -249,8 +226,7 @@ export function BusinessTripForm({
                 <div className="grid grid-cols-2 gap-4">
                   <form.Field name="estimatedCost">
                     {(field) => (
-                      <div className="space-y-2">
-                        <Label htmlFor={field.name}>Estimated Cost</Label>
+                      <FormField field={field} label="Estimated Cost">
                         <Input
                           id={field.name}
                           onBlur={field.handleBlur}
@@ -261,13 +237,12 @@ export function BusinessTripForm({
                           type="number"
                           value={field.state.value ?? ""}
                         />
-                      </div>
+                      </FormField>
                     )}
                   </form.Field>
                   <form.Field name="currency">
                     {(field) => (
-                      <div className="space-y-2">
-                        <Label>Currency</Label>
+                      <FormField field={field} label="Currency">
                         <Select
                           onValueChange={field.handleChange}
                           value={field.state.value}
@@ -282,7 +257,7 @@ export function BusinessTripForm({
                             <SelectItem value="QAR">QAR</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
+                      </FormField>
                     )}
                   </form.Field>
                 </div>
@@ -297,25 +272,18 @@ export function BusinessTripForm({
               <CardContent className="grid gap-6">
                 <form.Field name="delegatedUserId">
                   {(field) => (
-                    <div className="space-y-2">
-                      <Label>
-                        Select Replacement{" "}
-                        <span className="text-destructive">*</span>
-                        <span className="ml-2 font-normal text-muted-foreground text-xs">
-                          (Required per policy)
-                        </span>
-                      </Label>
+                    <FormField
+                      description="(Required per policy)"
+                      field={field}
+                      label="Select Replacement"
+                      required
+                    >
                       <UserSearchCombobox
-                        onChange={(val) => field.handleChange(val || "")}
+                        onChange={field.handleChange}
                         placeholder="Search for delegate..."
                         value={field.state.value}
                       />
-                      {field.state.meta.errors && (
-                        <p className="text-destructive text-sm">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
+                    </FormField>
                   )}
                 </form.Field>
               </CardContent>
