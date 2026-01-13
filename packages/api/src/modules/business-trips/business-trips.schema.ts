@@ -6,7 +6,7 @@ const baseTripSchema = z.object({
   purpose: z.string().min(1),
   startDate: z.date(),
   endDate: z.date(),
-  delegatedUserId: z.string().uuid().optional(),
+  delegatedUserId: z.string().min(1).optional(),
   visaRequired: z.boolean(),
   needsFlightBooking: z.boolean(),
   needsHotelBooking: z.boolean(),

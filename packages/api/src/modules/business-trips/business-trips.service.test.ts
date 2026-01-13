@@ -48,7 +48,12 @@ describe("BusinessTripsService", () => {
     transaction: mock((cb) => cb(mockDb)),
   } as any;
 
-  const service = createBusinessTripsService(mockDb);
+  const mockWorkflowService = {
+    getNextApproverIdForStatus: mock(() => Promise.resolve("manager-1")),
+    getApproverForStatus: mock(() => "MANAGER"),
+  } as any;
+
+  const service = createBusinessTripsService(mockDb, mockWorkflowService);
 
   it("should create a business trip", async () => {
     const input = {

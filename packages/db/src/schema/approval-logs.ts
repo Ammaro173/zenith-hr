@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { businessTrip } from "./business-trips";
 import { manpowerRequest } from "./manpower-requests";
 
 export const approvalActionEnum = pgEnum("approval_action", [
@@ -15,9 +16,7 @@ export const approvalActionEnum = pgEnum("approval_action", [
 
 export const approvalLog = pgTable("approval_log", {
   id: uuid("id").primaryKey().defaultRandom(),
-  requestId: uuid("request_id")
-    .notNull()
-    .references(() => manpowerRequest.id, { onDelete: "cascade" }),
+  requestId: uuid("request_id").notNull(),
   actorId: text("actor_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
@@ -29,9 +28,13 @@ export const approvalLog = pgTable("approval_log", {
 });
 
 export const approvalLogRelations = relations(approvalLog, ({ one }) => ({
-  request: one(manpowerRequest, {
+  manpowerRequest: one(manpowerRequest, {
     fields: [approvalLog.requestId],
     references: [manpowerRequest.id],
+  }),
+  businessTrip: one(businessTrip, {
+    fields: [approvalLog.requestId],
+    references: [businessTrip.id],
   }),
   actor: one(user, {
     fields: [approvalLog.actorId],

@@ -39,14 +39,14 @@ export const CONTRACT_DURATIONS = [
 const baseRequestSchema = z.object({
   requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
   isBudgeted: z.boolean(),
-  replacementForUserId: z.string().uuid().optional(),
+  replacementForUserId: z.string().min(1).optional(),
   contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
   justificationText: z.string().min(1),
   salaryRangeMin: z.number().positive(),
   salaryRangeMax: z.number().positive(),
   positionDetails: positionDetailsSchema,
   budgetDetails: budgetDetailsSchema,
-  approverId: z.string().uuid().optional(),
+  approverId: z.string().min(1).optional(),
 });
 
 // Create schema with refinements

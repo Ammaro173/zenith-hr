@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { approvalLog } from "./approval-logs";
 import { user, userRoleEnum } from "./auth";
 
 export const tripStatusEnum = pgEnum("trip_status", [
@@ -82,6 +83,7 @@ export const businessTripRelations = relations(
       relationName: "delegatedTrips",
     }),
     expenses: many(tripExpense),
+    approvalLogs: many(approvalLog),
   }),
 );
 
