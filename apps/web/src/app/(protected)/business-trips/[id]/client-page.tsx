@@ -118,10 +118,16 @@ export function BusinessTripDetailClientPage({
     return <div>Trip not found</div>;
   }
 
-  const canApprove =
+  const canReject =
     (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
     (role === "HR" && trip.status === "PENDING_HR") ||
     role === "ADMIN";
+
+  const canApprove =
+    (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
+    (role === "HR" && trip.status === "PENDING_HR") ||
+    (role === "ADMIN" && trip.status !== "APPROVED");
+
   const hasExpenses = (expenses?.length ?? 0) > 0;
 
   return (
@@ -140,24 +146,24 @@ export function BusinessTripDetailClientPage({
           </p>
         </div>
         <div className="ml-auto flex gap-2">
+          {canReject && (
+            <Button
+              onClick={() =>
+                transitionTrip({ tripId: trip.id, action: "REJECT" })
+              }
+              variant="destructive"
+            >
+              Reject
+            </Button>
+          )}
           {canApprove && (
-            <>
-              <Button
-                onClick={() =>
-                  transitionTrip({ tripId: trip.id, action: "REJECT" })
-                }
-                variant="destructive"
-              >
-                Reject
-              </Button>
-              <Button
-                onClick={() =>
-                  transitionTrip({ tripId: trip.id, action: "APPROVE" })
-                }
-              >
-                Approve
-              </Button>
-            </>
+            <Button
+              onClick={() =>
+                transitionTrip({ tripId: trip.id, action: "APPROVE" })
+              }
+            >
+              Approve
+            </Button>
           )}
           {trip.status === "DRAFT" && (
             <Button
