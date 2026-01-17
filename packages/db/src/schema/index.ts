@@ -24,6 +24,13 @@ export { auditLogRelations } from "./audit-logs";
 export { userRelations } from "./auth";
 export { businessTripRelations, tripExpenseRelations } from "./business-trips";
 export { contractRelations } from "./contracts";
+export {
+  competencyTemplateRelations,
+  performanceCompetencyRelations,
+  performanceCycleRelations,
+  performanceGoalRelations,
+  performanceReviewRelations,
+} from "./performance";
 export { requestVersionRelations } from "./request-versions";
 
 export const manpowerRequestRelations = relations(
