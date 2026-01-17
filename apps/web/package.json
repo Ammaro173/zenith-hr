@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port=3001",
+    "dev": "bun run --env-file=../../.env -- sh -c 'next dev --port $WEB_PORT'",
     "build": "next build",
-    "start": "next start --port=3001",
+    "start": "bun run --env-file=../../.env -- sh -c 'next start --port $WEB_PORT'",
     "check-types": "tsc --noEmit",
     "clean": "rimraf --glob \".next\" \".open-next\" \".vercel\" \".netlify\" \".wrangler\" \".vinxi\" \".output\" \".react-router\" \".tanstack\" \".nitro\" \"out\" \"build\" \"dist\" \"dev-dist\" \"coverage\" \".cache\" \"node_modules\" \"**/*.tsbuildinfo\""
   },
