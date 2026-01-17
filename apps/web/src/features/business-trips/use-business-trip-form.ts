@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createTripDefaults,
   createTripSchema,
@@ -17,10 +17,12 @@ export function useBusinessTripForm({
   onSuccess,
   onCancel,
 }: UseBusinessTripFormProps = {}) {
+  const queryClient = useQueryClient();
   const createMutation = useMutation({
     mutationFn: (data: CreateTripInput) => client.businessTrips.create(data),
     onSuccess: () => {
       toast.success("Business trip request submitted successfully");
+      queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {

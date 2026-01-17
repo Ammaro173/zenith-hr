@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createRequestDefaults,
   createRequestSchema,
@@ -19,11 +19,13 @@ export function useManpowerRequestForm({
   onSuccess,
   onCancel,
 }: UseManpowerRequestFormProps = {}) {
+  const queryClient = useQueryClient();
   const createMutation = useMutation({
     mutationFn: (data: z.infer<typeof createRequestSchema>) =>
       client.requests.create(data),
     onSuccess: () => {
       toast.success("Manpower request submitted successfully");
+      queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {

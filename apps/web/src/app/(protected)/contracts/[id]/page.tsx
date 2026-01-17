@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { client, orpc } from "@/utils/orpc";
 
 function getStatusBadgeClass(status: string): string {
@@ -18,12 +19,21 @@ export default function ContractPage() {
   const params = useParams();
   const contractId = params.id as string;
 
+  const queryClient = useQueryClient();
+
   const { data: contract, isLoading } = useQuery(
     orpc.contracts.getById.queryOptions({ input: { id: contractId } }),
   );
 
   const sendMutation = useMutation({
     mutationFn: (id: string) => client.contracts.sendForSignature({ id }),
+    onSuccess: () => {
+      toast.success("Contract sent for signature");
+      queryClient.invalidateQueries();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to send contract");
+    },
   });
 
   if (isLoading) {

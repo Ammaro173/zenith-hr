@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { UserRole } from "@/config/navigation";
@@ -39,6 +39,8 @@ function parseCsv(text: string): string[][] {
 export default function ImportsPage() {
   const [usersCsv, setUsersCsv] = useState("");
   const [departmentsCsv, setDepartmentsCsv] = useState("");
+
+  const queryClient = useQueryClient();
 
   const usersPreview = useMemo(
     () => parseCsv(usersCsv).slice(0, 5),
@@ -81,6 +83,7 @@ export default function ImportsPage() {
       toast.success(
         `Users import done: ${inserted} inserted, ${skipped} skipped`,
       );
+      queryClient.invalidateQueries();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -112,6 +115,7 @@ export default function ImportsPage() {
     },
     onSuccess: () => {
       toast.success("Departments import done");
+      queryClient.invalidateQueries();
     },
     onError: (err) => toast.error(err.message),
   });

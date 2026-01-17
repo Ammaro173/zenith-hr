@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -34,6 +34,7 @@ export function RequestDetailClientPage({
 }: RequestDetailClientPageProps) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
 
   const { data: request, isLoading: isRequestLoading } = useQuery(
@@ -56,6 +57,7 @@ export function RequestDetailClientPage({
         `Request ${data.newStatus.toLowerCase().replace("_", " ")}`,
       );
       setComment("");
+      queryClient.invalidateQueries();
       router.refresh();
     },
     onError: (error) => {

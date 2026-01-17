@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,8 +20,8 @@ async function fileToBase64(file: File): Promise<string> {
 export default function CandidateSelectionPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const requestId = params.id as string;
-
   const [formData, setFormData] = useState({
     candidateName: "",
     candidateEmail: "",
@@ -61,6 +61,8 @@ export default function CandidateSelectionPage() {
       return contract;
     },
     onSuccess: (contract) => {
+      toast.success("Candidate selected and contract generated");
+      queryClient.invalidateQueries();
       router.push(`/contracts/${contract.id}`);
     },
     onError: (err) => {

@@ -105,6 +105,7 @@ export function BusinessTripForm({
                                 "w-full justify-start text-left font-normal",
                                 !field.state.value && "text-muted-foreground",
                               )}
+                              type="button"
                               variant="outline"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -142,6 +143,7 @@ export function BusinessTripForm({
                                 "w-full justify-start text-left font-normal",
                                 !field.state.value && "text-muted-foreground",
                               )}
+                              type="button"
                               variant="outline"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
