@@ -10,8 +10,8 @@ export { eq } from "drizzle-orm";
 // Configure WebSocket for non-edge environments
 neonConfig.webSocketConstructor = ws;
 
-// Enable fetch-based queries for edge environments (Cloudflare Workers, Vercel Edge, etc.)
-// neonConfig.poolQueryViaFetch = true
+// Enable fetch-based queries for edge environments (Cloudflare Workers, Vercel Edge,Docker, etc.)
+neonConfig.poolQueryViaFetch = true;
 
 const pool = new Pool({ connectionString: env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
