@@ -9,12 +9,10 @@ import {
 } from "@zenith-hr/db/schema/business-trips";
 import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import type { z } from "zod";
+import { AppError } from "../../shared/errors";
 import { notifyUser } from "../../shared/notify";
-import type {
-  ApprovalAction,
-  RequestStatus,
-  UserRole,
-} from "../../shared/types";
+import type { ApprovalAction, RequestStatus } from "../../shared/types";
+import { getActorRole } from "../../shared/utils";
 import type {
   addExpenseSchema,
   createTripSchema,
@@ -36,16 +34,10 @@ export const createBusinessTripsService = (
 ) => ({
   async create(input: CreateTripInput, requesterId: string) {
     if (input.startDate > input.endDate) {
-      throw new Error("INVALID_DATES");
+      throw AppError.badRequest("End date must be after start date");
     }
 
-    const [requester] = await db
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, requesterId))
-      .limit(1);
-
-    const requesterRole = (requester?.role || "REQUESTER") as UserRole;
+    const requesterRole = await getActorRole(db, requesterId);
     let initialStatus: RequestStatus = "PENDING_MANAGER";
 
     // Skip logical steps if the requester is already in that role
@@ -83,7 +75,7 @@ export const createBusinessTripsService = (
       })
       .returning();
     if (!trip) {
-      throw new Error("Failed to create trip");
+      throw AppError.badRequest("Failed to create trip");
     }
     return trip;
   },
@@ -216,13 +208,7 @@ export const createBusinessTripsService = (
   },
 
   async getPendingApprovals(userId: string) {
-    const [actor] = await db
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1);
-
-    const actorRole = (actor?.role || "REQUESTER") as string;
+    const actorRole = await getActorRole(db, userId);
     let statusFilter: (typeof tripStatusEnum.enumValues)[number] | null = null;
     if (actorRole === "MANAGER") {
       statusFilter = "PENDING_MANAGER";
@@ -251,16 +237,10 @@ export const createBusinessTripsService = (
         .limit(1);
 
       if (!trip) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Trip not found");
       }
 
-      const [actor] = await tx
-        .select({ role: user.role })
-        .from(user)
-        .where(eq(user.id, actorId))
-        .limit(1);
-
-      const actorRole = (actor?.role || "REQUESTER") as UserRole;
+      const actorRole = await getActorRole(tx, actorId);
       const currentStatus = trip.status as BusinessTripStatus;
       let newStatus: BusinessTripStatus = currentStatus;
 
@@ -269,21 +249,25 @@ export const createBusinessTripsService = (
 
       if (input.action === "CANCEL") {
         if (!isRequester && actorRole !== "ADMIN") {
-          throw new Error("FORBIDDEN");
+          throw new AppError(
+            "FORBIDDEN",
+            "Only requester or admin can cancel",
+            403,
+          );
         }
         newStatus = "CANCELLED";
       } else if (input.action === "SUBMIT") {
         if (!isRequester) {
-          throw new Error("FORBIDDEN");
+          throw new AppError("FORBIDDEN", "Only requester can submit", 403);
         }
         if (currentStatus !== "DRAFT") {
-          throw new Error("INVALID_TRANSITION");
+          throw AppError.badRequest("Invalid status transition");
         }
         newStatus = "PENDING_MANAGER";
       } else {
         // Approval flow
         if (trip.currentApproverId !== actorId && actorRole !== "ADMIN") {
-          throw new Error("FORBIDDEN");
+          throw new AppError("FORBIDDEN", "Not authorized to approve", 403);
         }
 
         if (input.action === "APPROVE") {
@@ -301,7 +285,7 @@ export const createBusinessTripsService = (
               newStatus = "APPROVED";
               break;
             default:
-              throw new Error("INVALID_TRANSITION");
+              throw AppError.badRequest("Invalid status transition");
           }
         } else if (input.action === "REJECT") {
           newStatus = "REJECTED";
@@ -336,7 +320,11 @@ export const createBusinessTripsService = (
         .returning();
 
       if (!updated) {
-        throw new Error("CONFLICT"); // Optimistic lock failure
+        throw new AppError(
+          "CONFLICT",
+          "Version mismatch - please refresh",
+          409,
+        );
       }
 
       // Audit logs
@@ -396,7 +384,7 @@ export const createBusinessTripsService = (
       })
       .returning();
     if (!expense) {
-      throw new Error("Failed to add expense");
+      throw AppError.badRequest("Failed to add expense");
     }
     return expense;
   },
