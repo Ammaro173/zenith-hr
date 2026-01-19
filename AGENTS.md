@@ -10,6 +10,7 @@ This document provides context, conventions, and critical rules for AI assistant
 
 - [Project Context](#project-context)
 - [Architectural Decisions](#architectural-decisions)
+- [SOLID, DRY, and YAGNI Principles](#solid-dry-and-yagni-principles)
 - [Critical Rules](#critical-rules)
 - [File Organization](#file-organization)
 - [Frontend Feature Organization](#frontend-feature-organization)
@@ -150,7 +151,77 @@ export type RequestsService = ReturnType<typeof createRequestsService>;
 - No decorator magic or reflection
 - Full TypeScript inference
 
+### SOLID, DRY, and YAGNI Principles
+
+We follow a **pragmatic approach** to software design principles, prioritizing simplicity and maintainability over theoretical purity.
+
+#### DRY (Don't Repeat Yourself)
+
+We eliminate repetition through shared utilities:
+
+```typescript
+// ✅ Good: Use shared utilities for common patterns
+import { getActorRole } from "../../shared/utils";
+import { AppError } from "../../shared/errors";
+
+const actorRole = await getActorRole(db, userId);
+if (!entity) {
+  throw AppError.notFound("Entity not found");
+}
+
+// ❌ Bad: Repeating the same pattern inline
+const [actor] = await db
+  .select({ role: user.role })
+  .from(user)
+  .where(eq(user.id, userId))
+  .limit(1);
+const actorRole = (actor?.role || "REQUESTER") as UserRole;
+```
+
+**Shared utilities location:** `packages/api/src/shared/`
+
+| Utility | Purpose |
+|---------|---------|
+| `utils.ts` | `getActorRole()`, common helpers |
+| `errors.ts` | `AppError` class for consistent error handling |
+| `types.ts` | Shared type definitions |
+| `notify.ts` | Notification helpers |
+
+#### SOLID Principles (Applied Pragmatically)
+
+| Principle | Our Approach |
+|-----------|--------------|
+| **S**ingle Responsibility | Services handle one domain (e.g., `business-trips`), but include CRUD + workflow for that domain |
+| **O**pen/Closed | Use switch statements for status transitions (simple enough); consider state machines only if complexity grows |
+| **L**iskov Substitution | Factory functions return consistent interfaces |
+| **I**nterface Segregation | Infrastructure interfaces are focused (`StorageService`, `PdfService`, `CacheService`) |
+| **D**ependency Inversion | Services depend on injected `db` abstraction, not concrete implementations |
+
+#### YAGNI (You Aren't Gonna Need It)
+
+We **avoid over-engineering**. Don't add patterns "just in case":
+
+| Pattern | When to Use | When NOT to Use |
+|---------|-------------|-----------------|
+| Repository Pattern | Multiple data sources, need to swap databases | Single PostgreSQL + Drizzle (our case) |
+| State Machine Library | 15+ states, complex transitions | Simple linear workflows (our case) |
+| Event Sourcing | Audit requirements beyond logs | Standard audit logs are sufficient (our case) |
+| CQRS | High read/write ratio imbalance | Normal CRUD operations (our case) |
+| Domain-Driven Design | Complex business invariants, large teams | CRUD-heavy apps with simple rules (our case) |
+
+**Rule of thumb:** Add abstractions when you feel real pain, not anticipating future pain.
+
+#### When to Refactor
+
+Consider introducing new patterns **only when**:
+
+1. A service exceeds ~500 lines → Split into focused services
+2. Same code appears 4+ times → Extract to shared utility
+3. Switch statements grow beyond 10 cases → Consider state machine
+4. Tests become difficult to write → Introduce more interfaces
+
 ---
+
 
 ## Critical Rules
 
