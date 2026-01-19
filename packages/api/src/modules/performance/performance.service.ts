@@ -8,6 +8,7 @@ import {
 } from "@zenith-hr/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
+import { AppError } from "../../shared/errors";
 import type {
   batchUpdateCompetenciesSchema,
   createCompetencySchema,
@@ -68,7 +69,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       })
       .returning();
     if (!cycle) {
-      throw new Error("Failed to create cycle");
+      throw AppError.badRequest("Failed to create cycle");
     }
     return cycle;
   },
@@ -138,7 +139,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .where(eq(performanceCycle.id, input.cycleId))
       .returning();
     if (!updated) {
-      throw new Error("NOT_FOUND");
+      throw AppError.notFound("Cycle not found");
     }
     return updated;
   },
@@ -172,7 +173,7 @@ export const createPerformanceService = (db: typeof _db) => ({
         .returning();
 
       if (!review) {
-        throw new Error("Failed to create review");
+        throw AppError.badRequest("Failed to create review");
       }
 
       // Get competency templates for this review type
@@ -350,7 +351,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!updated) {
-      throw new Error("NOT_FOUND");
+      throw AppError.notFound("Review not found");
     }
     return updated;
   },
@@ -427,13 +428,13 @@ export const createPerformanceService = (db: typeof _db) => ({
       });
 
       if (!review) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Review not found");
       }
 
       // Validate all competencies are rated
       const unratedCompetencies = review.competencies.filter((c) => !c.rating);
       if (unratedCompetencies.length > 0) {
-        throw new Error("INCOMPLETE_RATINGS");
+        throw AppError.badRequest("All competencies must be rated");
       }
 
       // Validate justification for low ratings
@@ -441,7 +442,7 @@ export const createPerformanceService = (db: typeof _db) => ({
         (c) => c.rating && c.rating < 3 && !c.justification,
       );
       if (lowRatingsWithoutJustification.length > 0) {
-        throw new Error("MISSING_JUSTIFICATION");
+        throw AppError.badRequest("Low ratings require justification");
       }
 
       // Calculate total score inline
@@ -559,7 +560,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!competency) {
-      throw new Error("Failed to create competency");
+      throw AppError.badRequest("Failed to create competency");
     }
     return competency;
   },
@@ -581,7 +582,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!updated) {
-      throw new Error("NOT_FOUND");
+      throw AppError.notFound("Competency not found");
     }
 
     // Get the review ID and update completion percentage
@@ -656,7 +657,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!goal) {
-      throw new Error("Failed to create goal");
+      throw AppError.badRequest("Failed to create goal");
     }
     return goal;
   },
@@ -693,7 +694,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!updated) {
-      throw new Error("NOT_FOUND");
+      throw AppError.notFound("Goal not found");
     }
     return updated;
   },
@@ -708,7 +709,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!deleted) {
-      throw new Error("NOT_FOUND");
+      throw AppError.notFound("Goal not found");
     }
     return deleted;
   },
@@ -745,7 +746,7 @@ export const createPerformanceService = (db: typeof _db) => ({
       .returning();
 
     if (!template) {
-      throw new Error("Failed to create template");
+      throw AppError.badRequest("Failed to create template");
     }
     return template;
   },
