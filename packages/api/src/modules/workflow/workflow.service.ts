@@ -9,6 +9,7 @@ import type { ExtractTablesWithRelations } from "drizzle-orm";
 import { eq, sql } from "drizzle-orm";
 import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
 import type { PgTransaction } from "drizzle-orm/pg-core";
+import { AppError } from "../../shared/errors";
 import type {
   ApprovalAction,
   RequestStatus,
@@ -208,7 +209,7 @@ export const createWorkflowService = (db: typeof _db) => {
           .limit(1);
 
         if (!request) {
-          throw new Error("Request not found");
+          throw AppError.notFound("Request not found");
         }
 
         const [actor] = await tx
@@ -218,7 +219,7 @@ export const createWorkflowService = (db: typeof _db) => {
           .limit(1);
 
         if (!actor) {
-          throw new Error("Actor not found");
+          throw AppError.notFound("Actor not found");
         }
 
         const actorRole = (actor.role || "REQUESTER") as UserRole;
@@ -232,7 +233,11 @@ export const createWorkflowService = (db: typeof _db) => {
           actorRole !== approverForCurrent &&
           action !== "REQUEST_CHANGE"
         ) {
-          throw new Error("FORBIDDEN");
+          throw new AppError(
+            "FORBIDDEN",
+            "Not authorized for this action",
+            403,
+          );
         }
 
         switch (currentStatus) {
@@ -243,7 +248,9 @@ export const createWorkflowService = (db: typeof _db) => {
                   ? "PENDING_HR"
                   : "PENDING_MANAGER";
             } else {
-              throw new Error(`Invalid action ${action} from ${currentStatus}`);
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
             }
             break;
           case "PENDING_MANAGER":
@@ -254,7 +261,9 @@ export const createWorkflowService = (db: typeof _db) => {
             } else if (action === "REQUEST_CHANGE") {
               newStatus = "DRAFT";
             } else {
-              throw new Error(`Invalid action ${action} from ${currentStatus}`);
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
             }
             break;
           case "PENDING_HR":
@@ -267,7 +276,9 @@ export const createWorkflowService = (db: typeof _db) => {
             } else if (action === "REQUEST_CHANGE") {
               newStatus = "DRAFT";
             } else {
-              throw new Error(`Invalid action ${action} from ${currentStatus}`);
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
             }
             break;
           case "PENDING_FINANCE":
@@ -276,7 +287,9 @@ export const createWorkflowService = (db: typeof _db) => {
             } else if (action === "REJECT" || action === "REQUEST_CHANGE") {
               newStatus = "DRAFT";
             } else {
-              throw new Error(`Invalid action ${action} from ${currentStatus}`);
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
             }
             break;
           case "PENDING_CEO":
@@ -285,18 +298,22 @@ export const createWorkflowService = (db: typeof _db) => {
             } else if (action === "REJECT") {
               newStatus = "REJECTED";
             } else {
-              throw new Error(`Invalid action ${action} from ${currentStatus}`);
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
             }
             break;
           case "APPROVED_OPEN":
             if (action === "SUBMIT") {
               newStatus = "HIRING_IN_PROGRESS";
             } else {
-              throw new Error(`Invalid action ${action} from ${currentStatus}`);
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
             }
             break;
           default:
-            throw new Error(`Invalid status ${currentStatus}`);
+            throw AppError.badRequest(`Invalid status ${currentStatus}`);
         }
 
         // Update request status within transaction
