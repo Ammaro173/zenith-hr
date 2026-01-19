@@ -687,30 +687,109 @@ await db.transaction(async (tx) => {
 
 ## Testing
 
-### Mocking Context
+We use **Bun's built-in test runner** (`bun:test`). Tests are co-located with source files using the `.test.ts` suffix.
+
+### Running Tests
+
+```bash
+# Run all tests
+bun test packages/api
+
+# Run specific module tests
+bun test packages/api/src/modules/workflow
+
+# Watch mode during development
+bun test --watch packages/api
+```
+
+### When to Write Tests (AI Guidelines)
+
+| Scenario | Write Tests? | Reason |
+|----------|--------------|--------|
+| Modifying workflow transitions | ✅ **Yes** | High risk of breaking approval flows |
+| Adding new status/action | ✅ **Yes** | Must verify state machine correctness |
+| Financial calculations | ✅ **Yes** | Money-related bugs are costly |
+| Score/rating calculations | ✅ **Yes** | Easy to get wrong |
+| Simple CRUD operations | ❌ No | Drizzle ORM is well-tested |
+| Input validation | ❌ No | Zod schemas handle this |
+| UI components | ❌ No | Low ROI for internal tools |
+
+### After Modifying Critical Files
+
+**ALWAYS run tests after changing these files:**
+
+| File | Command | Reason |
+|------|---------|--------|
+| `workflow.service.ts` | `bun test packages/api/src/modules/workflow` | Status transitions |
+| `business-trips.service.ts` | `bun test packages/api/src/modules/business-trips` | Expense calculations |
+| `performance.service.ts` | `bun test packages/api/src/modules/performance` | Score calculations |
+| `separations.service.ts` | `bun test packages/api/src/modules/separations` | Clearance workflow |
+
+### Mock Patterns for Drizzle
+
+Use this factory pattern for mocking database interactions:
 
 ```typescript
-// test-utils.ts
-export function createTestContext(overrides?: Partial<Context>): Context {
-  return {
-    session: {
-      user: { id: 'test-user-id', email: 'test@example.com' },
-    },
-    db: mockDb,
-    services: {
-      requests: createRequestsService(mockDb),
-      candidates: createCandidatesService(mockDb, mockStorage),
-      // ...
-    },
-    ...overrides,
-  };
+import { describe, expect, it, mock } from "bun:test";
+
+// Factory function for creating mock database
+function createMockDb(overrides: {
+  request?: { id: string; status: string } | null;
+  actor?: { id: string; role: string } | null;
+} = {}) {
+  let selectCallCount = 0;
+  
+  const mockDb = {
+    select: mock(() => ({
+      from: mock(() => ({
+        where: mock(() => ({
+          limit: mock(() => {
+            selectCallCount++;
+            if (selectCallCount === 1) {
+              return Promise.resolve(overrides.request ? [overrides.request] : []);
+            }
+            return Promise.resolve(overrides.actor ? [overrides.actor] : []);
+          }),
+        })),
+      })),
+    })),
+    insert: mock(() => ({
+      values: mock(() => ({
+        returning: mock(() => Promise.resolve([{ id: "new-1" }])),
+      })),
+    })),
+    update: mock(() => ({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() => Promise.resolve([{ id: "updated-1" }])),
+        })),
+      })),
+    })),
+    transaction: mock(async (cb) => {
+      selectCallCount = 0;
+      return await cb(mockDb);
+    }),
+  } as any;
+
+  return mockDb;
 }
+
+// Usage in tests
+describe("MyService", () => {
+  it("should handle not found", async () => {
+    const mockDb = createMockDb({ request: null });
+    const service = createMyService(mockDb);
+    
+    await expect(service.getById("id")).rejects.toThrow("not found");
+  });
+});
 ```
 
 ### Testing Services Directly
 
+Test service methods directly, not through routers:
+
 ```typescript
-// Test service methods directly, not through routers
 describe("RequestsService", () => {
   const mockDb = createMockDb();
   const service = createRequestsService(mockDb);
@@ -725,7 +804,28 @@ describe("RequestsService", () => {
 });
 ```
 
+### Test File Location
+
+Tests are co-located with source files:
+
+```
+packages/api/src/modules/workflow/
+├── workflow.service.ts
+├── workflow.service.test.ts    ← Tests here
+├── workflow.router.ts
+└── workflow.schema.ts
+```
+
+### Coverage Targets
+
+| Module | Target | Priority |
+|--------|--------|----------|
+| `workflow.service.ts` | 80%+ | HIGH |
+| `business-trips.service.ts` | 60%+ | MEDIUM |
+| `performance.service.ts` | 40%+ | LOW |
+
 ---
+
 
 ## Commit Messages
 
