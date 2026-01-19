@@ -2,39 +2,55 @@ import { describe, expect, it, mock } from "bun:test";
 import { createPerformanceService } from "./performance.service";
 
 describe("PerformanceService", () => {
-  const mockDb = {
-    insert: mock(() => ({
-      values: mock(() => ({
-        returning: mock(() =>
-          Promise.resolve([{ id: "cycle-123", status: "DRAFT" }]),
-        ),
-      })),
-    })),
-    update: mock(() => ({
-      set: mock(() => ({
-        where: mock(() => ({
+  // Factory to create fresh mock for each test
+  function createMockDb() {
+    const mockDb: any = {
+      insert: mock(() => ({
+        values: mock(() => ({
           returning: mock(() =>
-            Promise.resolve([{ id: "review-123", overallRating: 4 }]),
+            Promise.resolve([{ id: "cycle-123", status: "DRAFT" }]),
           ),
         })),
       })),
-    })),
-    query: {
-      performanceCycle: {
-        findMany: mock(() => Promise.resolve([])),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({
+            returning: mock(() =>
+              Promise.resolve([{ id: "review-123", overallRating: 4 }]),
+            ),
+          })),
+        })),
+      })),
+      select: mock(() => ({
+        from: mock(() => ({
+          where: mock(() => ({
+            orderBy: mock(() => Promise.resolve([])),
+            limit: mock(() => Promise.resolve([])),
+          })),
+        })),
+      })),
+      query: {
+        performanceCycle: {
+          findMany: mock(() => Promise.resolve([])),
+        },
+        performanceReview: {
+          findFirst: mock(() =>
+            Promise.resolve({ id: "review-123", status: "DRAFT" }),
+          ),
+        },
+        competencyTemplate: {
+          findMany: mock(() => Promise.resolve([])),
+        },
       },
-      performanceReview: {
-        findFirst: mock(() =>
-          Promise.resolve({ id: "review-123", status: "DRAFT" }),
-        ),
-      },
-    },
-    transaction: mock((cb) => cb(mockDb)),
-  } as any;
-
-  const service = createPerformanceService(mockDb);
+      transaction: mock((cb: (tx: any) => Promise<any>) => cb(mockDb)),
+    };
+    return mockDb;
+  }
 
   it("should create a performance cycle", async () => {
+    const mockDb = createMockDb();
+    const service = createPerformanceService(mockDb);
+
     const input = {
       name: "Q4 2024",
       startDate: "2024-10-01T00:00:00Z",
@@ -50,18 +66,31 @@ describe("PerformanceService", () => {
   });
 
   it("should create a performance review", async () => {
+    const mockDb = createMockDb();
+    const service = createPerformanceService(mockDb);
+
     const input = {
       cycleId: "cycle-123",
       employeeId: "emp-1",
       reviewerId: "mgr-1",
+      reviewType: "ANNUAL_PERFORMANCE" as const,
     };
 
-    // Mock insert for review
+    // Mock insert to return created review
     mockDb.insert.mockReturnValueOnce({
       values: mock(() => ({
         returning: mock(() =>
           Promise.resolve([{ id: "review-123", status: "DRAFT", ...input }]),
         ),
+      })),
+    });
+
+    // Mock select for global templates
+    mockDb.select.mockReturnValueOnce({
+      from: mock(() => ({
+        where: mock(() => ({
+          orderBy: mock(() => Promise.resolve([])),
+        })),
       })),
     });
 
@@ -74,6 +103,9 @@ describe("PerformanceService", () => {
   });
 
   it("should update a performance review", async () => {
+    const mockDb = createMockDb();
+    const service = createPerformanceService(mockDb);
+
     const input = {
       reviewId: "review-123",
       overallRating: 4,
@@ -89,6 +121,9 @@ describe("PerformanceService", () => {
   });
 
   it("should create a performance goal", async () => {
+    const mockDb = createMockDb();
+    const service = createPerformanceService(mockDb);
+
     const input = {
       reviewId: "review-123",
       title: "Increase sales",
