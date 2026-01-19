@@ -7,6 +7,7 @@ import type {
   PdfService,
   StorageService,
 } from "../../infrastructure/interfaces";
+import { AppError } from "../../shared/errors";
 import type {
   generateContractSchema,
   updateContractSchema,
@@ -30,14 +31,16 @@ export const createContractsService = (
         .limit(1);
 
       if (!request) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Request not found");
       }
 
       if (
         request.status !== "APPROVED_OPEN" &&
         request.status !== "HIRING_IN_PROGRESS"
       ) {
-        throw new Error("BAD_REQUEST");
+        throw AppError.badRequest(
+          "Request must be APPROVED_OPEN or HIRING_IN_PROGRESS",
+        );
       }
 
       const positionDetails = request.positionDetails as {
@@ -104,10 +107,10 @@ export const createContractsService = (
         .limit(1);
 
       if (!contractRecord) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Contract not found");
       }
       if (contractRecord.status !== "DRAFT") {
-        throw new Error("BAD_REQUEST");
+        throw AppError.badRequest("Contract is not in DRAFT status");
       }
 
       const [updated] = await db
@@ -131,10 +134,10 @@ export const createContractsService = (
         .limit(1);
 
       if (!contractRecord) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Contract not found");
       }
       if (contractRecord.status !== "DRAFT") {
-        throw new Error("BAD_REQUEST");
+        throw AppError.badRequest("Contract is not in DRAFT status");
       }
 
       // Mock e-signature provider ID
@@ -161,7 +164,7 @@ export const createContractsService = (
         .limit(1);
 
       if (!contractRecord?.pdfS3Url) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Contract or PDF not found");
       }
 
       const key = contractRecord.pdfS3Url.replace(

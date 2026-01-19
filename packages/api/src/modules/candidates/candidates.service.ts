@@ -4,6 +4,7 @@ import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import type { StorageService } from "../../infrastructure/interfaces";
+import { AppError } from "../../shared/errors";
 import type { uploadCvSchema } from "./candidates.schema";
 
 type UploadCvInput = z.infer<typeof uploadCvSchema>;
@@ -22,11 +23,11 @@ export const createCandidatesService = (
         .limit(1);
 
       if (!request) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Request not found");
       }
 
       if (request.status !== "APPROVED_OPEN") {
-        throw new Error("BAD_REQUEST");
+        throw AppError.badRequest("Request is not in APPROVED_OPEN status");
       }
 
       // 1. Upload CV
@@ -62,7 +63,7 @@ export const createCandidatesService = (
           .limit(1);
 
         if (!request) {
-          throw new Error("NOT_FOUND");
+          throw AppError.notFound("Request not found");
         }
 
         // Check if candidate exists
@@ -73,7 +74,7 @@ export const createCandidatesService = (
           .limit(1);
 
         if (!candidate) {
-          throw new Error("CANDIDATE_NOT_FOUND");
+          throw AppError.notFound("Candidate not found");
         }
 
         // Update request status to HIRING_IN_PROGRESS
