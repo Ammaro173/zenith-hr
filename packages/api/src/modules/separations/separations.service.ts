@@ -2,11 +2,12 @@ import {
   auditLog,
   separationChecklist,
   separationRequest,
-  user,
 } from "@zenith-hr/db";
 import { eq } from "drizzle-orm";
 import type { z } from "zod";
+import { AppError } from "../../shared/errors";
 import { notifyUser } from "../../shared/notify";
+import { getActorRole } from "../../shared/utils";
 import type {
   createSeparationSchema,
   startClearanceSchema,
@@ -98,13 +99,7 @@ export const createSeparationsService = (
       input: z.infer<typeof updateChecklistSchema>,
       userId: string,
     ) {
-      const [actor] = await db
-        .select({ role: user.role })
-        .from(user)
-        .where(eq(user.id, userId))
-        .limit(1);
-
-      const actorRole = actor?.role;
+      const actorRole = await getActorRole(db, userId);
 
       const [checklist] = await db
         .select()
@@ -113,7 +108,7 @@ export const createSeparationsService = (
         .limit(1);
 
       if (!checklist) {
-        throw new Error("NOT_FOUND");
+        throw AppError.notFound("Checklist item not found");
       }
 
       const allowedDepartment = actorRole
@@ -121,7 +116,11 @@ export const createSeparationsService = (
         : undefined;
 
       if (!allowedDepartment || allowedDepartment !== checklist.department) {
-        throw new Error("FORBIDDEN");
+        throw new AppError(
+          "FORBIDDEN",
+          "Not authorized for this department",
+          403,
+        );
       }
 
       const [updated] = await db
@@ -169,14 +168,10 @@ export const createSeparationsService = (
       input: z.infer<typeof startClearanceSchema>,
       actorId: string,
     ) {
-      const [actor] = await db
-        .select({ role: user.role })
-        .from(user)
-        .where(eq(user.id, actorId))
-        .limit(1);
+      const actorRole = await getActorRole(db, actorId);
 
-      if (actor?.role !== "HR") {
-        throw new Error("FORBIDDEN");
+      if (actorRole !== "HR") {
+        throw new AppError("FORBIDDEN", "Only HR can start clearance", 403);
       }
 
       return await db.transaction(async (tx) => {
@@ -187,7 +182,7 @@ export const createSeparationsService = (
           .limit(1);
 
         if (!request) {
-          throw new Error("NOT_FOUND");
+          throw AppError.notFound("Separation request not found");
         }
 
         const checklistItems = (

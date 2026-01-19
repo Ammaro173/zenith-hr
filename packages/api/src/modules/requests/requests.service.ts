@@ -4,6 +4,8 @@ import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
+import { AppError } from "../../shared/errors";
+import { getActorRole } from "../../shared/utils";
 import type { WorkflowService } from "../workflow/workflow.service";
 import type {
   createRequestSchema,
@@ -39,13 +41,7 @@ export const createRequestsService = (
 
       const requestCode = this.generateRequestCode();
 
-      const [requester] = await db
-        .select({ role: user.role })
-        .from(user)
-        .where(eq(user.id, requesterId))
-        .limit(1);
-
-      const requesterRole = (requester?.role || "REQUESTER") as string;
+      const requesterRole = await getActorRole(db, requesterId);
       const initialStatus =
         requesterRole === "MANAGER" || requesterRole === "HR"
           ? "PENDING_HR"
@@ -272,16 +268,24 @@ export const createRequestsService = (
           .limit(1);
 
         if (!existing) {
-          throw new Error("NOT_FOUND");
+          throw AppError.notFound("Request not found");
         }
 
         if (existing.version !== version) {
-          throw new Error("CONFLICT");
+          throw new AppError(
+            "CONFLICT",
+            "Version mismatch - please refresh",
+            409,
+          );
         }
 
         // Check permissions (simplified)
         if (existing.requesterId !== userId) {
-          throw new Error("FORBIDDEN");
+          throw new AppError(
+            "FORBIDDEN",
+            "Not authorized to edit this request",
+            403,
+          );
         }
 
         const nextSalaryMin =
@@ -298,7 +302,7 @@ export const createRequestsService = (
           nextRequestType === "REPLACEMENT" &&
           (!replacementForUserId || replacementForUserId.length === 0)
         ) {
-          throw new Error("REPLACEMENT_NEEDS_TARGET");
+          throw AppError.badRequest("Replacement request requires target user");
         }
 
         // Save version history
@@ -356,7 +360,9 @@ export const createRequestsService = (
      */
     validateSalaryRange(min: number, max: number): void {
       if (min > max) {
-        throw new Error("Minimum salary cannot exceed maximum salary");
+        throw AppError.badRequest(
+          "Minimum salary cannot exceed maximum salary",
+        );
       }
     },
 
