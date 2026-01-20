@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/react";
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
 
 import { authPlugins } from "./auth-plugins";
 import { env } from "./env";
@@ -15,9 +15,12 @@ const serverAuthClient = createAuthClient({
 });
 
 export async function getServerSession() {
+  const cookieHeader = (await cookies()).toString();
+
   return await serverAuthClient.getSession({
     fetchOptions: {
-      headers: await headers(),
+      // Only forward cookies to avoid poisoning upstream requests with
+      headers: cookieHeader ? { cookie: cookieHeader } : {},
       throw: false,
     },
   });
