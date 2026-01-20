@@ -41,6 +41,10 @@ export const serverEnvSchema = {
 export const authEnvSchema = {
   BETTER_AUTH_SECRET: z.string().min(32).optional(),
   BETTER_AUTH_URL: z.string().url().optional(),
+  /**
+   * Optional cookie domain override for sharing auth cookies across subdomains.
+   */
+  BETTER_AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
 };
 
 /**
