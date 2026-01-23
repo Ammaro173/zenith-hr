@@ -5,7 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { env } from "./env";
 
-export const auth = betterAuth<BetterAuthOptions>({
+export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
@@ -27,7 +27,13 @@ export const auth = betterAuth<BetterAuthOptions>({
   },
   emailAndPassword: {
     enabled: true,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({
+      user,
+      url,
+    }: {
+      user: { email: string };
+      url: string;
+    }) => {
       // TODO: Replace with actual email service in production
       // For development, log the reset URL to console
       console.log("=".repeat(60));
@@ -68,4 +74,4 @@ export const auth = betterAuth<BetterAuthOptions>({
       httpOnly: true,
     },
   },
-});
+} satisfies BetterAuthOptions);

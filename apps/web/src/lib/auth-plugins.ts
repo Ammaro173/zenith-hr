@@ -5,7 +5,7 @@ import { inferAdditionalFields } from "better-auth/client/plugins";
  * Shared auth plugins configuration used by both client and server auth clients.
  * Single source of truth for user field extensions.
  */
-export const authPlugins: BetterAuthClientPlugin[] = [
+export const authPlugins = [
   inferAdditionalFields({
     user: {
       sapNo: { type: "string" },
@@ -14,4 +14,4 @@ export const authPlugins: BetterAuthClientPlugin[] = [
       departmentId: { type: "string", required: false },
     },
   }),
-];
+] satisfies BetterAuthClientPlugin[];
