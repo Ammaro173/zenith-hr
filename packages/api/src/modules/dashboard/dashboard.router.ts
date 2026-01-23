@@ -2,10 +2,11 @@ import { o, protectedProcedure } from "../../shared/middleware";
 
 export const dashboardRouter = o.router({
   getStats: protectedProcedure.handler(async ({ context }) => {
-    const { cache } = context;
+    const { cache, session } = context;
+    const { user } = session;
 
-    // Check cache first (1 hour TTL)
-    const cacheKey = "dashboard:stats";
+    // Check cache first (1 hour TTL) - Scope cache by user/role!
+    const cacheKey = `dashboard:stats:${user.id}`;
     const cached = await cache.get<{
       totalRequests: number;
       pendingRequests: number;
@@ -15,12 +16,20 @@ export const dashboardRouter = o.router({
       activeContracts: number;
       averageTimeToHire: number;
     }>(cacheKey);
+
     if (cached) {
       return cached;
     }
 
     // Get statistics from service
-    const stats = await context.services.dashboard.getDashboardStats();
+    // Default to REQUESTER if no role (shouldn't happen with typed auth)
+    // Default to REQUESTER if no role or invalid
+    const role = user.role || "REQUESTER";
+
+    const stats = await context.services.dashboard.getDashboardStats(
+      user.id,
+      role,
+    );
     const averageTimeToHire =
       await context.services.dashboard.getAverageTimeToHire();
 
@@ -36,7 +45,12 @@ export const dashboardRouter = o.router({
   }),
 
   getPendingCount: protectedProcedure.handler(async ({ context }) => {
-    const count = await context.services.dashboard.getPendingRequests();
+    const { user } = context.session;
+    const role = user.role || "REQUESTER";
+    const count = await context.services.dashboard.getPendingRequests(
+      user.id,
+      role,
+    );
     return { count };
   }),
 
@@ -57,5 +71,16 @@ export const dashboardRouter = o.router({
     await cache.set(cacheKey, averageTimeToHire, 3600);
 
     return { averageDays: averageTimeToHire };
+  }),
+
+  getActionsRequired: protectedProcedure.handler(async ({ context }) => {
+    const { user } = context.session;
+    const role = user.role || "REQUESTER";
+
+    const actions = await context.services.dashboard.getActionsRequired(
+      user.id,
+      role,
+    );
+    return actions;
   }),
 });
