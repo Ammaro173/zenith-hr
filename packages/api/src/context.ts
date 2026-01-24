@@ -58,7 +58,7 @@ export async function createContext({ context }: CreateContextOptions) {
     candidates: createCandidatesService(db, storage),
     businessTrips: createBusinessTripsService(db, workflow),
     performance: createPerformanceService(db),
-    separations: createSeparationsService(db),
+    separations: createSeparationsService(db, storage),
     imports: createImportsService(db),
     users: createUsersService(db),
     webhooks: createWebhooksService(db),

@@ -1,23 +1,40 @@
 import { describe, expect, it, mock } from "bun:test";
 import { createSeparationsService } from "./separations.service";
 
+interface MockDb {
+  insert: ReturnType<typeof mock>;
+  select: ReturnType<typeof mock>;
+  update: ReturnType<typeof mock>;
+  transaction: ReturnType<typeof mock>;
+  query: Record<string, unknown>;
+}
+
+function createMockStorage() {
+  return {
+    upload: mock(() => Promise.resolve("s3://bucket/key")),
+    getPresignedUrl: mock(() =>
+      Promise.resolve("https://example.com/presigned"),
+    ),
+  };
+}
+
 describe("SeparationsService", () => {
-  // Factory to create fresh mock for each test
-  function createMockDb() {
-    const mockDb: any = {
+  it("create() sets PENDING_MANAGER when requester has manager", async () => {
+    const storage = createMockStorage();
+
+    const tx: Record<string, unknown> = {};
+    const mockDb: MockDb = {
       insert: mock(() => ({
         values: mock(() => ({
           returning: mock(() =>
-            Promise.resolve([{ id: "sep-123", status: "REQUESTED" }]),
+            Promise.resolve([{ id: "sep-1", status: "PENDING_MANAGER" }]),
           ),
         })),
       })),
       update: mock(() => ({
         set: mock(() => ({
           where: mock(() => ({
-            returning: mock(() =>
-              Promise.resolve([{ id: "sep-123", status: "MANAGER_APPROVED" }]),
-            ),
+            returning: mock(() => Promise.resolve([{ id: "sep-1" }])),
           })),
         })),
       })),
@@ -26,99 +43,206 @@ describe("SeparationsService", () => {
           where: mock(() => ({
             limit: mock(() =>
               Promise.resolve([
-                { id: "user-1", role: "HR", name: "Test User" },
+                { id: "emp-1", role: "REQUESTER", name: "Emp" },
               ]),
             ),
           })),
         })),
       })),
-      query: {
-        separationRequest: {
-          findFirst: mock(() =>
-            Promise.resolve({ id: "sep-123", status: "DRAFT" }),
-          ),
-        },
+      transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
+        // tx.select for manager lookup
+        (tx as { select?: unknown }).select = mock(() => ({
+          from: mock(() => ({
+            where: mock(() => ({
+              limit: mock(() => Promise.resolve([{ managerId: "mgr-1" }])),
+            })),
+          })),
+        }));
+        // tx.insert used for separationRequest insert + auditLog insert + outbox insert
+        (tx as { insert?: unknown }).insert = mock(() => ({
+          values: mock(() => ({
+            returning: mock(() =>
+              Promise.resolve([{ id: "sep-1", status: "PENDING_MANAGER" }]),
+            ),
+            onConflictDoNothing: mock(() => Promise.resolve()),
+          })),
+        }));
+        return await cb(tx);
+      }),
+      query: {},
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as any,
+      storage as any,
+    );
+
+    const result = await service.create(
+      {
+        type: "RESIGNATION",
+        reason: "Moving to another company",
+        lastWorkingDay: new Date("2026-01-31"),
+        noticePeriodWaived: false,
       },
-      transaction: mock((cb: (tx: any) => Promise<any>) => cb(mockDb)),
-    };
-    return mockDb;
-  }
-
-  it("should create a separation request", async () => {
-    const mockDb = createMockDb();
-    const service = createSeparationsService(mockDb);
-
-    const input = {
-      type: "RESIGNATION" as const,
-      reason: "Moving to another company",
-      lastWorkingDay: new Date("2024-12-31"),
-      noticePeriodWaived: false,
-    };
-    const employeeId = "emp-1";
-
-    const result = await service.create(input, employeeId);
-
-    expect(result).toEqual(
-      expect.objectContaining({ id: "sep-123", status: "REQUESTED" }),
+      "emp-1",
     );
-    expect(mockDb.insert).toHaveBeenCalled();
+
+    expect(result?.status).toBe("PENDING_MANAGER");
   });
 
-  it("should get a separation request", async () => {
-    const mockDb = createMockDb();
-    const service = createSeparationsService(mockDb);
+  it("approveByHr() clones templates into checklist + starts clearance", async () => {
+    const storage = createMockStorage();
 
-    const result = await service.get("sep-123");
-    expect(result).toEqual(
-      expect.objectContaining({ id: "sep-123", status: "DRAFT" }),
-    );
-  });
+    const tx: Record<string, unknown> = {};
+    let selectCall = 0;
 
-  it("should update a separation request", async () => {
-    const mockDb = createMockDb();
-    const service = createSeparationsService(mockDb);
+    const mockDb: MockDb = {
+      select: mock(() => ({
+        from: mock(() => ({
+          where: mock(() => ({
+            limit: mock(() => {
+              selectCall++;
+              if (selectCall === 1) {
+                // getActorRole(actorId) => HR
+                return Promise.resolve([{ role: "HR" }]);
+              }
+              return Promise.resolve([]);
+            }),
+          })),
+        })),
+      })),
+      insert: mock(() => ({
+        values: mock(() => Promise.resolve(undefined)),
+        onConflictDoNothing: mock(() => ({
+          returning: mock(() => Promise.resolve([])),
+        })),
+      })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({
+            returning: mock(() =>
+              Promise.resolve([
+                { id: "sep-1", status: "CLEARANCE_IN_PROGRESS" },
+              ]),
+            ),
+          })),
+        })),
+      })),
+      transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
+        let txSelectCall = 0;
+        (tx as any).select = mock(() => ({
+          from: mock(() => ({
+            where: mock(() => {
+              txSelectCall++;
+              if (txSelectCall === 1) {
+                return {
+                  limit: mock(() =>
+                    Promise.resolve([
+                      {
+                        id: "sep-1",
+                        employeeId: "emp-1",
+                        status: "PENDING_HR",
+                        lastWorkingDay: "2026-01-31",
+                        hrOwnerId: null,
+                      },
+                    ]),
+                  ),
+                };
+              }
 
-    const input = {
-      separationId: "sep-123",
-      status: "MANAGER_APPROVED" as const,
+              return {
+                orderBy: mock(() =>
+                  Promise.resolve([
+                    {
+                      id: "tpl-1",
+                      lane: "IT",
+                      title: "Disable email",
+                      description: null,
+                      required: true,
+                      defaultDueOffsetDays: 3,
+                      order: 0,
+                      active: true,
+                    },
+                  ]),
+                ),
+              };
+            }),
+          })),
+        }));
+
+        (tx as any).insert = mock(() => ({
+          values: mock(() => ({
+            returning: mock(() =>
+              Promise.resolve([
+                { id: "sep-1", status: "CLEARANCE_IN_PROGRESS" },
+              ]),
+            ),
+            onConflictDoNothing: mock(() => Promise.resolve()),
+          })),
+        }));
+
+        (tx as any).update = mockDb.update;
+
+        return await cb(tx);
+      }),
+      query: {},
     };
 
-    const result = await service.update(input);
-
-    expect(result).toEqual(
-      expect.objectContaining({ id: "sep-123", status: "MANAGER_APPROVED" }),
+    const service = createSeparationsService(
+      mockDb as unknown as any,
+      storage as any,
     );
-    expect(mockDb.update).toHaveBeenCalled();
+
+    const result = await service.approveByHr({ separationId: "sep-1" }, "hr-1");
+    expect(result?.status).toBe("CLEARANCE_IN_PROGRESS");
   });
 
-  it("should update a checklist item", async () => {
-    const mockDb = createMockDb();
-    const service = createSeparationsService(mockDb);
+  it("updateChecklist() requires remarks when rejecting", async () => {
+    const storage = createMockStorage();
 
-    const input = {
-      checklistId: "chk-1",
-      status: "CLEARED" as const,
+    const mockDb: MockDb = {
+      select: mock(() => ({
+        from: mock(() => ({
+          where: mock(() => ({
+            limit: mock(() => Promise.resolve([{ role: "IT" }])),
+          })),
+        })),
+      })),
+      insert: mock(() => ({
+        values: mock(() => Promise.resolve(undefined)),
+      })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({
+            returning: mock(() =>
+              Promise.resolve([{ id: "chk-1", status: "REJECTED" }]),
+            ),
+          })),
+        })),
+      })),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {},
     };
-    const userId = "user-1";
 
-    // First select returns user with HR role
-    // Second select returns checklist with HR department (matching the user's role)
-    let selectCallCount = 0;
+    // checklist select call should return the checklist item after role lookup.
+    let selectCall = 0;
     mockDb.select.mockImplementation(() => ({
       from: mock(() => ({
         where: mock(() => ({
           limit: mock(() => {
-            selectCallCount++;
-            if (selectCallCount === 1) {
-              // getActorRole call - return HR user
-              return Promise.resolve([{ id: "user-1", role: "HR" }]);
+            selectCall++;
+            if (selectCall === 1) {
+              return Promise.resolve([{ role: "IT" }]);
             }
-            // Get checklist call - return checklist with HR department
             return Promise.resolve([
               {
                 id: "chk-1",
-                separationId: "sep-123",
-                department: "HR",
+                separationId: "sep-1",
+                lane: "IT",
+                title: "Disable email",
+                required: true,
                 status: "PENDING",
               },
             ]);
@@ -127,27 +251,96 @@ describe("SeparationsService", () => {
       })),
     }));
 
-    // Mock update for checklist
-    mockDb.update.mockReturnValueOnce({
-      set: mock(() => ({
-        where: mock(() => ({
-          returning: mock(() =>
-            Promise.resolve([{ id: "chk-1", status: "CLEARED" }]),
-          ),
+    const service = createSeparationsService(
+      mockDb as unknown as any,
+      storage as any,
+    );
+
+    await expect(
+      service.updateChecklist(
+        { checklistId: "chk-1", status: "REJECTED" },
+        "it-1",
+      ),
+    ).rejects.toThrow("Remarks are required");
+  });
+
+  it("updateChecklist() forbids acting on a lane you don't own", async () => {
+    const storage = createMockStorage();
+
+    const mockDb: MockDb = {
+      select: mock(() => ({
+        from: mock(() => ({
+          where: mock(() => ({
+            limit: mock(() => Promise.resolve([])),
+          })),
         })),
       })),
-    });
+      insert: mock(() => ({
+        values: mock(() => Promise.resolve(undefined)),
+      })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({
+            returning: mock(() => Promise.resolve([])),
+          })),
+        })),
+      })),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {},
+    };
 
-    // Mock insert for audit log
-    mockDb.insert.mockReturnValueOnce({
-      values: mock(() => Promise.resolve()),
-    });
+    let selectCall = 0;
+    mockDb.select.mockImplementation(() => ({
+      from: mock((_table: unknown) => ({
+        where: mock(() => {
+          const builder = {
+            limit: mock(() => {
+              selectCall++;
+              if (selectCall === 1) {
+                // getActorRole => FINANCE
+                return Promise.resolve([{ role: "FINANCE" }]);
+              }
+              if (selectCall === 2) {
+                // checklist lookup => IT lane
+                return Promise.resolve([
+                  {
+                    id: "chk-1",
+                    separationId: "sep-1",
+                    lane: "IT",
+                    title: "Disable email",
+                    required: true,
+                    status: "PENDING",
+                  },
+                ]);
+              }
+              // userClearanceLane membership lookup => none
+              return Promise.resolve([]);
+            }),
+          };
 
-    const result = await service.updateChecklist(input, userId);
+          // Some queries `await ...where(...)` directly (no `.limit()`).
+          return {
+            ...builder,
+            // biome-ignore lint/suspicious/noThenProperty: mock
+            then: (onFulfilled: (value: unknown) => unknown) =>
+              Promise.resolve([]).then(onFulfilled),
+          };
+        }),
+      })),
+    }));
 
-    expect(result).toEqual(
-      expect.objectContaining({ id: "chk-1", status: "CLEARED" }),
+    const service = createSeparationsService(
+      mockDb as unknown as any,
+      storage as any,
     );
-    expect(mockDb.update).toHaveBeenCalled();
+
+    await expect(
+      service.updateChecklist(
+        { checklistId: "chk-1", status: "CLEARED", remarks: "ok" },
+        "finance-1",
+      ),
+    ).rejects.toThrow("Not authorized for this lane");
   });
 });

@@ -13,7 +13,7 @@
   },
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "bun --env-file=../../.env test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
     "clean": "rimraf --glob \"dist\" \"out\" \"build\" \"coverage\" \".cache\" \".eslintcache\" \"node_modules\" \"**/*.tsbuildinfo\""
