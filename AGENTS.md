@@ -357,20 +357,13 @@ packages/api/src/infrastructure/
 
 ## Frontend Feature Organization
 
+Use the **Create Feature Skill** to scaffold new frontend features.
+
+> **Skill**: `.agent/skills/create-feature/SKILL.md`
+
 ### Feature-Based Structure
 
 Reusable feature code lives in `apps/web/src/features/{feature-name}/`. We follow a **lean (Option A)** approach where structure emerges based on complexity.
-
-```
-apps/web/src/features/manpower-requests/
-├── index.ts                              # Barrel exports
-├── use-manpower-request-form.ts          # Hooks (flat until >3 hooks)
-├── manpower-request-form.tsx             # Components (flat until >5 components)
-├── manpower-request-form-context.tsx     # Context providers
-├── types.ts                              # Feature-specific types
-└── form-sections/                        # Subfolders only when logically grouped
-    └── ...
-```
 
 ### When to Create Subfolders
 
@@ -391,21 +384,6 @@ app/(protected)/requests/
 ├── _hooks/               # Route-specific hooks (use-requests-table)
 ├── page.tsx
 └── [id]/page.tsx
-```
-
-### Import Pattern
-
-Always use the barrel export for feature code to maintain a clean interface:
-
-```typescript
-// ✅ CORRECT - Use barrel export
-import {
-  ManpowerRequestForm,
-  useManpowerRequestForm,
-} from '@/features/manpower-requests';
-
-// ❌ WRONG - Direct file import
-import { ManpowerRequestForm } from '@/features/manpower-requests/manpower-request-form';
 ```
 
 ---
@@ -587,61 +565,14 @@ export type CreateRequestInput = z.infer<typeof createRequestSchema>;
 
 ## Database Patterns
 
-### Select with Where
+Detailed patterns, transaction rules, and mocking strategies are now maintained in the **Database Best Practices Skill**.
 
-```typescript
-// Single record
-const [request] = await db
-  .select()
-  .from(manpowerRequest)
-  .where(eq(manpowerRequest.id, id))
-  .limit(1);
+> **Skill**: `.agent/skills/database-best-practices/SKILL.md`
 
-// Multiple records
-const requests = await db
-  .select()
-  .from(manpowerRequest)
-  .where(eq(manpowerRequest.requesterId, userId));
-```
-
-### Insert with Returning
-
-```typescript
-const [newRequest] = await db
-  .insert(manpowerRequest)
-  .values({
-    requesterId: userId,
-    requestCode: this.generateRequestCode(),
-    positionDetails: input.positionDetails,
-    budgetDetails: input.budgetDetails,
-    status: 'PENDING_MANAGER',
-  })
-  .returning();
-```
-
-### Update with Returning
-
-```typescript
-const [updated] = await db
-  .update(manpowerRequest)
-  .set({
-    status: newStatus,
-    version: existing.version + 1,
-    updatedAt: new Date(),
-  })
-  .where(eq(manpowerRequest.id, id))
-  .returning();
-```
-
-### Transactions
-
-```typescript
-await db.transaction(async (tx) => {
-  // All queries use tx instead of db
-  await tx.update(manpowerRequest)...;
-  await tx.insert(approvalLog)...;
-});
-```
+Use this skill to:
+- Learn correct `select`, `insert`, `update` syntax.
+- Understand how to write transactional code.
+- Get the factory function pattern for mocking the database in tests.
 
 ---
 
@@ -658,15 +589,13 @@ await db.transaction(async (tx) => {
 | New Zod schema             | `{module}.schema.ts`                                                                  |
 | Shared types               | `packages/api/src/shared/types.ts`                                                    |
 
-### Adding a New Module Checklist
+### Adding a New Module
 
-1. Create folder: `packages/api/src/modules/{name}/`
-2. Create schema: `{name}.schema.ts` with Zod validation
-3. Create service: `{name}.service.ts` with factory function
-4. Create router: `{name}.router.ts` with procedures
-5. Create barrel: `index.ts` exporting router
-6. Wire service in `packages/api/src/context.ts`
-7. Add router to `packages/api/src/router.ts`
+Use the **Create Module Skill** to generate the correct file structure (Router, Service, Schema, Index).
+
+> **Skill**: `.agent/skills/create-module/SKILL.md`
+
+This skill enforces the "Factory Function" pattern and provides the correct templates.
 
 ---
 
@@ -691,16 +620,9 @@ We use **Bun's built-in test runner** (`bun:test`). Tests are co-located with so
 
 ### Running Tests
 
-```bash
-# Run all tests
-bun test packages/api
+Use the **Run Tests Skill** to determine the correct test suite for your changes.
 
-# Run specific module tests
-bun test packages/api/src/modules/workflow
-
-# Watch mode during development
-bun test --watch packages/api
-```
+> **Skill**: `.agent/skills/run-tests/SKILL.md`
 
 ### When to Write Tests (AI Guidelines)
 
@@ -714,90 +636,15 @@ bun test --watch packages/api
 | Input validation | ❌ No | Zod schemas handle this |
 | UI components | ❌ No | Low ROI for internal tools |
 
-### After Modifying Critical Files
+### Checking Forbidden Patterns
 
-**ALWAYS run tests after changing these files:**
+Use the **Check Consistency Skill** to verify your code against architectural rules.
 
-| File | Command | Reason |
-|------|---------|--------|
-| `workflow.service.ts` | `bun test packages/api/src/modules/workflow` | Status transitions |
-| `business-trips.service.ts` | `bun test packages/api/src/modules/business-trips` | Expense calculations |
-| `performance.service.ts` | `bun test packages/api/src/modules/performance` | Score calculations |
-| `separations.service.ts` | `bun test packages/api/src/modules/separations` | Clearance workflow |
+> **Skill**: `.agent/skills/check-consistency/SKILL.md`
 
-### Mock Patterns for Drizzle
+### Mock Patterns
 
-Use this factory pattern for mocking database interactions:
-
-```typescript
-import { describe, expect, it, mock } from "bun:test";
-
-// Factory function for creating mock database
-function createMockDb(overrides: {
-  request?: { id: string; status: string } | null;
-  actor?: { id: string; role: string } | null;
-} = {}) {
-  let selectCallCount = 0;
-  
-  const mockDb = {
-    select: mock(() => ({
-      from: mock(() => ({
-        where: mock(() => ({
-          limit: mock(() => {
-            selectCallCount++;
-            if (selectCallCount === 1) {
-              return Promise.resolve(overrides.request ? [overrides.request] : []);
-            }
-            return Promise.resolve(overrides.actor ? [overrides.actor] : []);
-          }),
-        })),
-      })),
-    })),
-    insert: mock(() => ({
-      values: mock(() => ({
-        returning: mock(() => Promise.resolve([{ id: "new-1" }])),
-      })),
-    })),
-    update: mock(() => ({
-      set: mock(() => ({
-        where: mock(() => ({
-          returning: mock(() => Promise.resolve([{ id: "updated-1" }])),
-        })),
-      })),
-    })),
-    transaction: mock(async (cb) => {
-      selectCallCount = 0;
-      return await cb(mockDb);
-    }),
-  } as any;
-
-  return mockDb;
-}
-
-// Usage in tests
-describe("MyService", () => {
-  it("should handle not found", async () => {
-    const mockDb = createMockDb({ request: null });
-    const service = createMyService(mockDb);
-    
-    await expect(service.getById("id")).rejects.toThrow("not found");
-  });
-});
-```
-
-### Testing Services Directly
-
-Test service methods directly, not through routers:
-
-```typescript
-describe("RequestsService", () => {
-  const mockDb = createMockDb();
-  const service = createRequestsService(mockDb);
-
-  it("should create a request", async () => {
-    const input = { positionDetails: {...}, budgetDetails: {...} };
-    const result = await service.create(input, "user-123");
-
+Mocking patterns are defined in the **Database Best Practices Skill**.
     expect(result.requestCode).toMatch(/^REQ-/);
     expect(result.status).toBe("PENDING_MANAGER");
   });
