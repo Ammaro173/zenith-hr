@@ -2,17 +2,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClearanceBoard } from "@/features/separations";
 import { orpc } from "@/utils/orpc";
-
-type ChecklistStatus = "PENDING" | "CLEARED" | "REJECTED";
 
 interface SeparationDetailClientPageProps {
   role: string | null;
@@ -24,7 +19,6 @@ export function SeparationDetailClientPage({
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [remarks, setRemarks] = useState<Record<string, string>>({});
 
   const { data: separation, isLoading } = useQuery(
     orpc.separations.get.queryOptions({
@@ -32,20 +26,20 @@ export function SeparationDetailClientPage({
     }),
   );
 
-  const startClearance = useMutation(
-    orpc.separations.startClearance.mutationOptions({
+  const approveByManager = useMutation(
+    orpc.separations.approveByManager.mutationOptions({
       onSuccess: () => {
-        toast.success("Clearance started");
+        toast.success("Approved");
         queryClient.invalidateQueries();
       },
       onError: (err) => toast.error(err.message),
     }),
   );
 
-  const updateChecklist = useMutation(
-    orpc.separations.updateChecklist.mutationOptions({
+  const approveByHr = useMutation(
+    orpc.separations.approveByHr.mutationOptions({
       onSuccess: () => {
-        toast.success("Checklist updated");
+        toast.success("Clearance started");
         queryClient.invalidateQueries();
       },
       onError: (err) => toast.error(err.message),
@@ -59,33 +53,6 @@ export function SeparationDetailClientPage({
   if (!separation) {
     return <div className="p-6">Not found</div>;
   }
-
-  const grouped = (separation.checklistItems ?? []).reduce(
-    (acc: Record<string, typeof separation.checklistItems>, item) => {
-      acc[item.department] = acc[item.department] || [];
-      acc[item.department].push(item);
-      return acc;
-    },
-    {},
-  );
-
-  const canStart =
-    role === "HR" && separation.status !== "CLEARANCE_IN_PROGRESS";
-
-  const canActionDepartment = (dept: string) => {
-    if (role === "HR") {
-      return true;
-    }
-    return role?.toUpperCase() === dept;
-  };
-
-  const handleUpdate = (id: string, status: ChecklistStatus) => {
-    updateChecklist.mutate({
-      checklistId: id,
-      status,
-      remarks: remarks[id],
-    });
-  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -104,72 +71,48 @@ export function SeparationDetailClientPage({
         </div>
       </div>
 
-      {canStart ? (
-        <Button
-          onClick={() => startClearance.mutate({ separationId: separation.id })}
-        >
-          Start Clearance
-        </Button>
+      {separation.status === "PENDING_MANAGER" &&
+      (role === "MANAGER" || role === "HR" || role === "ADMIN") ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manager approval required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              disabled={approveByManager.isPending}
+              onClick={() =>
+                approveByManager.mutate({ separationId: separation.id })
+              }
+            >
+              Approve
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
 
-      <Tabs defaultValue="IT">
-        <TabsList>
-          {Object.keys(grouped).map((dept) => (
-            <TabsTrigger key={dept} value={dept}>
-              {dept}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {separation.status === "PENDING_HR" &&
+      (role === "HR" || role === "ADMIN") ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>HR approval required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              disabled={approveByHr.isPending}
+              onClick={() =>
+                approveByHr.mutate({ separationId: separation.id })
+              }
+            >
+              Approve & Start Clearance
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
-        {Object.entries(grouped).map(([dept, items]) => (
-          <TabsContent key={dept} value={dept}>
-            <div className="grid gap-4 md:grid-cols-2">
-              {items.map((item) => (
-                <Card key={item.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{item.item}</span>
-                      <Badge variant="outline">{item.status}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <Label htmlFor={`${item.id}-remarks`}>Remarks</Label>
-                      <Input
-                        id={`${item.id}-remarks`}
-                        onChange={(e) =>
-                          setRemarks((prev) => ({
-                            ...prev,
-                            [item.id]: e.target.value,
-                          }))
-                        }
-                        placeholder="Add remark"
-                        value={remarks[item.id] ?? ""}
-                      />
-                    </div>
-                    {canActionDepartment(dept) ? (
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handleUpdate(item.id, "CLEARED")}
-                          variant="default"
-                        >
-                          Clear
-                        </Button>
-                        <Button
-                          onClick={() => handleUpdate(item.id, "REJECTED")}
-                          variant="destructive"
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      {separation.status === "CLEARANCE_IN_PROGRESS" ||
+      separation.status === "COMPLETED" ? (
+        <ClearanceBoard role={role} separation={separation} />
+      ) : null}
     </div>
   );
 }
