@@ -6,6 +6,7 @@ export * from "./candidates";
 export * from "./contracts";
 export * from "./departments";
 export * from "./manpower-requests";
+export * from "./notifications";
 export * from "./performance";
 export * from "./request-versions";
 export * from "./separations";
@@ -24,6 +25,10 @@ export { auditLogRelations } from "./audit-logs";
 export { userRelations } from "./auth";
 export { businessTripRelations, tripExpenseRelations } from "./business-trips";
 export { contractRelations } from "./contracts";
+export {
+  notificationOutboxRelations,
+  notificationRelations,
+} from "./notifications";
 export {
   competencyTemplateRelations,
   performanceCompetencyRelations,
