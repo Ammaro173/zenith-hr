@@ -258,7 +258,12 @@ export const createBusinessTripsService = (
     return await db
       .select()
       .from(businessTrip)
-      .where(eq(businessTrip.status, statusFilter));
+      .where(
+        and(
+          eq(businessTrip.status, statusFilter),
+          eq(businessTrip.currentApproverId, userId),
+        ),
+      );
   },
 
   async transition(input: TripActionInput, actorId: string) {

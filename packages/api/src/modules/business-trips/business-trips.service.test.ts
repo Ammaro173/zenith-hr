@@ -129,4 +129,28 @@ describe("BusinessTripsService", () => {
     );
     expect(mockDb.insert).toHaveBeenCalled();
   });
+
+  it("should scope pending approvals to current approver", async () => {
+    const actorId = "manager-1";
+
+    // 1) getActorRole(db, actorId)
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "MANAGER" }]));
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    // 2) getPendingApprovals query itself
+    const approvalsWhereMock = mock(() => Promise.resolve([{ id: "trip-1" }]));
+    const approvalsFromMock = mock(() => ({ where: approvalsWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: approvalsFromMock });
+
+    const result = await service.getPendingApprovals(actorId);
+
+    expect(result).toEqual([{ id: "trip-1" }]);
+    expect(roleFromMock).toHaveBeenCalled();
+    expect(roleWhereMock).toHaveBeenCalled();
+    expect(roleLimitMock).toHaveBeenCalled();
+    expect(approvalsFromMock).toHaveBeenCalled();
+    expect(approvalsWhereMock).toHaveBeenCalled();
+  });
 });
