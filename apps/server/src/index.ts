@@ -1,9 +1,9 @@
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { Elysia } from "elysia";
 import { env } from "./env";
+import { startBackgroundJobs } from "./jobs/background-jobs";
 // Plugins
 import { corsPlugin } from "./plugins/cors.plugin";
-
 // Route handlers
 import { aiRouteHandler } from "./routes/ai.route";
 import { authHandler } from "./routes/auth.route";
@@ -50,5 +50,6 @@ export const app = new Elysia()
 
   // Start server
   .listen({ port: env.PORT, hostname: "0.0.0.0" }, () => {
+    startBackgroundJobs();
     console.log(`Server is running on http://localhost:${env.PORT}`);
   });

@@ -8,6 +8,7 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --env-file=../../.env --hot src/index.ts",
     "start": "bun run --env-file=../../.env dist/index.mjs",
+    "test": "rimraf --glob \"dist\" && bun --env-file=../../.env test",
     "clean": "rimraf --glob \"dist\" \"build\" \"out\" \".next\" \".vercel\" \"node_modules\" \"**/*.tsbuildinfo\""
   },
   "dependencies": {
