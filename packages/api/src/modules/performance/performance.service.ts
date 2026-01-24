@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import {
   competencyTemplate,
   performanceCompetency,
@@ -48,7 +48,7 @@ type CreateCompetencyTemplateInput = z.infer<
 // Service Factory
 // ============================================================================
 
-export const createPerformanceService = (db: typeof _db) => ({
+export const createPerformanceService = (db: DbOrTx) => ({
   // ==========================================================================
   // Cycle Operations
   // ==========================================================================

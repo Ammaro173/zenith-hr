@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { candidates } from "@zenith-hr/db/schema/candidates";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq } from "drizzle-orm";
@@ -10,7 +10,7 @@ import type { uploadCvSchema } from "./candidates.schema";
 type UploadCvInput = z.infer<typeof uploadCvSchema>;
 
 export const createCandidatesService = (
-  db: typeof _db,
+  db: DbOrTx,
   storage: StorageService,
 ) => {
   return {

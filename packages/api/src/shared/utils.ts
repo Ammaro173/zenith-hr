@@ -1,3 +1,4 @@
+import type { DbOrTx } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
 import { eq } from "drizzle-orm";
 import type { UserRole } from "./types";
@@ -8,8 +9,7 @@ import type { UserRole } from "./types";
  * Works with both db and transaction contexts
  */
 export async function getActorRole(
-  // biome-ignore lint/suspicious/noExplicitAny: Drizzle db/tx types are complex
-  db: any,
+  db: DbOrTx,
   userId: string,
 ): Promise<UserRole> {
   const [result] = await db
@@ -25,8 +25,7 @@ export async function getActorRole(
  * Works with both db and transaction contexts
  */
 export async function getActor(
-  // biome-ignore lint/suspicious/noExplicitAny: Drizzle db/tx types are complex
-  db: any,
+  db: DbOrTx,
   userId: string,
 ): Promise<{ id: string; role: UserRole; name: string } | null> {
   const [result] = await db

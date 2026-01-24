@@ -1,10 +1,10 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { contract } from "@zenith-hr/db/schema/contracts";
 import { eq } from "drizzle-orm";
 
 type DocuSignStatus = "completed" | "voided" | "declined" | string;
 
-export const createWebhooksService = (db: typeof _db) => ({
+export const createWebhooksService = (db: DbOrTx) => ({
   async handleDocuSignEvent(envelopeId: string, status: DocuSignStatus) {
     const [contractRecord] = await db
       .select()

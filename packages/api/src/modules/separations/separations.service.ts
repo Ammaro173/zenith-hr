@@ -1,5 +1,6 @@
 import {
   auditLog,
+  type DbOrTx,
   separationChecklist,
   separationRequest,
 } from "@zenith-hr/db";
@@ -15,9 +16,7 @@ import type {
   updateSeparationSchema,
 } from "./separations.schema";
 
-export const createSeparationsService = (
-  db: typeof import("@zenith-hr/db").db,
-) => {
+export const createSeparationsService = (db: DbOrTx) => {
   const departmentItems: Record<"IT" | "ADMIN" | "FINANCE" | "HR", string[]> = {
     IT: [
       "Computer/Laptop",

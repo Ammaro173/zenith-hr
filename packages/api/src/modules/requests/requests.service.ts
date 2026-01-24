@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { user, type userRoleEnum } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
@@ -20,7 +20,7 @@ type UpdateRequestInput = z.infer<typeof updateRequestSchema>;
  * Factory function to create RequestService with injected dependencies
  */
 export const createRequestsService = (
-  db: typeof _db,
+  db: DbOrTx,
   workflowService: WorkflowService,
 ) => {
   return {

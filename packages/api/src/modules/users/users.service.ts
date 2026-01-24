@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
 import {
@@ -22,7 +22,7 @@ export interface CurrentUser {
   role: string;
 }
 
-export const createUsersService = (db: typeof _db) => ({
+export const createUsersService = (db: DbOrTx) => ({
   /**
    * Search users by name, email, or SAP number (for autocomplete)
    */

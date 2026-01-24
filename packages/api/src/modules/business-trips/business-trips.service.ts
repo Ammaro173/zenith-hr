@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user } from "@zenith-hr/db/schema/auth";
@@ -29,7 +29,7 @@ type AddExpenseInput = z.infer<typeof addExpenseSchema>;
 import type { WorkflowService } from "../workflow/workflow.service";
 
 export const createBusinessTripsService = (
-  db: typeof _db,
+  db: DbOrTx,
   workflowService: WorkflowService,
 ) => ({
   async create(input: CreateTripInput, requesterId: string) {

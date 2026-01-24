@@ -1,14 +1,10 @@
-import type { db as _db } from "@zenith-hr/db";
-import type * as schema from "@zenith-hr/db/schema";
+import type { DbOrTx, Transaction } from "@zenith-hr/db";
 import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import type { ExtractTablesWithRelations } from "drizzle-orm";
 import { eq, sql } from "drizzle-orm";
-import type { NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
-import type { PgTransaction } from "drizzle-orm/pg-core";
 import { AppError } from "../../shared/errors";
 import type {
   ApprovalAction,
@@ -16,14 +12,7 @@ import type {
   UserRole,
 } from "../../shared/types";
 
-// Type for transaction context - must match what Drizzle returns from db.transaction()
-type TransactionDB = PgTransaction<
-  NeonQueryResultHKT,
-  typeof schema,
-  ExtractTablesWithRelations<typeof schema>
->;
-
-export const createWorkflowService = (db: typeof _db) => {
+export const createWorkflowService = (db: DbOrTx) => {
   const getStepName = (status: RequestStatus): string => {
     const stepMap: Record<RequestStatus, string> = {
       DRAFT: "Draft",
@@ -44,7 +33,7 @@ export const createWorkflowService = (db: typeof _db) => {
 
   // Helper functions now accept a transaction context
   const createApprovalLog = async (
-    tx: TransactionDB,
+    tx: Transaction,
     requestId: string,
     actorId: string,
     action: ApprovalAction,
@@ -63,7 +52,7 @@ export const createWorkflowService = (db: typeof _db) => {
   };
 
   const archiveVersion = async (
-    tx: TransactionDB,
+    tx: Transaction,
     requestId: string,
     versionNumber: number,
     snapshotData: Record<string, unknown>,
@@ -77,7 +66,7 @@ export const createWorkflowService = (db: typeof _db) => {
   };
 
   const createAuditLog = async (
-    tx: TransactionDB,
+    tx: Transaction,
     entityId: string,
     performedBy: string,
     action: string,
@@ -153,7 +142,7 @@ export const createWorkflowService = (db: typeof _db) => {
     async getNextApproverIdForStatus(
       requesterId: string,
       status: RequestStatus,
-      txOrDb?: TransactionDB | typeof db,
+      txOrDb?: DbOrTx,
     ): Promise<string | null> {
       const queryDb = txOrDb || db;
       const targetRole = getApproverForStatus(status);

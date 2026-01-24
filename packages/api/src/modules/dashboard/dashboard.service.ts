@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { candidates } from "@zenith-hr/db/schema/candidates";
 import { contract } from "@zenith-hr/db/schema/contracts";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
@@ -56,7 +56,7 @@ const ACTION_STRATEGIES: Record<string, ActionFilterStrategy> = {
   REQUESTER: () => null,
 };
 
-export const createDashboardService = (db: typeof _db) => {
+export const createDashboardService = (db: DbOrTx) => {
   return {
     async getTotalRequests(userId: string, role: string): Promise<number> {
       const strategy = REQUEST_FILTERS[role] || REQUESTER_STRATEGY;

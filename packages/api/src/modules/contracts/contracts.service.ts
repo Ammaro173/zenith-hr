@@ -1,4 +1,4 @@
-import type { db as _db } from "@zenith-hr/db";
+import type { DbOrTx } from "@zenith-hr/db";
 import { contract } from "@zenith-hr/db/schema/contracts";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { eq } from "drizzle-orm";
@@ -17,7 +17,7 @@ type GenerateContractInput = z.infer<typeof generateContractSchema>;
 type UpdateContractInput = z.infer<typeof updateContractSchema>;
 
 export const createContractsService = (
-  db: typeof _db,
+  db: DbOrTx,
   storage: StorageService,
   pdf: PdfService,
 ) => {
