@@ -11,7 +11,11 @@ import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { notifyUser } from "../../shared/notify";
-import type { ApprovalAction, RequestStatus } from "../../shared/types";
+import type {
+  ApprovalAction,
+  RequestStatus,
+  UserRole,
+} from "../../shared/types";
 import { getActorRole } from "../../shared/utils";
 import type {
   addExpenseSchema,
@@ -28,6 +32,50 @@ type AddExpenseInput = z.infer<typeof addExpenseSchema>;
 
 import type { WorkflowService } from "../workflow/workflow.service";
 
+// 1. Initial Status Strategy on Create
+const INITIAL_STATUS_MAP: Partial<Record<UserRole, RequestStatus>> = {
+  MANAGER: "PENDING_HR",
+  HR: "PENDING_FINANCE",
+  FINANCE: "PENDING_CEO",
+  // Default fallback is PENDING_MANAGER (handled in code)
+};
+
+// 2. Pending Approvals View Strategy
+const PENDING_VIEW_MAP: Partial<Record<UserRole, BusinessTripStatus>> = {
+  MANAGER: "PENDING_MANAGER",
+  HR: "PENDING_HR",
+  FINANCE: "PENDING_FINANCE",
+  CEO: "PENDING_CEO",
+};
+
+// 3. Status Transition Strategy (State Machine)
+const NEXT_STATUS_MAP: Partial<Record<BusinessTripStatus, BusinessTripStatus>> =
+  {
+    PENDING_MANAGER: "PENDING_HR",
+    PENDING_HR: "PENDING_FINANCE",
+    PENDING_FINANCE: "PENDING_CEO",
+    PENDING_CEO: "APPROVED",
+  };
+
+// 4. Approval Action Strategy
+const APPROVAL_TRANSITION_MAP: Partial<
+  Record<
+    TripActionInput["action"],
+    (status: BusinessTripStatus) => BusinessTripStatus
+  >
+> = {
+  REJECT: () => "REJECTED",
+  APPROVE: (status) => {
+    const nextState = NEXT_STATUS_MAP[status];
+    if (!nextState) {
+      throw AppError.badRequest(
+        `Invalid approval transition from status: ${status}`,
+      );
+    }
+    return nextState;
+  },
+};
+
 export const createBusinessTripsService = (
   db: DbOrTx,
   workflowService: WorkflowService,
@@ -38,14 +86,15 @@ export const createBusinessTripsService = (
     }
 
     const requesterRole = await getActorRole(db, requesterId);
-    let initialStatus: RequestStatus = "PENDING_MANAGER";
 
-    // Skip logical steps if the requester is already in that role
-    if (requesterRole === "MANAGER") {
-      initialStatus = "PENDING_HR";
-    } else if (requesterRole === "HR") {
-      initialStatus = "PENDING_FINANCE";
-    }
+    // Determine initial status based on role map, default to PENDING_MANAGER
+    // (If user is ADMIN or REQUESTER or others not in map, they start at PENDING_MANAGER logic)
+    // Note: The original logic had:
+    // if MANAGER -> PENDING_HR
+    // if HR -> PENDING_FINANCE
+    // others -> PENDING_MANAGER
+    const initialStatus =
+      INITIAL_STATUS_MAP[requesterRole as UserRole] || "PENDING_MANAGER";
 
     // Determine initial approver
     const initialApproverId = await workflowService.getNextApproverIdForStatus(
@@ -68,7 +117,7 @@ export const createBusinessTripsService = (
         needsFlightBooking: input.needsFlightBooking,
         needsHotelBooking: input.needsHotelBooking,
         perDiemAllowance: input.perDiemAllowance?.toString(),
-        status: initialStatus as BusinessTripStatus, // Cast is safe because logic ensures it's a valid subset
+        status: initialStatus as BusinessTripStatus,
         currentApproverId: initialApproverId,
         currentApproverRole:
           workflowService.getApproverForStatus(initialStatus),
@@ -162,16 +211,7 @@ export const createBusinessTripsService = (
     }
 
     if (search) {
-      conditions.push(
-        ilike(
-          businessTrip.destination,
-          ` % $;
-{
-  search;
-}
-%`,
-        ),
-      );
+      conditions.push(ilike(businessTrip.destination, `%${search}%`));
     }
 
     const offset = (page - 1) * pageSize;
@@ -208,17 +248,8 @@ export const createBusinessTripsService = (
   },
 
   async getPendingApprovals(userId: string) {
-    const actorRole = await getActorRole(db, userId);
-    let statusFilter: (typeof tripStatusEnum.enumValues)[number] | null = null;
-    if (actorRole === "MANAGER") {
-      statusFilter = "PENDING_MANAGER";
-    } else if (actorRole === "HR") {
-      statusFilter = "PENDING_HR";
-    } else if (actorRole === "FINANCE") {
-      statusFilter = "PENDING_FINANCE";
-    } else if (actorRole === "CEO") {
-      statusFilter = "PENDING_CEO";
-    }
+    const actorRole = (await getActorRole(db, userId)) as UserRole;
+    const statusFilter = PENDING_VIEW_MAP[actorRole];
 
     if (!statusFilter) {
       return [];
@@ -246,9 +277,9 @@ export const createBusinessTripsService = (
       const currentStatus = trip.status as BusinessTripStatus;
       let newStatus: BusinessTripStatus = currentStatus;
 
-      // Validate actor is the current approver (unless it's a cancellation/submission by requester)
       const isRequester = trip.requesterId === actorId;
 
+      // Handle CANCEL
       if (input.action === "CANCEL") {
         if (!isRequester && actorRole !== "ADMIN") {
           throw new AppError(
@@ -258,42 +289,33 @@ export const createBusinessTripsService = (
           );
         }
         newStatus = "CANCELLED";
-      } else if (input.action === "SUBMIT") {
+      }
+      // Handle SUBMIT
+      else if (input.action === "SUBMIT") {
         if (!isRequester) {
           throw new AppError("FORBIDDEN", "Only requester can submit", 403);
         }
         if (currentStatus !== "DRAFT") {
-          throw AppError.badRequest("Invalid status transition");
+          throw AppError.badRequest(
+            `Invalid status transition from ${currentStatus}`,
+          );
         }
         newStatus = "PENDING_MANAGER";
-      } else {
-        // Approval flow
+      }
+      // Handle APPROVE / REJECT (Approval Flow)
+      else {
+        // Validation: must be current approver or ADMIN
         if (trip.currentApproverId !== actorId && actorRole !== "ADMIN") {
           throw new AppError("FORBIDDEN", "Not authorized to approve", 403);
         }
 
-        if (input.action === "APPROVE") {
-          switch (currentStatus) {
-            case "PENDING_MANAGER":
-              newStatus = "PENDING_HR";
-              break;
-            case "PENDING_HR":
-              newStatus = "PENDING_FINANCE";
-              break;
-            case "PENDING_FINANCE":
-              newStatus = "PENDING_CEO";
-              break;
-            case "PENDING_CEO":
-              newStatus = "APPROVED";
-              break;
-            default:
-              throw AppError.badRequest("Invalid status transition");
-          }
-        } else if (input.action === "REJECT") {
-          newStatus = "REJECTED";
+        const strategy = APPROVAL_TRANSITION_MAP[input.action];
+        if (strategy) {
+          newStatus = strategy(currentStatus);
         }
       }
 
+      // Allow idempotent saves if status unchanged, except for submits
       if (newStatus === currentStatus && input.action !== "SUBMIT") {
         // allow idempotent saves if needed
       }

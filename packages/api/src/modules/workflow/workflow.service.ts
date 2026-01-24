@@ -12,6 +12,42 @@ import type {
   UserRole,
 } from "../../shared/types";
 
+type TransitionResult = RequestStatus;
+type TransitionFn = (actorRole: UserRole) => TransitionResult;
+type TransitionTarget = TransitionResult | TransitionFn;
+
+const WORKFLOW_TRANSITIONS: Partial<
+  Record<RequestStatus, Partial<Record<ApprovalAction, TransitionTarget>>>
+> = {
+  DRAFT: {
+    SUBMIT: (role) =>
+      role === "MANAGER" || role === "HR" ? "PENDING_HR" : "PENDING_MANAGER",
+  },
+  PENDING_MANAGER: {
+    APPROVE: "PENDING_HR",
+    REJECT: "REJECTED",
+    REQUEST_CHANGE: "DRAFT",
+  },
+  PENDING_HR: {
+    APPROVE: "PENDING_FINANCE",
+    REJECT: "REJECTED",
+    HOLD: "PENDING_HR",
+    REQUEST_CHANGE: "DRAFT",
+  },
+  PENDING_FINANCE: {
+    APPROVE: "PENDING_CEO",
+    REJECT: "DRAFT",
+    REQUEST_CHANGE: "DRAFT",
+  },
+  PENDING_CEO: {
+    APPROVE: "APPROVED_OPEN",
+    REJECT: "REJECTED",
+  },
+  APPROVED_OPEN: {
+    SUBMIT: "HIRING_IN_PROGRESS",
+  },
+};
+
 export const createWorkflowService = (db: DbOrTx) => {
   const getStepName = (status: RequestStatus): string => {
     const stepMap: Record<RequestStatus, string> = {
@@ -229,80 +265,22 @@ export const createWorkflowService = (db: DbOrTx) => {
           );
         }
 
-        switch (currentStatus) {
-          case "DRAFT":
-            if (action === "SUBMIT") {
-              newStatus =
-                actorRole === "MANAGER" || actorRole === "HR"
-                  ? "PENDING_HR"
-                  : "PENDING_MANAGER";
-            } else {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            break;
-          case "PENDING_MANAGER":
-            if (action === "APPROVE") {
-              newStatus = "PENDING_HR";
-            } else if (action === "REJECT") {
-              newStatus = "REJECTED";
-            } else if (action === "REQUEST_CHANGE") {
-              newStatus = "DRAFT";
-            } else {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            break;
-          case "PENDING_HR":
-            if (action === "APPROVE") {
-              newStatus = "PENDING_FINANCE";
-            } else if (action === "REJECT") {
-              newStatus = "REJECTED";
-            } else if (action === "HOLD") {
-              newStatus = "PENDING_HR";
-            } else if (action === "REQUEST_CHANGE") {
-              newStatus = "DRAFT";
-            } else {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            break;
-          case "PENDING_FINANCE":
-            if (action === "APPROVE") {
-              newStatus = "PENDING_CEO";
-            } else if (action === "REJECT" || action === "REQUEST_CHANGE") {
-              newStatus = "DRAFT";
-            } else {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            break;
-          case "PENDING_CEO":
-            if (action === "APPROVE") {
-              newStatus = "APPROVED_OPEN";
-            } else if (action === "REJECT") {
-              newStatus = "REJECTED";
-            } else {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            break;
-          case "APPROVED_OPEN":
-            if (action === "SUBMIT") {
-              newStatus = "HIRING_IN_PROGRESS";
-            } else {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            break;
-          default:
-            throw AppError.badRequest(`Invalid status ${currentStatus}`);
+        const statusTransitions = WORKFLOW_TRANSITIONS[currentStatus];
+        if (!statusTransitions) {
+          throw AppError.badRequest(`Invalid status ${currentStatus}`);
+        }
+
+        const transition = statusTransitions[action];
+        if (!transition) {
+          throw AppError.badRequest(
+            `Invalid action ${action} from ${currentStatus}`,
+          );
+        }
+
+        if (typeof transition === "function") {
+          newStatus = transition(actorRole);
+        } else {
+          newStatus = transition;
         }
 
         // Update request status within transaction

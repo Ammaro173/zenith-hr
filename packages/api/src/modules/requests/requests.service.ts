@@ -16,6 +16,18 @@ import type {
 type CreateRequestInput = z.infer<typeof createRequestSchema>;
 type UpdateRequestInput = z.infer<typeof updateRequestSchema>;
 
+const PENDING_VIEW_MAP: Partial<
+  Record<
+    string,
+    "PENDING_MANAGER" | "PENDING_HR" | "PENDING_FINANCE" | "PENDING_CEO"
+  >
+> = {
+  MANAGER: "PENDING_MANAGER",
+  HR: "PENDING_HR",
+  FINANCE: "PENDING_FINANCE",
+  CEO: "PENDING_CEO",
+};
+
 /**
  * Factory function to create RequestService with injected dependencies
  */
@@ -226,16 +238,9 @@ export const createRequestsService = (
       const userRole = (userRecord?.role ||
         "REQUESTER") as (typeof userRoleEnum.enumValues)[number];
 
-      let statusFilter: string;
-      if (userRole === "MANAGER") {
-        statusFilter = "PENDING_MANAGER";
-      } else if (userRole === "HR") {
-        statusFilter = "PENDING_HR";
-      } else if (userRole === "FINANCE") {
-        statusFilter = "PENDING_FINANCE";
-      } else if (userRole === "CEO") {
-        statusFilter = "PENDING_CEO";
-      } else {
+      const statusFilter = PENDING_VIEW_MAP[userRole];
+
+      if (!statusFilter) {
         return [];
       }
 
