@@ -216,6 +216,8 @@ export const createBusinessTripsService = (
       statusFilter = "PENDING_HR";
     } else if (actorRole === "FINANCE") {
       statusFilter = "PENDING_FINANCE";
+    } else if (actorRole === "CEO") {
+      statusFilter = "PENDING_CEO";
     }
 
     if (!statusFilter) {

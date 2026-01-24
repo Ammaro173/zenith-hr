@@ -8,7 +8,7 @@ import {
   tripActionSchema,
 } from "./business-trips.schema";
 
-const create = requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
+const create = requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN", "CEO"])
   .input(createTripSchema)
   .handler(
     async ({ input, context }) =>
@@ -43,6 +43,7 @@ const getPendingApprovals = requireRoles([
   "HR",
   "FINANCE",
   "ADMIN",
+  "CEO",
 ]).handler(async ({ context }) =>
   context.services.businessTrips.getPendingApprovals(context.session.user.id),
 );
@@ -53,6 +54,7 @@ const transition = requireRoles([
   "HR",
   "FINANCE",
   "ADMIN",
+  "CEO",
 ])
   .input(tripActionSchema)
   .handler(async ({ input, context }) => {
