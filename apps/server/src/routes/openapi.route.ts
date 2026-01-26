@@ -4,6 +4,7 @@ import { onError } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { appRouter, createContext } from "@zenith-hr/api/server";
 import type { Context } from "elysia";
+import { env } from "@/env";
 
 /**
  * Create OpenAPI handler with schema converter
@@ -13,6 +14,13 @@ const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
+      specGenerateOptions: {
+        servers: [
+          {
+            url: `${env.SERVER_URL ?? `http://localhost:${env.PORT}`}/api-reference`,
+          },
+        ],
+      },
     }),
   ],
   interceptors: [

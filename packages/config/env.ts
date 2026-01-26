@@ -33,6 +33,7 @@ export const serverEnvSchema = {
     .default("development"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   CORS_ORIGIN: z.string().url().default("http://localhost:3001"),
+  SERVER_URL: z.string().url().optional(),
 };
 
 /**
