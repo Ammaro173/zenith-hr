@@ -39,10 +39,24 @@ export const createRequestsService = (
     /**
      * Generate a unique request code
      */
-    generateRequestCode(): string {
-      const timestamp = Date.now().toString(36).toUpperCase();
-      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-      return `REQ-${timestamp}-${random}`;
+    async generateRequestCode(): Promise<string> {
+      const result = await db.execute(
+        sql`SELECT nextval('manpower_requests_seq') as value`,
+      );
+
+      if (!result.rows.length) {
+        throw new AppError(
+          "INTERNAL_SERVER_ERROR",
+          "Failed to generate manpower request code",
+          500,
+        );
+      }
+
+      const row = result.rows[0] as { value: number | string };
+      const sequenceNumber = row.value ? Number(row.value) : 0;
+
+      // Note: padding grows naturally beyond 4 digits (MPR-10000+)
+      return `MPR-${String(sequenceNumber).padStart(4, "0")}`;
     },
 
     /**
@@ -51,7 +65,7 @@ export const createRequestsService = (
     async create(input: CreateRequestInput, requesterId: string) {
       this.validateSalaryRange(input.salaryRangeMin, input.salaryRangeMax);
 
-      const requestCode = this.generateRequestCode();
+      const requestCode = await this.generateRequestCode();
 
       const requesterRole = await getActorRole(db, requesterId);
       const initialStatus =
