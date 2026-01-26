@@ -4,12 +4,17 @@ import {
   integer,
   jsonb,
   pgEnum,
+  pgSequence,
   pgTable,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
 import { user, userRoleEnum } from "./auth";
+
+export const manpowerRequestSeq = pgSequence("manpower_requests_seq", {
+  startWith: 1,
+});
 
 export const requestStatusEnum = pgEnum("request_status", [
   "DRAFT",
