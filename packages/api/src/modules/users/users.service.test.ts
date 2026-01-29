@@ -43,7 +43,7 @@ const createUserInputArb: fc.Arbitrary<CreateUserInput> = fc.record({
 
 /**
  * Creates a mock database for testing user creation.
- * The mock tracks inserted users and simulates database behavior.
+ * The mock tracks inserted users and accounts, simulating database behavior.
  * Properly handles the Drizzle ORM query patterns including subqueries with .as()
  */
 function createMockDbForCreate() {
@@ -56,7 +56,17 @@ function createMockDbForCreate() {
     status: string;
     departmentId: string | null;
     reportsToManagerId: string | null;
-    passwordHash: string;
+    passwordHash: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+
+  const insertedAccounts: Array<{
+    id: string;
+    accountId: string;
+    providerId: string;
+    userId: string;
+    password: string;
     createdAt: Date;
     updatedAt: Date;
   }> = [];
@@ -112,26 +122,46 @@ function createMockDbForCreate() {
         })),
       };
     }),
-    insert: mock(() => ({
+    insert: mock((_table: unknown) => ({
       values: mock((values: unknown) => {
-        const userData = values as {
-          id: string;
-          name: string;
-          email: string;
-          sapNo: string;
-          role: string;
-          status: string;
-          departmentId: string | null;
-          reportsToManagerId: string | null;
-          passwordHash: string;
-          createdAt: Date;
-          updatedAt: Date;
-        };
-        insertedUsers.push(userData);
+        // Check if this is a user or account insert based on the values structure
+        const data = values as Record<string, unknown>;
+        if ("providerId" in data) {
+          // This is an account insert
+          insertedAccounts.push(
+            data as {
+              id: string;
+              accountId: string;
+              providerId: string;
+              userId: string;
+              password: string;
+              createdAt: Date;
+              updatedAt: Date;
+            },
+          );
+        } else {
+          // This is a user insert
+          insertedUsers.push(
+            data as {
+              id: string;
+              name: string;
+              email: string;
+              sapNo: string;
+              role: string;
+              status: string;
+              departmentId: string | null;
+              reportsToManagerId: string | null;
+              passwordHash: string | null;
+              createdAt: Date;
+              updatedAt: Date;
+            },
+          );
+        }
         return Promise.resolve();
       }),
     })),
     getInsertedUsers: () => insertedUsers,
+    getInsertedAccounts: () => insertedAccounts,
   };
 
   return mockDb;
@@ -280,12 +310,12 @@ describe("Feature: user-management, Property 1: User creation preserves input da
  *
  * **Validates: Requirements 1.2**
  *
- * For any user creation operation, the stored passwordHash SHALL NOT equal
- * the plain text password, and SHALL be a valid hash that can verify the
- * original password.
+ * For any user creation operation, the stored password in the account table
+ * SHALL NOT equal the plain text password, and SHALL be a valid hash that
+ * can verify the original password.
  */
 describe("Feature: user-management, Property 2: Password hashing invariant", () => {
-  it("should hash password and not store plain text", async () => {
+  it("should hash password and store in account table, not user table", async () => {
     await fc.assert(
       fc.asyncProperty(createUserInputArb, async (input) => {
         const mockDb = createMockDbForCreate();
@@ -295,21 +325,31 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
 
         await service.create(input);
 
-        // Get the inserted user to check the password hash
+        // Get the inserted user and account
         const insertedUsers = mockDb.getInsertedUsers();
+        const insertedAccounts = mockDb.getInsertedAccounts();
         expect(insertedUsers.length).toBe(1);
+        expect(insertedAccounts.length).toBe(1);
 
         const insertedUser = insertedUsers[0];
-        if (!insertedUser) {
-          throw new Error("No user was inserted");
+        const insertedAccount = insertedAccounts[0];
+        if (!(insertedUser && insertedAccount)) {
+          throw new Error("No user or account was inserted");
         }
 
-        // Property: passwordHash is NOT equal to plain text password
-        expect(insertedUser.passwordHash).not.toBe(input.password);
+        // Property: user.passwordHash should be null (Better Auth pattern)
+        expect(insertedUser.passwordHash).toBeNull();
 
-        // Property: passwordHash is a non-empty string (valid hash format)
-        expect(typeof insertedUser.passwordHash).toBe("string");
-        expect(insertedUser.passwordHash.length).toBeGreaterThan(0);
+        // Property: account.password is NOT equal to plain text password
+        expect(insertedAccount.password).not.toBe(input.password);
+
+        // Property: account.password is a non-empty string (valid hash format)
+        expect(typeof insertedAccount.password).toBe("string");
+        expect(insertedAccount.password.length).toBeGreaterThan(0);
+
+        // Property: account references the correct user
+        expect(insertedAccount.userId).toBe(insertedUser.id);
+        expect(insertedAccount.providerId).toBe("credential");
       }),
       { numRuns: 20 },
     );
@@ -325,16 +365,16 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
 
         await service.create(input);
 
-        const insertedUsers = mockDb.getInsertedUsers();
-        const insertedUser = insertedUsers[0];
-        if (!insertedUser) {
-          throw new Error("No user was inserted");
+        const insertedAccounts = mockDb.getInsertedAccounts();
+        const insertedAccount = insertedAccounts[0];
+        if (!insertedAccount) {
+          throw new Error("No account was inserted");
         }
 
         // Property: The hash can verify the original password
         const isValid = await verifyPassword({
           password: input.password,
-          hash: insertedUser.passwordHash,
+          hash: insertedAccount.password,
         });
         expect(isValid).toBe(true);
       }),
@@ -360,16 +400,16 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
 
           await service.create(input);
 
-          const insertedUsers = mockDb.getInsertedUsers();
-          const insertedUser = insertedUsers[0];
-          if (!insertedUser) {
-            throw new Error("No user was inserted");
+          const insertedAccounts = mockDb.getInsertedAccounts();
+          const insertedAccount = insertedAccounts[0];
+          if (!insertedAccount) {
+            throw new Error("No account was inserted");
           }
 
           // Property: The hash rejects incorrect passwords
           const isValid = await verifyPassword({
             password: wrongPassword,
-            hash: insertedUser.passwordHash,
+            hash: insertedAccount.password,
           });
           expect(isValid).toBe(false);
         },
@@ -558,6 +598,7 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
 import type { UpdateUserInput } from "./users.schema";
 
 // Arbitrary for generating valid UpdateUserInput (partial updates)
+// biome-ignore lint/correctness/noUnusedVariables://TODO
 const updateUserInputArb: fc.Arbitrary<Omit<UpdateUserInput, "id">> = fc.record(
   {
     name: fc.option(validNameArb, { nil: undefined }),
@@ -2535,9 +2576,13 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             const service = createUsersService(
               mockDb as unknown as Parameters<typeof createUsersService>[0],
             );
+            const targetSession = sessions[0];
+            if (!targetSession) {
+              return;
+            }
 
             // Revoke the only session
-            await service.revokeSession(sessions[0].id);
+            await service.revokeSession(targetSession.id);
 
             // Property: The session should be deleted
             const remainingSessions = mockDb.getSessions();
@@ -2555,7 +2600,11 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
           sessionForRevocationArb,
           async (userId, sessionData) => {
             const sessions = [{ ...sessionData, userId }];
-            const targetSessionId = sessions[0].id;
+            const targetSession = sessions[0];
+            if (!targetSession) {
+              return;
+            }
+            const targetSessionId = targetSession.id;
 
             const mockDb = createMockDbForRevokeSession(sessions);
             const service = createUsersService(
@@ -2781,7 +2830,8 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
 
 /**
  * Creates a mock database for testing password reset.
- * Tracks user password hash updates and session deletions.
+ * Tracks account password updates and session deletions.
+ * Note: resetPassword now updates the account table, not the user table.
  */
 function createMockDbForResetPassword(existingUser: {
   id: string;
@@ -2797,6 +2847,16 @@ function createMockDbForResetPassword(existingUser: {
   updatedAt: Date;
 }) {
   const currentUser = { ...existingUser };
+  // Account stores the password for Better Auth
+  const currentAccount = {
+    id: "account-id",
+    accountId: existingUser.id,
+    providerId: "credential",
+    userId: existingUser.id,
+    password: existingUser.passwordHash,
+    createdAt: existingUser.createdAt,
+    updatedAt: existingUser.updatedAt,
+  };
   const sessions: Array<{
     id: string;
     userId: string;
@@ -2822,12 +2882,12 @@ function createMockDbForResetPassword(existingUser: {
     update: mock(() => ({
       set: mock((updateData: Record<string, unknown>) => ({
         where: mock(() => {
-          // Apply the update to currentUser
-          if (updateData.passwordHash !== undefined) {
-            currentUser.passwordHash = updateData.passwordHash as string;
+          // Apply the update to account (password is now in account table)
+          if (updateData.password !== undefined) {
+            currentAccount.password = updateData.password as string;
           }
           if (updateData.updatedAt !== undefined) {
-            currentUser.updatedAt = updateData.updatedAt as Date;
+            currentAccount.updatedAt = updateData.updatedAt as Date;
           }
           return Promise.resolve();
         }),
@@ -2841,6 +2901,7 @@ function createMockDbForResetPassword(existingUser: {
       }),
     })),
     getCurrentUser: () => currentUser,
+    getCurrentAccount: () => currentAccount,
     getSessions: () => sessions,
     addSession: (sessionData: (typeof sessions)[0]) => {
       sessions.push(sessionData);
@@ -2909,18 +2970,18 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
 
           await service.resetPassword(userId, newPassword);
 
-          // Get the updated user to check the password hash
-          const updatedUser = mockDb.getCurrentUser();
+          // Get the updated account to check the password hash
+          const updatedAccount = mockDb.getCurrentAccount();
 
-          // Property: passwordHash is NOT equal to plain text password
-          expect(updatedUser.passwordHash).not.toBe(newPassword);
+          // Property: password is NOT equal to plain text password
+          expect(updatedAccount.password).not.toBe(newPassword);
 
-          // Property: passwordHash is a non-empty string (valid hash format)
-          expect(typeof updatedUser.passwordHash).toBe("string");
-          expect(updatedUser.passwordHash.length).toBeGreaterThan(0);
+          // Property: password is a non-empty string (valid hash format)
+          expect(typeof updatedAccount.password).toBe("string");
+          expect(updatedAccount.password.length).toBeGreaterThan(0);
 
-          // Property: passwordHash should be different from original
-          expect(updatedUser.passwordHash).not.toBe(existingUser.passwordHash);
+          // Property: password should be different from original
+          expect(updatedAccount.password).not.toBe(existingUser.passwordHash);
         },
       ),
       { numRuns: 5 },
@@ -2955,12 +3016,12 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
 
           await service.resetPassword(userId, newPassword);
 
-          const updatedUser = mockDb.getCurrentUser();
+          const updatedAccount = mockDb.getCurrentAccount();
 
           // Property: The hash can verify the new password
           const isValid = await verifyPassword({
             password: newPassword,
-            hash: updatedUser.passwordHash,
+            hash: updatedAccount.password,
           });
           expect(isValid).toBe(true);
         },
@@ -3003,12 +3064,12 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
 
           await service.resetPassword(userId, newPassword);
 
-          const updatedUser = mockDb.getCurrentUser();
+          const updatedAccount = mockDb.getCurrentAccount();
 
           // Property: The hash rejects incorrect passwords
           const isValid = await verifyPassword({
             password: wrongPassword,
-            hash: updatedUser.passwordHash,
+            hash: updatedAccount.password,
           });
           expect(isValid).toBe(false);
         },
@@ -3143,9 +3204,9 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           // Password reset should succeed even with no sessions
           await service.resetPassword(userId, newPassword);
 
-          // Property: Password should still be updated
-          const updatedUser = mockDb.getCurrentUser();
-          expect(updatedUser.passwordHash).not.toBe("original-hash");
+          // Property: Password should still be updated (in account table)
+          const updatedAccount = mockDb.getCurrentAccount();
+          expect(updatedAccount.password).not.toBe("original-hash");
 
           // Property: Sessions array should still be empty
           expect(mockDb.getSessions().length).toBe(0);
@@ -3278,10 +3339,8 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           await service.resetPassword(userId, newPassword);
 
           // Property: Both operations should complete
-          // Password should be updated (hash changed)
-          expect(mockDb.getCurrentUser().passwordHash).not.toBe(
-            "original-hash",
-          );
+          // Password should be updated in account table (hash changed)
+          expect(mockDb.getCurrentAccount().password).not.toBe("original-hash");
           // All sessions should be deleted
           expect(mockDb.getSessions().length).toBe(0);
         },
@@ -3418,10 +3477,10 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
           // Property: Response is void - success confirmation without exposing password
           expect(result).toBeUndefined();
 
-          // Property: Password was actually updated (verify internally)
-          const updatedUser = mockDb.getCurrentUser();
-          expect(updatedUser.passwordHash).not.toBe("original-hash");
-          expect(updatedUser.passwordHash).not.toBe(newPassword);
+          // Property: Password was actually updated in account table (verify internally)
+          const updatedAccount = mockDb.getCurrentAccount();
+          expect(updatedAccount.password).not.toBe("original-hash");
+          expect(updatedAccount.password).not.toBe(newPassword);
         },
       ),
       { numRuns: 20 },

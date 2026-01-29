@@ -329,7 +329,6 @@ export const createUsersService = (db: DbOrTx) => ({
   async create(input: CreateUserInput): Promise<UserResponse> {
     const {
       name,
-      email,
       password,
       sapNo,
       role,
@@ -337,6 +336,9 @@ export const createUsersService = (db: DbOrTx) => ({
       departmentId,
       reportsToManagerId,
     } = input;
+
+    // Normalize email to lowercase (Better Auth does case-sensitive lookups)
+    const email = input.email.toLowerCase();
 
     // Check for duplicate email
     const existingByEmail = await db

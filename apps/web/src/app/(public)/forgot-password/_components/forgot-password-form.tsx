@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
     onSubmit: async ({ value, formApi }) => {
       await authClient.requestPasswordReset(
         {
-          email: value.email,
+          email: value.email.toLowerCase(), // Normalize email to lowercase
           redirectTo: "/reset-password",
         },
         {

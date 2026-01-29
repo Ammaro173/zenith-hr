@@ -36,7 +36,7 @@ export function LoginForm() {
     onSubmit: async ({ value }) => {
       await authClient.signIn.email(
         {
-          email: value.email,
+          email: value.email.toLowerCase(), // Normalize email to lowercase
           password: value.password,
         },
         {

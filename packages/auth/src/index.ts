@@ -2,6 +2,7 @@ import { db } from "@zenith-hr/db";
 import * as schema from "@zenith-hr/db/schema/auth";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin } from "better-auth/plugins";
 
 import { env } from "./env";
 
@@ -14,6 +15,7 @@ export const auth = betterAuth({
     schema,
   }),
   trustedOrigins: env.CORS_ORIGIN ? [env.CORS_ORIGIN] : [],
+  plugins: [admin()],
   user: {
     additionalFields: {
       sapNo: {

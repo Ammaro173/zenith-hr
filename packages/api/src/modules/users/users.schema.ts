@@ -71,8 +71,18 @@ export const createUserSchema = z.object({
   sapNo: z.string().min(1).max(50),
   role: userRoleSchema.default("REQUESTER"),
   status: userStatusSchema.default("ACTIVE"),
-  departmentId: z.string().uuid().nullable().optional(),
-  reportsToManagerId: z.string().nullable().optional(),
+  departmentId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
+  reportsToManagerId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -85,8 +95,18 @@ export const updateUserSchema = z.object({
   sapNo: z.string().min(1).max(50).optional(),
   role: userRoleSchema.optional(),
   status: userStatusSchema.optional(),
-  departmentId: z.string().uuid().nullable().optional(),
-  reportsToManagerId: z.string().nullable().optional(),
+  departmentId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
+  reportsToManagerId: z
+    .string()
+    .uuid()
+    .nullable()
+    .optional()
+    .or(z.literal("").transform(() => null)),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
