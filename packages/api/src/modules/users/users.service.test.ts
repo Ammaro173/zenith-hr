@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { verifyPassword } from "better-auth/crypto";
+import { verifyPassword } from "@zenith-hr/auth";
 import * as fc from "fast-check";
 import { AppError } from "../../shared/errors";
 import type { CreateUserInput } from "./users.schema";
