@@ -21,6 +21,7 @@
   "devDependencies": {
     "@types/react": "catalog:",
     "@zenith-hr/config": "workspace:*",
+    "fast-check": "^4.5.3",
     "pino-pretty": "catalog:",
     "pino-std-serializers": "catalog:",
     "react": "^19.2.3",

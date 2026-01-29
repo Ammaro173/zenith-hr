@@ -5,6 +5,9 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { env } from "./env";
 
+// Re-export password utilities for use in other packages
+export { hashPassword, verifyPassword } from "better-auth/crypto";
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
