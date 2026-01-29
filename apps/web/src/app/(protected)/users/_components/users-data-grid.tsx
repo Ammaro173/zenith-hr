@@ -1,6 +1,7 @@
 "use client";
 
-import { FunnelX, Settings2 } from "lucide-react";
+import { FunnelX, Plus, Settings2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
 import { DataGridColumnVisibility } from "@/components/ui/data-grid-column-visibility";
@@ -10,10 +11,19 @@ import { Filters } from "@/components/ui/filters";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getRoleFromSessionUser } from "@/config/navigation";
+import { authClient } from "@/lib/auth-client";
 import { useUsersTable } from "../_hooks/use-users-table";
+import { CreateUserDialog } from "./create-user-dialog";
 import { filterFields } from "./filter-config";
 
 export function UsersDataGrid() {
+  const { data: session } = authClient.useSession();
+  const currentRole = getRoleFromSessionUser(session?.user);
+  const canCreateUser = currentRole === "ADMIN" || currentRole === "HR";
+
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
   const {
     table,
     filters,
@@ -62,6 +72,12 @@ export function UsersDataGrid() {
             value={globalFilter}
           />
           <div className="flex items-center gap-2">
+            {canCreateUser && (
+              <Button onClick={() => setShowCreateDialog(true)} size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Create User
+              </Button>
+            )}
             <DataGridColumnVisibility
               table={table}
               trigger={
@@ -97,6 +113,11 @@ export function UsersDataGrid() {
         </DataGridContainer>
         <DataGridPagination />
       </div>
+
+      <CreateUserDialog
+        onOpenChange={setShowCreateDialog}
+        open={showCreateDialog}
+      />
     </DataGrid>
   );
 }

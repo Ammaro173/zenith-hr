@@ -10,6 +10,7 @@ import {
   type UserRole,
   type UserStatus,
 } from "@/types/users";
+import { UserRowActions } from "./user-row-actions";
 
 const columnHelper = createColumnHelper<UserListItem>();
 
@@ -134,5 +135,15 @@ export const columns = [
     enableHiding: true,
     enableResizing: true,
     enablePinning: true,
+  }),
+  columnHelper.display({
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => <UserRowActions user={row.original} />,
+    size: 80,
+    enableSorting: false,
+    enableHiding: false,
+    enableResizing: false,
+    enablePinning: false,
   }),
 ];
