@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { hashPassword } from "@zenith-hr/auth";
 import type { DbOrTx } from "@zenith-hr/db";
-import { user } from "@zenith-hr/db/schema/auth";
+import { session, user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
 import {
   and,
@@ -12,7 +14,15 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import type { HierarchyNode, ListUsersInput } from "./users.schema";
+import { AppError } from "../../shared/errors";
+import type {
+  CreateUserInput,
+  HierarchyNode,
+  ListUsersInput,
+  UpdateUserInput,
+  UserResponse,
+  UserSession,
+} from "./users.schema";
 
 // Roles that can see all users
 const FULL_ACCESS_ROLES = ["ADMIN", "HR", "CEO", "IT", "FINANCE"];
@@ -308,6 +318,428 @@ export const createUsersService = (db: DbOrTx) => ({
     // Show manager's tree (which includes the current user as a child)
     const managerTree = buildTree(currentUserData.reportsToManagerId);
     return managerTree ? [managerTree] : [];
+  },
+
+  /**
+   * Create a new user
+   * - Checks for duplicate email and SAP number
+   * - Hashes password using better-auth utilities
+   * - Returns user without password hash
+   */
+  async create(input: CreateUserInput): Promise<UserResponse> {
+    const {
+      name,
+      email,
+      password,
+      sapNo,
+      role,
+      status,
+      departmentId,
+      reportsToManagerId,
+    } = input;
+
+    // Check for duplicate email
+    const existingByEmail = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email))
+      .limit(1);
+
+    if (existingByEmail.length > 0) {
+      throw new AppError(
+        "CONFLICT",
+        "A user with this email already exists",
+        409,
+      );
+    }
+
+    // Check for duplicate SAP number
+    const existingBySapNo = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.sapNo, sapNo))
+      .limit(1);
+
+    if (existingBySapNo.length > 0) {
+      throw new AppError(
+        "CONFLICT",
+        "A user with this SAP number already exists",
+        409,
+      );
+    }
+
+    // Hash password using better-auth
+    const passwordHash = await hashPassword(password);
+
+    // Generate unique ID
+    const userId = randomUUID();
+    const now = new Date();
+
+    // Insert user record
+    await db.insert(user).values({
+      id: userId,
+      name,
+      email,
+      emailVerified: false,
+      sapNo,
+      role: role ?? "REQUESTER",
+      status: status ?? "ACTIVE",
+      departmentId: departmentId ?? null,
+      reportsToManagerId: reportsToManagerId ?? null,
+      passwordHash,
+      failedLoginAttempts: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Fetch the created user with department and manager joins
+    const manager = db
+      .select({
+        id: user.id,
+        name: user.name,
+      })
+      .from(user)
+      .as("manager");
+
+    const [createdUser] = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        sapNo: user.sapNo,
+        role: user.role,
+        status: user.status,
+        departmentId: user.departmentId,
+        departmentName: department.name,
+        reportsToManagerId: user.reportsToManagerId,
+        managerName: manager.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+      .from(user)
+      .leftJoin(department, eq(user.departmentId, department.id))
+      .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!createdUser) {
+      throw new AppError("INTERNAL_ERROR", "Failed to create user", 500);
+    }
+
+    return createdUser;
+  },
+
+  /**
+   * Get a user by ID
+   * - Fetches user with department and manager joins
+   * - Returns user without password hash
+   * - Returns null if user not found
+   */
+  async getById(userId: string): Promise<UserResponse | null> {
+    // Alias for manager join
+    const manager = db
+      .select({
+        id: user.id,
+        name: user.name,
+      })
+      .from(user)
+      .as("manager");
+
+    const [foundUser] = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        sapNo: user.sapNo,
+        role: user.role,
+        status: user.status,
+        departmentId: user.departmentId,
+        departmentName: department.name,
+        reportsToManagerId: user.reportsToManagerId,
+        managerName: manager.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+      .from(user)
+      .leftJoin(department, eq(user.departmentId, department.id))
+      .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    return foundUser ?? null;
+  },
+
+  /**
+   * Update an existing user
+   * - Verifies user exists
+   * - Checks for duplicate email/SAP if changed
+   * - Updates only provided fields
+   * - Returns user without password hash
+   */
+  async update(input: UpdateUserInput): Promise<UserResponse> {
+    const {
+      id,
+      name,
+      email,
+      sapNo,
+      role,
+      status,
+      departmentId,
+      reportsToManagerId,
+    } = input;
+
+    // Verify user exists
+    const [existingUserRecord] = await db
+      .select({
+        id: user.id,
+        email: user.email,
+        sapNo: user.sapNo,
+      })
+      .from(user)
+      .where(eq(user.id, id))
+      .limit(1);
+
+    if (!existingUserRecord) {
+      throw new AppError("NOT_FOUND", "User not found", 404);
+    }
+
+    // Check for duplicate email if changed
+    if (email !== undefined && email !== existingUserRecord.email) {
+      const existingByEmail = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, email))
+        .limit(1);
+
+      if (existingByEmail.length > 0) {
+        throw new AppError(
+          "CONFLICT",
+          "A user with this email already exists",
+          409,
+        );
+      }
+    }
+
+    // Check for duplicate SAP number if changed
+    if (sapNo !== undefined && sapNo !== existingUserRecord.sapNo) {
+      const existingBySapNo = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.sapNo, sapNo))
+        .limit(1);
+
+      if (existingBySapNo.length > 0) {
+        throw new AppError(
+          "CONFLICT",
+          "A user with this SAP number already exists",
+          409,
+        );
+      }
+    }
+
+    // Build update object with only provided fields
+    const updateData: Partial<{
+      name: string;
+      email: string;
+      sapNo: string;
+      role: "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
+      status: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
+      departmentId: string | null;
+      reportsToManagerId: string | null;
+      updatedAt: Date;
+    }> = {
+      updatedAt: new Date(),
+    };
+
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    if (email !== undefined) {
+      updateData.email = email;
+    }
+    if (sapNo !== undefined) {
+      updateData.sapNo = sapNo;
+    }
+    if (role !== undefined) {
+      updateData.role = role;
+    }
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+    if (departmentId !== undefined) {
+      updateData.departmentId = departmentId;
+    }
+    if (reportsToManagerId !== undefined) {
+      updateData.reportsToManagerId = reportsToManagerId;
+    }
+
+    // Update user record
+    await db.update(user).set(updateData).where(eq(user.id, id));
+
+    // Fetch the updated user with department and manager joins
+    const manager = db
+      .select({
+        id: user.id,
+        name: user.name,
+      })
+      .from(user)
+      .as("manager");
+
+    const [updatedUser] = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        sapNo: user.sapNo,
+        role: user.role,
+        status: user.status,
+        departmentId: user.departmentId,
+        departmentName: department.name,
+        reportsToManagerId: user.reportsToManagerId,
+        managerName: manager.name,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })
+      .from(user)
+      .leftJoin(department, eq(user.departmentId, department.id))
+      .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+      .where(eq(user.id, id))
+      .limit(1);
+
+    if (!updatedUser) {
+      throw new AppError("INTERNAL_ERROR", "Failed to update user", 500);
+    }
+
+    return updatedUser;
+  },
+
+  /**
+   * Deactivate a user (soft delete)
+   * - Updates user status to INACTIVE
+   * - Revokes all active sessions for the user
+   */
+  async deactivate(userId: string): Promise<void> {
+    // Verify user exists
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      throw new AppError("NOT_FOUND", "User not found", 404);
+    }
+
+    // Update user status to INACTIVE
+    await db
+      .update(user)
+      .set({
+        status: "INACTIVE",
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId));
+
+    // Revoke all sessions for the user
+    await db.delete(session).where(eq(session.userId, userId));
+  },
+
+  /**
+   * Delete a user (hard delete)
+   * - Permanently removes the user record
+   * - Cascades to sessions/accounts via foreign key constraints
+   * Requirements: 4.2, 4.4
+   */
+  async delete(userId: string): Promise<void> {
+    // Verify user exists
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      throw new AppError("NOT_FOUND", "User not found", 404);
+    }
+
+    // Delete user record - sessions/accounts cascade delete via FK constraints
+    await db.delete(user).where(eq(user.id, userId));
+  },
+
+  /**
+   * Get all sessions for a user
+   * - Fetches all sessions for the specified user
+   * - Returns session list with id, createdAt, expiresAt, ipAddress, userAgent
+   * Requirements: 5.1, 5.3
+   */
+  async getSessions(userId: string): Promise<UserSession[]> {
+    const sessions = await db
+      .select({
+        id: session.id,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+      })
+      .from(session)
+      .where(eq(session.userId, userId));
+
+    return sessions;
+  },
+
+  /**
+   * Revoke a specific session by ID
+   * - Deletes the session record from the database
+   * - Immediately invalidates the session token
+   * Requirements: 6.1, 6.4
+   */
+  async revokeSession(sessionId: string): Promise<void> {
+    await db.delete(session).where(eq(session.id, sessionId));
+  },
+
+  /**
+   * Revoke all sessions for a user
+   * - Deletes all session records for the specified user
+   * - Immediately invalidates all session tokens for the user
+   * Requirements: 6.2
+   */
+  async revokeAllSessions(userId: string): Promise<void> {
+    await db.delete(session).where(eq(session.userId, userId));
+  },
+
+  /**
+   * Reset a user's password
+   * - Hashes the new password using better-auth utilities
+   * - Updates the user's password hash in the database
+   * - Revokes all active sessions for the user
+   * - Returns void (success confirmation without exposing password)
+   * Requirements: 7.1, 7.2, 7.4
+   */
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    // Verify user exists
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      throw new AppError("NOT_FOUND", "User not found", 404);
+    }
+
+    // Hash new password using better-auth
+    const passwordHash = await hashPassword(newPassword);
+
+    // Update user password hash
+    await db
+      .update(user)
+      .set({
+        passwordHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId));
+
+    // Revoke all sessions for the user
+    await db.delete(session).where(eq(session.userId, userId));
   },
 });
 
