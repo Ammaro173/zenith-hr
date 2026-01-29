@@ -84,11 +84,6 @@ export interface UpdateUserFormData {
 // Department Select Component
 // ============================================
 
-interface DepartmentOption {
-  id: string;
-  name: string;
-}
-
 interface DepartmentSelectProps {
   value?: string | null;
   onChange: (val: string | null) => void;
@@ -100,106 +95,41 @@ function DepartmentSelect({
   onChange,
   placeholder = "Select department...",
 }: DepartmentSelectProps) {
-  const [open, setOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] =
-    useState<DepartmentOption | null>(null);
-
   const { data: departments, isLoading } = useQuery({
     queryKey: ["departments"],
     queryFn: () => client.users.getDepartments(),
   });
 
-  // When value changes, update selectedDepartment
-  useEffect(() => {
-    if (value && departments) {
-      const dept = departments.find((d) => d.id === value);
-      if (dept) {
-        setSelectedDepartment(dept);
-      }
-    } else if (!value) {
-      setSelectedDepartment(null);
-    }
-  }, [value, departments]);
+  if (isLoading) {
+    return (
+      <Select disabled>
+        <SelectTrigger>
+          <Loader2 className="mr-2 size-4 animate-spin" />
+          <span className="text-muted-foreground">Loading...</span>
+        </SelectTrigger>
+      </Select>
+    );
+  }
 
   return (
-    <Faceted
-      onOpenChange={setOpen}
-      onValueChange={(val) => {
-        onChange(val as string | null);
-        setOpen(false);
-      }}
-      open={open}
-      value={value ?? undefined}
+    <Select
+      onValueChange={(val) => onChange(val === "__none__" ? null : val)}
+      value={value ?? "__none__"}
     >
-      <FacetedTrigger asChild>
-        <Button
-          className="w-full justify-between font-normal"
-          role="combobox"
-          variant="outline"
-        >
-          {selectedDepartment ? (
-            <span className="truncate">{selectedDepartment.name}</span>
-          ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </FacetedTrigger>
-      <FacetedContent
-        align="start"
-        className="w-[--radix-popover-trigger-width] p-0"
-      >
-        <CommandList>
-          {isLoading && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {!isLoading && (!departments || departments.length === 0) && (
-            <CommandEmpty>No departments found.</CommandEmpty>
-          )}
-          {!isLoading && departments && departments.length > 0 && (
-            <CommandGroup>
-              <CommandItem
-                onSelect={() => {
-                  setSelectedDepartment(null);
-                  onChange(null);
-                  setOpen(false);
-                }}
-                value=""
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value ? "opacity-0" : "opacity-100",
-                  )}
-                />
-                <span className="text-muted-foreground">None</span>
-              </CommandItem>
-              {departments.map((dept) => (
-                <CommandItem
-                  key={dept.id}
-                  onSelect={() => {
-                    setSelectedDepartment(dept);
-                    onChange(dept.id);
-                    setOpen(false);
-                  }}
-                  value={dept.id}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === dept.id ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <span>{dept.name}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </CommandList>
-      </FacetedContent>
-    </Faceted>
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="__none__">
+          <span className="text-muted-foreground">None</span>
+        </SelectItem>
+        {departments?.map((dept) => (
+          <SelectItem key={dept.id} value={dept.id}>
+            {dept.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -432,6 +362,7 @@ export function UserForm({
           {(field) => (
             <FormField field={field} label="Email" required>
               <Input
+                autoComplete="off"
                 id={field.name}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -449,6 +380,7 @@ export function UserForm({
             {(field) => (
               <FormField field={field} label="Password" required>
                 <PasswordInput
+                  autoComplete="new-password"
                   id={field.name}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
