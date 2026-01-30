@@ -34,7 +34,7 @@ export const usersRouter = o.router({
       return await context.services.users.list(input, currentUser);
     }),
 
-  // Get departments for filter dropdown
+  // Get departments for filter dropdown (redirects to departments service)
   getDepartments: requireRoles([
     "ADMIN",
     "HR",
@@ -43,7 +43,7 @@ export const usersRouter = o.router({
     "FINANCE",
     "MANAGER",
   ]).handler(
-    async ({ context }) => await context.services.users.getDepartments(),
+    async ({ context }) => await context.services.departments.getAll(),
   ),
 
   // Get organizational hierarchy for org chart

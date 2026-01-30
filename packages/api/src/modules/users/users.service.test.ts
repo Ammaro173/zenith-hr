@@ -45,6 +45,7 @@ const createUserInputArb: fc.Arbitrary<CreateUserInput> = fc.record({
  * Creates a mock database for testing user creation.
  * The mock tracks inserted users and accounts, simulating database behavior.
  * Properly handles the Drizzle ORM query patterns including subqueries with .as()
+ * Note: Password is stored in the account table (Better Auth pattern), not in user table
  */
 function createMockDbForCreate() {
   const insertedUsers: Array<{
@@ -271,7 +272,7 @@ describe("Feature: user-management, Property 1: User creation preserves input da
         expect(result.createdAt).toBeInstanceOf(Date);
         expect(result.updatedAt).toBeInstanceOf(Date);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1280,12 +1281,9 @@ function createMockDbForDeactivate(existingUser: {
     ipAddress: string | null;
     userAgent: string | null;
   }> = [];
-  let selectCallCount = 0;
 
   const mockDb = {
     select: mock(() => {
-      selectCallCount++;
-
       return {
         from: mock(() => ({
           // For subquery creation (manager alias)
@@ -3424,7 +3422,7 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
           }
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 

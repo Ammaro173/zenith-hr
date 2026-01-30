@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "@zenith-hr/auth";
 import type { DbOrTx } from "@zenith-hr/db";
-import { session, user } from "@zenith-hr/db/schema/auth";
+import { account, session, user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
 import {
   and,
@@ -371,13 +371,14 @@ export const createUsersService = (db: DbOrTx) => ({
     }
 
     // Hash password using better-auth
-    const passwordHash = await hashPassword(password);
+    const hashedPassword = await hashPassword(password);
 
-    // Generate unique ID
+    // Generate unique IDs
     const userId = randomUUID();
+    const accountId = randomUUID();
     const now = new Date();
 
-    // Insert user record
+    // Insert user record (passwordHash is null - Better Auth stores password in account table)
     await db.insert(user).values({
       id: userId,
       name,
@@ -388,8 +389,19 @@ export const createUsersService = (db: DbOrTx) => ({
       status: status ?? "ACTIVE",
       departmentId: departmentId ?? null,
       reportsToManagerId: reportsToManagerId ?? null,
-      passwordHash,
+      passwordHash: null,
       failedLoginAttempts: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Insert account record with hashed password (Better Auth pattern)
+    await db.insert(account).values({
+      id: accountId,
+      accountId: userId,
+      providerId: "credential",
+      userId,
+      password: hashedPassword,
       createdAt: now,
       updatedAt: now,
     });
@@ -707,7 +719,7 @@ export const createUsersService = (db: DbOrTx) => ({
   /**
    * Reset a user's password
    * - Hashes the new password using better-auth utilities
-   * - Updates the user's password hash in the database
+   * - Updates the password in the account table (Better Auth pattern)
    * - Revokes all active sessions for the user
    * - Returns void (success confirmation without exposing password)
    */
@@ -724,16 +736,16 @@ export const createUsersService = (db: DbOrTx) => ({
     }
 
     // Hash new password using better-auth
-    const passwordHash = await hashPassword(newPassword);
+    const hashedPassword = await hashPassword(newPassword);
 
-    // Update user password hash
+    // Update account password (Better Auth stores password in account table)
     await db
-      .update(user)
+      .update(account)
       .set({
-        passwordHash,
+        password: hashedPassword,
         updatedAt: new Date(),
       })
-      .where(eq(user.id, userId));
+      .where(eq(account.userId, userId));
 
     // Revoke all sessions for the user
     await db.delete(session).where(eq(session.userId, userId));
