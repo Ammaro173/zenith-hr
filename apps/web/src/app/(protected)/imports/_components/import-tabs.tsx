@@ -23,8 +23,6 @@ export interface ImportTabsProps {
  * - Data preview with validation
  * - Import execution
  *
- * Requirements: 7.2
- *
  * @example
  * ```tsx
  * <ImportTabs defaultTab="users" />

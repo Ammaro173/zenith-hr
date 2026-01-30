@@ -21,8 +21,6 @@ export interface UseCSVParserReturn {
  * - File reading and parsing
  * - Paste event parsing (direct text input)
  * - Loading and error states
- *
- * Requirements: 1.1, 1.3
  */
 export function useCSVParser(): UseCSVParserReturn {
   const [parsedData, setParsedData] = useState<ParsedCSVData | null>(null);

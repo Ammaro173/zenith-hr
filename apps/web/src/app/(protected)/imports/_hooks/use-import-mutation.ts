@@ -54,8 +54,6 @@ export interface UseImportMutationReturn {
 /**
  * Hook for importing user rows.
  * Calls the importUsers API endpoint.
- *
- * Requirements: 6.1, 6.2, 6.3, 8.2, 8.3
  */
 function useImportUsersMutation() {
   return useMutation({
@@ -77,8 +75,6 @@ function useImportUsersMutation() {
 /**
  * Hook for importing department rows.
  * Calls the importDepartments API endpoint.
- *
- * Requirements: 6.1, 6.2, 6.3, 8.2, 8.3
  */
 function useImportDepartmentsMutation() {
   return useMutation({
@@ -111,8 +107,6 @@ function useImportDepartmentsMutation() {
  * - Returns import results with generated passwords for new users
  * - Creates import history records
  * - Returns summary with counts of inserted, updated, skipped, and failed records
- *
- * Requirements: 6.1, 6.2, 6.3, 8.2, 8.3
  *
  * @returns Object containing importUsers and importDepartments mutations
  *

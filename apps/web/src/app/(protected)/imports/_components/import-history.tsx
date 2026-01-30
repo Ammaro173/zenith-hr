@@ -35,8 +35,6 @@ interface ImportHistoryComponentProps {
  * Shows timestamp, user, type, and counts for each import.
  * Supports clicking to view detailed results.
  *
- * Requirements: 5.1, 5.2, 5.3, 7.1
- *
  * @example
  * ```tsx
  * <ImportHistoryComponent

@@ -44,8 +44,6 @@ export interface ImportProgressProps {
  * - Cancel button during import
  * - Final summary on completion
  *
- * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
- *
  * @example
  * ```tsx
  * <ImportProgress

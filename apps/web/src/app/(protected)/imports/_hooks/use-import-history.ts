@@ -62,8 +62,6 @@ export interface ImportHistoryDetails {
  * - Pagination support with limit and offset
  * - Returns history in reverse chronological order (most recent first)
  *
- * Requirements: 5.1, 5.2
- *
  * @param params - Parameters for querying import history
  * @param params.type - Optional filter by import type ('users' or 'departments')
  * @param params.limit - Optional limit for pagination (default: 10)
@@ -106,8 +104,6 @@ export function useImportHistory(params: ImportHistoryParams = {}) {
  * - Query detailed results for a specific import by ID
  * - Returns import metadata and all row-level results
  * - Only enabled when an ID is provided
- *
- * Requirements: 5.1, 5.2
  *
  * @param id - The import history ID to fetch details for
  *

@@ -4,8 +4,6 @@
  * Generates secure temporary passwords for imported users.
  * This is a client-side utility for preview purposes.
  * The actual password generation for imports happens on the backend.
- *
- * Requirements: 10.1
  */
 
 /**

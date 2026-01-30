@@ -13,8 +13,6 @@ import { ImportTabs } from "./_components/import-tabs";
  * - Department import with column mapping, validation, and preview
  * - Import history tracking
  * - Template downloads
- *
- * Requirements: 7.1, 7.2, 7.3
  */
 export default function ImportsPage() {
   return (

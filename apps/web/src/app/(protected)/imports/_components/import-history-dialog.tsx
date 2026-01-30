@@ -57,9 +57,6 @@ interface ImportHistoryDialogProps {
  * - Color-coded status indicators for each row
  * - Error messages for failed rows
  * - Scrollable content for large imports
- *
- * Requirements: 5.4
- *
  * @example
  * ```tsx
  * <ImportHistoryDialog

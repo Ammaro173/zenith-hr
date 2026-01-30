@@ -105,8 +105,6 @@ function clearStoredMapping(key: string): void {
  * - Persist mappings to localStorage
  * - Validate required fields are mapped
  *
- * Requirements: 4.1, 4.4, 4.5
- *
  * @param type - The type of import ('users' or 'departments')
  * @returns Column mapping state and functions
  */

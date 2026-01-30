@@ -55,8 +55,6 @@ interface ImportResultsDialogProps {
  * - Import status (inserted, updated, skipped, failed)
  * - Generated password (for new users only)
  * - Error message (for failed rows)
- *
- * Requirements: 12.1, 12.2, 12.3, 12.4
  */
 function exportResultsToCSV(
   result: ImportResult,
@@ -116,8 +114,6 @@ function escapeCSVValue(value: string): string {
  * - Table showing generated passwords for new users
  * - Security warning before exporting passwords
  * - Export button to download results as CSV
- *
- * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
  *
  * @example
  * ```tsx

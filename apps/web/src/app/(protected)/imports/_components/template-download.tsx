@@ -19,8 +19,6 @@ import {
  * - Example rows demonstrating valid data formats
  * - Comment rows explaining field requirements
  *
- * Requirements: 9.1, 9.2
- *
  * @example
  * ```tsx
  * <TemplateDownload />

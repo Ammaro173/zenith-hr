@@ -60,8 +60,6 @@ export interface ColumnMappingProps {
  * - Show auto-detected mappings
  * - Allow manual mapping via Select dropdowns
  * - Highlight unmapped required fields
- *
- * Requirements: 4.1, 4.2, 4.3, 4.4
  */
 export function ColumnMapping({
   headers,

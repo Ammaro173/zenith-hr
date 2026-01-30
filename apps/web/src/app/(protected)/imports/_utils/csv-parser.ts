@@ -5,8 +5,6 @@
  * - Different line endings (CRLF, LF)
  * - Quoted values with commas inside
  * - Empty rows
- *
- * Requirements: 1.1, 1.3
  */
 
 export interface ParsedCSVData {

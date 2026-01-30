@@ -649,7 +649,6 @@ export const createUsersService = (db: DbOrTx) => ({
    * Delete a user (hard delete)
    * - Permanently removes the user record
    * - Cascades to sessions/accounts via foreign key constraints
-   * Requirements: 4.2, 4.4
    */
   async delete(userId: string): Promise<void> {
     // Verify user exists
@@ -671,7 +670,6 @@ export const createUsersService = (db: DbOrTx) => ({
    * Get all sessions for a user
    * - Fetches all sessions for the specified user
    * - Returns session list with id, createdAt, expiresAt, ipAddress, userAgent
-   * Requirements: 5.1, 5.3
    */
   async getSessions(userId: string): Promise<UserSession[]> {
     const sessions = await db
@@ -692,7 +690,6 @@ export const createUsersService = (db: DbOrTx) => ({
    * Revoke a specific session by ID
    * - Deletes the session record from the database
    * - Immediately invalidates the session token
-   * Requirements: 6.1, 6.4
    */
   async revokeSession(sessionId: string): Promise<void> {
     await db.delete(session).where(eq(session.id, sessionId));
@@ -702,7 +699,6 @@ export const createUsersService = (db: DbOrTx) => ({
    * Revoke all sessions for a user
    * - Deletes all session records for the specified user
    * - Immediately invalidates all session tokens for the user
-   * Requirements: 6.2
    */
   async revokeAllSessions(userId: string): Promise<void> {
     await db.delete(session).where(eq(session.userId, userId));
@@ -714,7 +710,6 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Updates the user's password hash in the database
    * - Revokes all active sessions for the user
    * - Returns void (success confirmation without exposing password)
-   * Requirements: 7.1, 7.2, 7.4
    */
   async resetPassword(userId: string, newPassword: string): Promise<void> {
     // Verify user exists

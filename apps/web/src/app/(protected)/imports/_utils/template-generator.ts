@@ -3,8 +3,6 @@
  *
  * Generates and downloads CSV templates for user and department imports.
  * Templates include headers and example rows demonstrating valid formats.
- *
- * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
  */
 
 /**

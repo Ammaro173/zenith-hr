@@ -3,8 +3,6 @@
  *
  * Auto-detects column mappings from CSV headers to expected fields.
  * Supports case-insensitive matching and common naming variations.
- *
- * Requirements: 4.1
  */
 
 /**

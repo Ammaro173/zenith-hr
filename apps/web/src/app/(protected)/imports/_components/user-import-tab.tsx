@@ -66,8 +66,6 @@ type StepId = (typeof STEPS)[keyof typeof STEPS];
  * - Upsert mode toggle
  * - Progress tracking
  * - Results dialog with password export
- *
- * Requirements: 7.1, 7.2, 7.3, 7.6, 8.1
  */
 export function UserImportTab() {
   // State

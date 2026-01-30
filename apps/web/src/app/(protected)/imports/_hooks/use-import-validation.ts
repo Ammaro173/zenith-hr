@@ -33,8 +33,6 @@ export interface UseImportValidationReturn {
 /**
  * Hook for validating user import rows.
  * Calls the validateUsers API endpoint.
- *
- * Requirements: 3.1
  */
 function useValidateUsersMutation() {
   return useMutation({
@@ -51,8 +49,6 @@ function useValidateUsersMutation() {
 /**
  * Hook for validating department import rows.
  * Calls the validateDepartments API endpoint.
- *
- * Requirements: 3.1
  */
 function useValidateDepartmentsMutation() {
   return useMutation({
@@ -80,8 +76,6 @@ function useValidateDepartmentsMutation() {
  * - Checks required fields, email format, role/status enum values
  * - Validates foreign key references (departmentId, reportsToManagerId, headOfDepartmentId)
  * - Returns validation results with row index, isValid, errors, and willUpdate flag
- *
- * Requirements: 3.1
  *
  * @returns Object containing validateUsers and validateDepartments mutations
  *
