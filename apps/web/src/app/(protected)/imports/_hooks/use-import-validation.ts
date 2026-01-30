@@ -1,110 +1,131 @@
+"use client";
+
 import { useMutation } from "@tanstack/react-query";
-import type {
-  DepartmentImportRow,
-  RowValidationResult,
-  UserImportRow,
-} from "@/types/imports";
-import { client } from "@/utils/orpc";
+import { orpc } from "@/utils/orpc";
 
 /**
- * Input type for user validation mutation
+ * Validation error for a specific field
  */
-interface ValidateUsersInput {
-  rows: UserImportRow[];
-  upsertMode: boolean;
+export interface ValidationError {
+  field: string;
+  message: string;
 }
 
 /**
- * Input type for department validation mutation
+ * Validation result for a single row
  */
-interface ValidateDepartmentsInput {
-  rows: DepartmentImportRow[];
-  upsertMode: boolean;
+export interface ValidationResult {
+  rowIndex: number;
+  isValid: boolean;
+  errors: ValidationError[];
+  willUpdate?: boolean;
 }
 
 /**
- * Return type for the useImportValidation hook
+ * User import row for validation
  */
-export interface UseImportValidationReturn {
-  validateUsers: ReturnType<typeof useValidateUsersMutation>;
-  validateDepartments: ReturnType<typeof useValidateDepartmentsMutation>;
+export interface UserImportRow {
+  name: string;
+  email: string;
+  sapNo: string;
+  role: "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
+  status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
+  departmentId?: string | null;
+  reportsToManagerId?: string | null;
+  password?: string;
 }
 
 /**
- * Hook for validating user import rows.
- * Calls the validateUsers API endpoint.
+ * Department import row for validation
  */
-function useValidateUsersMutation() {
-  return useMutation({
-    mutationFn: async ({
-      rows,
-      upsertMode,
-    }: ValidateUsersInput): Promise<RowValidationResult[]> => {
-      const results = await client.imports.validateUsers({ rows, upsertMode });
-      return results;
-    },
-  });
+export interface DepartmentImportRow {
+  name: string;
+  costCenterCode: string;
+  headOfDepartmentId?: string | null;
 }
 
 /**
- * Hook for validating department import rows.
- * Calls the validateDepartments API endpoint.
- */
-function useValidateDepartmentsMutation() {
-  return useMutation({
-    mutationFn: async ({
-      rows,
-      upsertMode,
-    }: ValidateDepartmentsInput): Promise<RowValidationResult[]> => {
-      const results = await client.imports.validateDepartments({
-        rows,
-        upsertMode,
-      });
-      return results;
-    },
-  });
-}
-
-/**
- * Hook for validating import data before performing the actual import.
+ * Hook for validating user import rows before import.
  *
- * Provides mutations for validating both user and department import rows
- * against the backend validation rules.
+ * Calls the validateUsers API endpoint to validate each row against
+ * schema rules and database constraints (e.g., foreign key validation).
  *
- * Features:
- * - Validates each row against schema rules
- * - Checks required fields, email format, role/status enum values
- * - Validates foreign key references (departmentId, reportsToManagerId, headOfDepartmentId)
- * - Returns validation results with row index, isValid, errors, and willUpdate flag
- *
- * @returns Object containing validateUsers and validateDepartments mutations
+ * @returns Mutation for validating user rows
  *
  * @example
  * ```tsx
- * const { validateUsers, validateDepartments } = useImportValidation();
+ * const validateUsers = useValidateUsers();
  *
- * // Validate user rows
- * const handleValidateUsers = async () => {
+ * const handleValidate = async () => {
  *   const results = await validateUsers.mutateAsync({
- *     rows: userRows,
+ *     rows: parsedRows,
  *     upsertMode: true,
  *   });
- *   // Process validation results
- * };
- *
- * // Validate department rows
- * const handleValidateDepartments = async () => {
- *   const results = await validateDepartments.mutateAsync({
- *     rows: departmentRows,
- *     upsertMode: false,
- *   });
- *   // Process validation results
+ *   console.log('Validation results:', results);
  * };
  * ```
  */
-export function useImportValidation(): UseImportValidationReturn {
-  const validateUsers = useValidateUsersMutation();
-  const validateDepartments = useValidateDepartmentsMutation();
+export function useValidateUsers() {
+  return useMutation({
+    mutationFn: async (input: {
+      rows: UserImportRow[];
+      upsertMode?: boolean;
+    }) => {
+      const result = await orpc.imports.validateUsers.call({
+        rows: input.rows,
+        upsertMode: input.upsertMode ?? false,
+      });
+      return result as ValidationResult[];
+    },
+  });
+}
+
+/**
+ * Hook for validating department import rows before import.
+ *
+ * Calls the validateDepartments API endpoint to validate each row against
+ * schema rules and database constraints.
+ *
+ * @returns Mutation for validating department rows
+ *
+ * @example
+ * ```tsx
+ * const validateDepartments = useValidateDepartments();
+ *
+ * const handleValidate = async () => {
+ *   const results = await validateDepartments.mutateAsync({
+ *     rows: parsedRows,
+ *     upsertMode: false,
+ *   });
+ *   console.log('Validation results:', results);
+ * };
+ * ```
+ */
+export function useValidateDepartments() {
+  return useMutation({
+    mutationFn: async (input: {
+      rows: DepartmentImportRow[];
+      upsertMode?: boolean;
+    }) => {
+      const result = await orpc.imports.validateDepartments.call({
+        rows: input.rows,
+        upsertMode: input.upsertMode ?? false,
+      });
+      return result as ValidationResult[];
+    },
+  });
+}
+
+/**
+ * Combined hook for import validation.
+ *
+ * Returns both user and department validation mutations for convenience.
+ *
+ * @returns Object containing validateUsers and validateDepartments mutations
+ */
+export function useImportValidation() {
+  const validateUsers = useValidateUsers();
+  const validateDepartments = useValidateDepartments();
 
   return {
     validateUsers,
