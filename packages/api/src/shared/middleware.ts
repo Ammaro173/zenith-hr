@@ -1,10 +1,26 @@
+import type { ORPCErrorCode } from "@orpc/client";
 import { ORPCError, os } from "@orpc/server";
 import type { Context } from "../context";
+import { AppError } from "./errors";
 import type { UserRole } from "./types";
 
 export const o = os.$context<Context>();
 
-export const publicProcedure = o;
+// Global error handler middleware that converts AppError to ORPCError
+const errorHandler = o.middleware(async ({ next }) => {
+  try {
+    return await next();
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw new ORPCError(error.code as ORPCErrorCode, {
+        message: error.message,
+      });
+    }
+    throw error;
+  }
+});
+
+export const publicProcedure = o.use(errorHandler);
 
 const requireAuth = o.middleware(({ context, next }) => {
   if (!context.session?.user) {
