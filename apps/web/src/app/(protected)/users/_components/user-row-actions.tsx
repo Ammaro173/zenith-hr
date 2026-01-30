@@ -68,7 +68,15 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     mutationFn: () => client.users.deactivate({ id: user.id }),
     onSuccess: () => {
       toast.success("User deactivated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      // Invalidate all user-related queries (orpc uses [path, options] structure)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) && Array.isArray(key[0]) && key[0][0] === "users"
+          );
+        },
+      });
       setShowDeactivateAlert(false);
     },
     onError: (error) => {
@@ -80,7 +88,15 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     mutationFn: () => client.users.update({ id: user.id, status: "ACTIVE" }),
     onSuccess: () => {
       toast.success("User activated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      // Invalidate all user-related queries (orpc uses [path, options] structure)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) && Array.isArray(key[0]) && key[0][0] === "users"
+          );
+        },
+      });
       setShowActivateAlert(false);
     },
     onError: (error) => {

@@ -10,7 +10,7 @@ export function useCreateUser(options?: { onSuccess?: () => void }) {
       client.users.create(input),
     onSuccess: () => {
       toast.success("User created successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -27,7 +27,7 @@ export function useUpdateUser(options?: { onSuccess?: () => void }) {
       client.users.update(input),
     onSuccess: () => {
       toast.success("User updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -43,7 +43,7 @@ export function useDeactivateUser(options?: { onSuccess?: () => void }) {
     mutationFn: (userId: string) => client.users.deactivate({ id: userId }),
     onSuccess: () => {
       toast.success("User deactivated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -59,7 +59,7 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
     mutationFn: (userId: string) => client.users.delete({ id: userId }),
     onSuccess: () => {
       toast.success("User deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -119,7 +119,7 @@ export function useResetPassword(options?: { onSuccess?: () => void }) {
       client.users.resetPassword(input),
     onSuccess: () => {
       toast.success("Password reset successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {

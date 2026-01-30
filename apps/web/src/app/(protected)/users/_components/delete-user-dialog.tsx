@@ -34,7 +34,15 @@ export function DeleteUserDialog({
     mutationFn: () => client.users.delete({ id: userId }),
     onSuccess: () => {
       toast.success("User deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      // Invalidate all user-related queries (orpc uses [path, options] structure)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) && Array.isArray(key[0]) && key[0][0] === "users"
+          );
+        },
+      });
       onOpenChange(false);
     },
     onError: (error) => {
