@@ -236,7 +236,6 @@ function createMockDbWithDuplicateSapNo() {
 /**
  * Feature: user-management, Property 1: User creation preserves input data
  *
- * **Validates: Requirements 1.1, 1.6**
  *
  * For any valid user creation input (name, email, sapNo, role, status,
  * departmentId, reportsToManagerId), when the user is created successfully,
@@ -308,7 +307,6 @@ describe("Feature: user-management, Property 1: User creation preserves input da
 /**
  * Feature: user-management, Property 2: Password hashing invariant
  *
- * **Validates: Requirements 1.2**
  *
  * For any user creation operation, the stored password in the account table
  * SHALL NOT equal the plain text password, and SHALL be a valid hash that
@@ -422,7 +420,6 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
 /**
  * Feature: user-management, Property 3: Email and SAP number uniqueness (create)
  *
- * **Validates: Requirements 1.3, 1.4**
  *
  * For any user creation operation, if the email or SAP number already exists
  * for a different user, the operation SHALL be rejected with a CONFLICT error.
@@ -503,7 +500,6 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
 /**
  * Feature: user-management, Property 11: Response sanitization (create)
  *
- * **Validates: Requirements 1.6**
  *
  * For any user creation operation that returns user data, the response
  * SHALL NOT contain the passwordHash field.
@@ -822,7 +818,6 @@ function createMockDbWithDuplicateSapNoOnUpdate(existingUser: {
 /**
  * Feature: user-management, Property 3: Email and SAP number uniqueness (update)
  *
- * **Validates: Requirements 2.2, 2.3**
  *
  * For any user update operation, if the email or SAP number already exists
  * for a different user, the operation SHALL be rejected with a CONFLICT error.
@@ -980,7 +975,6 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
 /**
  * Feature: user-management, Property 5: Update preserves unmodified fields
  *
- * **Validates: Requirements 2.1, 2.5, 2.6, 2.7**
  *
  * For any user update operation with a partial update (only some fields provided),
  * all fields not included in the update input SHALL remain unchanged in the database.
@@ -1361,7 +1355,6 @@ function createMockDbForDeactivateNotFound() {
 /**
  * Feature: user-management, Property 6: Deactivation status change
  *
- * **Validates: Requirements 3.1**
  *
  * For any user deactivation operation, the user's status SHALL be set to INACTIVE.
  */
@@ -1494,7 +1487,6 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
 /**
  * Feature: user-management, Property 7: Session cleanup on state changes (deactivate)
  *
- * **Validates: Requirements 3.2**
  *
  * For any user deactivation operation, all active sessions for that user
  * SHALL be deleted from the database.
@@ -1798,7 +1790,6 @@ function createMockDbForDeleteNotFound() {
 /**
  * Unit tests for delete method
  *
- * **Validates: Requirements 4.2, 4.4**
  *
  * When an Admin confirms the deletion, the system SHALL permanently remove
  * the user record and all associated sessions (via cascade).
@@ -1936,7 +1927,6 @@ describe("delete method - hard delete user", () => {
 /**
  * Property test for delete method using fast-check
  *
- * **Validates: Requirements 4.2, 4.4**
  */
 describe("Feature: user-management, Property 8: Hard delete cascade", () => {
   it("should delete user for any valid user input", async () => {
@@ -2061,7 +2051,6 @@ const sessionArb = fc.record({
 /**
  * Feature: user-management, Property 9: Session data completeness
  *
- * **Validates: Requirements 5.1, 5.3**
  *
  * For any session retrieval operation, each returned session SHALL include
  * id, createdAt, expiresAt, ipAddress, and userAgent fields.
@@ -2466,7 +2455,6 @@ const sessionForRevocationArb = fc.record({
 /**
  * Feature: user-management, Property 10: Session revocation deletes records
  *
- * **Validates: Requirements 6.1, 6.2, 6.4**
  *
  * For any single session revocation, the specified session SHALL be deleted.
  * For any bulk session revocation, all sessions for the specified user SHALL be deleted.
@@ -2934,7 +2922,6 @@ function createMockDbForResetPasswordNotFound() {
 /**
  * Feature: user-management, Property 2: Password hashing invariant (reset)
  *
- * **Validates: Requirements 7.1**
  *
  * For any password reset operation, the stored passwordHash SHALL NOT equal
  * the plain text password, and SHALL be a valid hash that can verify the
@@ -3109,7 +3096,6 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
 /**
  * Feature: user-management, Property 7: Session cleanup on state changes (reset)
  *
- * **Validates: Requirements 7.2**
  *
  * For any password reset operation, all active sessions for that user
  * SHALL be deleted from the database.
@@ -3353,7 +3339,6 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
 /**
  * Feature: user-management, Property 11: Response sanitization (reset)
  *
- * **Validates: Requirements 7.4**
  *
  * For any password reset operation, the response SHALL NOT expose the new password.
  * The resetPassword method returns void, which inherently satisfies this requirement.

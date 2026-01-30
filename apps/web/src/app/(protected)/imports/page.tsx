@@ -14,7 +14,6 @@ import { ImportTabs } from "./_components/import-tabs";
  * - Complete import workflow with file upload, column mapping, validation, and progress tracking
  * - Import history tracking with detailed results
  *
- * Requirements: 7.1, 7.6
  */
 export default function ImportsPage() {
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(

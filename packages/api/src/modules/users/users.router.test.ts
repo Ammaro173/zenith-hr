@@ -9,7 +9,6 @@ type AnyORPCError = ORPCError<string, unknown>;
 /**
  * Feature: user-management, Property 4: Role-based access control enforcement
  *
- * **Validates: Requirements 1.5, 2.4, 3.3, 4.3, 5.2, 6.3, 7.3, 9.1-9.7**
  *
  * For any user management operation and any actor role:
  * - Create/Update/Deactivate/ResetPassword: SHALL succeed only if actor role is ADMIN or HR

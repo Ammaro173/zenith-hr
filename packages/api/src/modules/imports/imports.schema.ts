@@ -6,7 +6,6 @@ import { z } from "zod";
 
 /**
  * User import row schema - validates individual user rows from CSV
- * Requirements: 3.1, 3.2, 3.3, 3.4, 11.1, 11.2
  */
 export const userImportRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -23,7 +22,6 @@ export type UserImportRow = z.infer<typeof userImportRowSchema>;
 
 /**
  * Import users input schema - wraps rows with import options
- * Requirements: 8.2, 8.3
  */
 export const importUsersInputSchema = z.object({
   rows: z.array(userImportRowSchema),
@@ -35,7 +33,6 @@ export type ImportUsersInput = z.infer<typeof importUsersInputSchema>;
 
 /**
  * Validate users input schema - for pre-import validation
- * Requirements: 3.1
  */
 export const validateUsersInputSchema = z.object({
   rows: z.array(userImportRowSchema),
@@ -50,7 +47,6 @@ export type ValidateUsersInput = z.infer<typeof validateUsersInputSchema>;
 
 /**
  * Department import row schema - validates individual department rows from CSV
- * Requirements: 3.1, 3.2
  */
 export const departmentImportRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -62,7 +58,6 @@ export type DepartmentImportRow = z.infer<typeof departmentImportRowSchema>;
 
 /**
  * Import departments input schema - wraps rows with import options
- * Requirements: 8.2, 8.3
  */
 export const importDepartmentsInputSchema = z.object({
   rows: z.array(departmentImportRowSchema),
@@ -76,7 +71,6 @@ export type ImportDepartmentsInput = z.infer<
 
 /**
  * Validate departments input schema - for pre-import validation
- * Requirements: 3.1
  */
 export const validateDepartmentsInputSchema = z.object({
   rows: z.array(departmentImportRowSchema),
@@ -103,7 +97,6 @@ export type ValidationError = z.infer<typeof validationErrorSchema>;
 
 /**
  * Validation result schema - result for a single row validation
- * Requirements: 3.1, 3.2, 3.3, 3.4
  */
 export const validationResultSchema = z.object({
   rowIndex: z.number(),
@@ -144,7 +137,6 @@ export type ImportSummary = z.infer<typeof importSummarySchema>;
 
 /**
  * Import result schema - complete result of an import operation
- * Requirements: 5.1, 8.5
  */
 export const importResultSchema = z.object({
   results: z.array(importResultItemSchema),
@@ -161,7 +153,6 @@ export type ImportResult = z.infer<typeof importResultSchema>;
 
 /**
  * Import history schema - represents a past import operation
- * Requirements: 5.1, 5.2, 5.3
  */
 export const importHistorySchema = z.object({
   id: z.string().uuid(),
@@ -182,7 +173,6 @@ export type ImportHistory = z.infer<typeof importHistorySchema>;
 
 /**
  * Import history item schema - represents a single row result in history
- * Requirements: 5.4
  */
 export const importHistoryItemSchema = z.object({
   id: z.string().uuid(),
@@ -198,7 +188,6 @@ export type ImportHistoryItem = z.infer<typeof importHistoryItemSchema>;
 
 /**
  * Import history details schema - history with all row items
- * Requirements: 5.4
  */
 export const importHistoryDetailsSchema = z.object({
   history: importHistorySchema,

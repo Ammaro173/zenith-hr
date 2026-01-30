@@ -30,7 +30,6 @@ type UserInsert = typeof user.$inferInsert;
 /**
  * Generates a secure password with at least 12 characters,
  * including uppercase, lowercase, numbers, and symbols.
- * Requirements: 10.1
  */
 function generateSecurePassword(): string {
   const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -68,7 +67,6 @@ function generateSecurePassword(): string {
 export const createImportsService = (db = defaultDb) => ({
   /**
    * Enhanced importUsers function with password handling, upsert mode, and history tracking.
-   * Requirements: 8.2, 8.3, 10.1, 10.2, 10.4, 10.5, 11.1, 11.2
    *
    * @param input - Import input containing rows, upsertMode, and skipInvalid flags
    * @param userId - The ID of the user performing the import
@@ -272,7 +270,6 @@ export const createImportsService = (db = defaultDb) => ({
 
   /**
    * Enhanced importDepartments function with upsert mode and history tracking.
-   * Requirements: 8.2, 8.3
    *
    * @param input - Import input containing rows, upsertMode, and skipInvalid flags
    * @param userId - The ID of the user performing the import
@@ -420,7 +417,6 @@ export const createImportsService = (db = defaultDb) => ({
 
   /**
    * Validates user import rows against schema and database constraints.
-   * Requirements: 3.1, 3.2, 3.3, 3.4, 11.3, 11.4, 11.5
    *
    * @param rows - Array of user import rows to validate
    * @param upsertMode - If true, existing records will be marked for update
@@ -550,7 +546,6 @@ export const createImportsService = (db = defaultDb) => ({
 
   /**
    * Validates department import rows against schema and database constraints.
-   * Requirements: 3.1, 3.2
    *
    * @param rows - Array of department import rows to validate
    * @param upsertMode - If true, existing records will be marked for update
@@ -651,7 +646,6 @@ export const createImportsService = (db = defaultDb) => ({
   /**
    * Retrieves paginated import history with optional filtering by type.
    * Returns results in reverse chronological order (most recent first).
-   * Requirements: 5.1, 5.2, 5.3
    *
    * @param params - Pagination and filter parameters (type, limit, offset)
    * @returns Array of import history records with user information
@@ -705,7 +699,6 @@ export const createImportsService = (db = defaultDb) => ({
 
   /**
    * Retrieves detailed information for a specific import, including all row items.
-   * Requirements: 5.1, 5.2, 5.3
    *
    * @param id - The UUID of the import history record
    * @returns Import history details with all associated items

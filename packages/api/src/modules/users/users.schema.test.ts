@@ -67,7 +67,6 @@ const invalidStatusArb = fc
 /**
  * Feature: user-management, Property 12: Form validation rejects invalid input
  *
- * **Validates: Requirements 8.5**
  *
  * Tests that invalid inputs are rejected by Zod schemas:
  * - Empty required fields are rejected
