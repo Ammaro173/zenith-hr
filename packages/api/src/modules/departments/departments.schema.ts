@@ -17,7 +17,7 @@ export const createDepartmentSchema = z.object({
   costCenterCode: z.string().min(1).max(50),
   headOfDepartmentId: z
     .string()
-    .uuid()
+    .min(1)
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
@@ -27,12 +27,12 @@ export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
 
 // Schema for updating a department
 export const updateDepartmentSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(255).optional(),
   costCenterCode: z.string().min(1).max(50).optional(),
   headOfDepartmentId: z
     .string()
-    .uuid()
+    .min(1)
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
@@ -42,14 +42,14 @@ export type UpdateDepartmentInput = z.infer<typeof updateDepartmentSchema>;
 
 // Schema for getting a department by ID
 export const getDepartmentByIdSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 });
 
 export type GetDepartmentByIdInput = z.infer<typeof getDepartmentByIdSchema>;
 
 // Schema for deleting a department
 export const deleteDepartmentSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
 });
 
 export type DeleteDepartmentInput = z.infer<typeof deleteDepartmentSchema>;
