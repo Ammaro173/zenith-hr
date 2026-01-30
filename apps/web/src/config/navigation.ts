@@ -1,4 +1,5 @@
 import {
+  Building2,
   FileText,
   Goal,
   LayoutDashboard,
@@ -53,6 +54,13 @@ export const protectedNavigationItems: {
     icon: UsersRound,
     description: "View organization users",
     allowedRoles: ["ADMIN", "HR", "CEO", "IT", "FINANCE", "MANAGER"],
+  },
+  {
+    title: "Departments",
+    href: "/departments",
+    icon: Building2,
+    description: "Manage organization departments",
+    allowedRoles: ["ADMIN", "HR"],
   },
   {
     title: "Organization Chart",
