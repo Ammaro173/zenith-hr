@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "../index.css";
 import { BreakpointIndicator } from "@/components/breakpoint-indicator";
 import Providers from "@/components/providers";
+import { Fps } from "@/components/ui/fps";
 import { siteConfig } from "@/config/site";
 import { fontMono, fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export default function RootLayout({
         <Providers>
           <div className="grid h-svh grid-rows-[auto_1fr]">{children}</div>
           <BreakpointIndicator />
+          <Fps position="top-left" />
         </Providers>
       </body>
     </html>
