@@ -1,7 +1,6 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,6 @@ import {
   StepperTrigger,
 } from "@/components/ui/stepper";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import type { UserImportRow } from "@/types/imports";
 import { USER_FIELD_DEFINITIONS } from "../_constants/field-definitions";
 import { useColumnMapping } from "../_hooks/use-column-mapping";
@@ -34,6 +32,7 @@ import {
 import { DataPreviewTable } from "./data-preview-table";
 import { ImportProgress, type ImportStatus } from "./import-progress";
 import { ImportResultsDialog } from "./import-results-dialog";
+import { SpreadsheetUpload } from "./spreadsheet-upload";
 import { TemplateDownload } from "./template-download";
 
 /**
@@ -73,7 +72,6 @@ export function UserImportTab() {
   const [upsertMode, setUpsertMode] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [showResults, setShowResults] = useState(false);
-  const [pastedText, setPastedText] = useState("");
 
   // Hooks
   const csvParser = useCSVParser();
@@ -168,30 +166,19 @@ export function UserImportTab() {
 
   // Handle file upload
   const handleFileUpload = useCallback(
-    async (files: File[]) => {
-      if (files.length === 0) {
-        return;
-      }
-
-      const file = files[0];
-      if (!file) {
-        return;
-      }
-
+    async (file: File) => {
       await csvParser.parseFile(file);
     },
     [csvParser],
   );
 
   // Handle paste
-  const handlePaste = useCallback(() => {
-    if (!pastedText.trim()) {
-      return;
-    }
-
-    csvParser.parseText(pastedText);
-    setPastedText("");
-  }, [pastedText, csvParser]);
+  const handleTextParse = useCallback(
+    (text: string) => {
+      csvParser.parseText(text);
+    },
+    [csvParser],
+  );
 
   // Handle validation
   const handleValidate = useCallback(async () => {
@@ -259,7 +246,6 @@ export function UserImportTab() {
     setCurrentStep(STEPS.UPLOAD);
     setImportStatus("idle");
     setShowResults(false);
-    setPastedText("");
   }, [
     csvParser,
     columnMapping,
@@ -373,58 +359,16 @@ export function UserImportTab() {
 
         {/* Step 1: Upload */}
         <StepperContent value={STEPS.UPLOAD}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload CSV File</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* File Upload - Simplified for now */}
-              <div className="space-y-2">
-                <Label>Upload File</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    accept=".csv"
-                    className="flex-1"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files ?? []);
-                      handleFileUpload(files);
-                    }}
-                    type="file"
-                  />
-                </div>
-                {csvParser.parsedData && (
-                  <p className="text-muted-foreground text-sm">
-                    Loaded: {csvParser.parsedData.filename} (
-                    {csvParser.parsedData.rows.length} rows)
-                  </p>
-                )}
-                {csvParser.error && (
-                  <p className="text-destructive text-sm">{csvParser.error}</p>
-                )}
-              </div>
-
-              {/* Paste CSV */}
-              <div className="space-y-2">
-                <Label htmlFor="paste-csv">Or Paste CSV Content</Label>
-                <Textarea
-                  id="paste-csv"
-                  onChange={(e) => setPastedText(e.target.value)}
-                  placeholder="Paste your CSV content here..."
-                  rows={8}
-                  value={pastedText}
-                />
-                <Button
-                  disabled={!pastedText.trim()}
-                  onClick={handlePaste}
-                  size="sm"
-                  variant="outline"
-                >
-                  <Upload className="mr-2 size-4" />
-                  Parse CSV
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <SpreadsheetUpload
+            error={csvParser.error}
+            filename={csvParser.parsedData?.filename}
+            hasData={!!csvParser.parsedData}
+            isLoading={csvParser.isLoading}
+            onFileSelect={handleFileUpload}
+            onReset={csvParser.reset}
+            onTextParse={handleTextParse}
+            rowCount={csvParser.parsedData?.rows.length}
+          />
         </StepperContent>
 
         {/* Step 2: Map Columns */}
