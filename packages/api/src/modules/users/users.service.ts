@@ -35,9 +35,10 @@ export interface CurrentUser {
 export const createUsersService = (db: DbOrTx) => ({
   /**
    * Search users by name, email, or SAP number (for autocomplete)
+   * If query is empty, returns all users up to limit
    */
-  async search(query: string, limit = 10) {
-    return await db
+  async search(query: string, limit = 100) {
+    const baseQuery = db
       .select({
         id: user.id,
         name: user.name,
@@ -46,7 +47,15 @@ export const createUsersService = (db: DbOrTx) => ({
         departmentName: department.name,
       })
       .from(user)
-      .leftJoin(department, eq(user.departmentId, department.id))
+      .leftJoin(department, eq(user.departmentId, department.id));
+
+    // If query is empty, return all users (up to limit)
+    if (!query.trim()) {
+      return await baseQuery.limit(limit);
+    }
+
+    // Otherwise filter by query
+    return await baseQuery
       .where(
         or(
           ilike(user.name, `%${query}%`),
