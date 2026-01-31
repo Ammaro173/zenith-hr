@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
+import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { BusinessTripFormProvider } from "./business-trip-form-context";
 import { useBusinessTripForm } from "./use-business-trip-form";
-import { UserSearchCombobox } from "./user-search-combobox";
 
 interface BusinessTripFormProps {
   mode?: "page" | "sheet";

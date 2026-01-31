@@ -3,22 +3,10 @@
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import type { UserResponse } from "@zenith-hr/api/modules/users/users.schema";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
+import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
-import {
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Faceted,
-  FacetedContent,
-  FacetedTrigger,
-} from "@/components/ui/faceted";
 import { Input } from "@/components/ui/input";
 import {
   PasswordInput,
@@ -31,8 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { cn } from "@/lib/utils";
 import { ROLE_OPTIONS, USER_STATUS_OPTIONS } from "@/types/users";
 import { client } from "@/utils/orpc";
 
@@ -130,147 +116,6 @@ function DepartmentSelect({
         ))}
       </SelectContent>
     </Select>
-  );
-}
-
-// ============================================
-// Manager Search Combobox Component
-// ============================================
-
-interface UserOption {
-  id: string;
-  name: string;
-  sapNo: string;
-  departmentName: string | null;
-}
-
-interface ManagerSearchComboboxProps {
-  value?: string | null;
-  onChange: (val: string | null) => void;
-  placeholder?: string;
-  excludeUserId?: string;
-}
-
-function ManagerSearchCombobox({
-  value,
-  onChange,
-  placeholder = "Search for a manager...",
-  excludeUserId,
-}: ManagerSearchComboboxProps) {
-  const [search, setSearch] = useState("");
-  const [selectedUser, setSelectedUser] = useState<UserOption | null>(null);
-  const debouncedSearch = useDebouncedValue(search, 300);
-
-  const { data: users, isLoading } = useQuery({
-    queryKey: ["users", "search", debouncedSearch],
-    queryFn: () => client.users.search({ query: debouncedSearch }),
-    enabled: debouncedSearch.length > 2,
-  });
-
-  // Filter out the current user being edited
-  const filteredUsers = users?.filter((u) => u.id !== excludeUserId);
-
-  // When value changes, if we have it in our results, update selectedUser
-  useEffect(() => {
-    if (value && users) {
-      const user = users.find((u) => u.id === value);
-      if (user) {
-        setSelectedUser(user);
-      }
-    } else if (!value) {
-      setSelectedUser(null);
-    }
-  }, [value, users]);
-
-  return (
-    <Faceted
-      onValueChange={(val) => onChange(val as string | null)}
-      value={value ?? undefined}
-    >
-      <FacetedTrigger asChild>
-        <Button
-          className="w-full justify-between font-normal"
-          role="combobox"
-          variant="outline"
-        >
-          {selectedUser ? (
-            <span className="truncate">{selectedUser.name}</span>
-          ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </FacetedTrigger>
-      <FacetedContent
-        align="start"
-        className="w-[--radix-popover-trigger-width] p-0"
-      >
-        <CommandInput
-          onValueChange={setSearch}
-          placeholder="Search by name, SAP no, or email..."
-          value={search}
-        />
-        <CommandList>
-          {isLoading && (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {!isLoading &&
-            debouncedSearch.length > 0 &&
-            debouncedSearch.length < 3 && (
-              <CommandEmpty>Type at least 3 characters...</CommandEmpty>
-            )}
-          {!isLoading &&
-            debouncedSearch.length >= 3 &&
-            filteredUsers?.length === 0 && (
-              <CommandEmpty>No employee found.</CommandEmpty>
-            )}
-          {/* Option to clear selection */}
-          {value && (
-            <CommandGroup>
-              <CommandItem
-                onSelect={() => {
-                  setSelectedUser(null);
-                  onChange(null);
-                }}
-                value="__clear__"
-              >
-                <Check className="mr-2 h-4 w-4 opacity-0" />
-                <span className="text-muted-foreground">Clear selection</span>
-              </CommandItem>
-            </CommandGroup>
-          )}
-          {!isLoading && filteredUsers && filteredUsers.length > 0 && (
-            <CommandGroup>
-              {filteredUsers.map((user) => (
-                <CommandItem
-                  key={user.id}
-                  onSelect={() => {
-                    setSelectedUser(user);
-                    onChange(user.id);
-                  }}
-                  value={user.id}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === user.id ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <div className="flex flex-col text-left">
-                    <span className="font-medium">{user.name}</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {user.sapNo} • {user.departmentName ?? "No Department"}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </CommandList>
-      </FacetedContent>
-    </Faceted>
   );
 }
 
@@ -478,9 +323,10 @@ export function UserForm({
         <form.Field name="reportsToManagerId">
           {(field) => (
             <FormField field={field} label="Reports To (Manager)">
-              <ManagerSearchCombobox
+              <UserSearchCombobox
                 excludeUserId={initialData?.id}
-                onChange={(val) => field.handleChange(val)}
+                nullable
+                onChange={(val) => field.handleChange(val ?? null)}
                 placeholder="Search for a manager..."
                 value={field.state.value}
               />

@@ -1,12 +1,12 @@
 import { REQUEST_TYPES } from "@zenith-hr/api/modules/requests/requests.schema";
 import { Info } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
+import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { useManpowerRequestFormContext } from "../manpower-request-form-context";
-import { UserSearchCombobox } from "../user-search-combobox";
 
 export function PositionDetailsSection() {
   const { form } = useManpowerRequestFormContext();

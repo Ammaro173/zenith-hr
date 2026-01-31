@@ -1,12 +1,12 @@
 import { ChevronDown, ChevronUp, Settings2, UserCheck } from "lucide-react";
 import * as React from "react";
 import { FormField } from "@/components/shared/form-field";
+import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Show } from "@/utils";
 import { useManpowerRequestFormContext } from "../manpower-request-form-context";
-import { UserSearchCombobox } from "../user-search-combobox";
 
 export function AdvancedOptionsSection() {
   const { form } = useManpowerRequestFormContext();
