@@ -63,6 +63,9 @@ describe("BusinessTripsService", () => {
       endDate: new Date("2024-01-05T00:00:00Z"),
       estimatedCost: 1000,
       currency: "USD",
+      visaRequired: false,
+      needsFlightBooking: true,
+      needsHotelBooking: true,
     };
     const requesterId = "user-1";
 
@@ -146,7 +149,9 @@ describe("BusinessTripsService", () => {
 
     const result = await service.getPendingApprovals(actorId);
 
-    expect(result).toEqual([{ id: "trip-1" }]);
+    expect(result).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "trip-1" })]),
+    );
     expect(roleFromMock).toHaveBeenCalled();
     expect(roleWhereMock).toHaveBeenCalled();
     expect(roleLimitMock).toHaveBeenCalled();

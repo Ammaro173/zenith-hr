@@ -595,7 +595,8 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
 import type { UpdateUserInput } from "./users.schema";
 
 // Arbitrary for generating valid UpdateUserInput (partial updates)
-// biome-ignore lint/correctness/noUnusedVariables://TODO
+// @ts-expect-error - Reserved for future property-based update tests
+// biome-ignore lint/correctness/noUnusedVariables: //TODO Reserved for future property-based update tests
 const updateUserInputArb: fc.Arbitrary<Omit<UpdateUserInput, "id">> = fc.record(
   {
     name: fc.option(validNameArb, { nil: undefined }),
