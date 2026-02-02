@@ -220,14 +220,6 @@ export function RequestDetailClientPage({
               <CardTitle className="font-bold text-base">
                 Budget & Financials
               </CardTitle>
-              {request.isBudgeted && (
-                <Badge
-                  className="border-green-200 bg-green-50 text-green-700"
-                  variant="outline"
-                >
-                  WITHIN BUDGET
-                </Badge>
-              )}
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-6 pt-6 md:grid-cols-3">
               <div className="space-y-1">

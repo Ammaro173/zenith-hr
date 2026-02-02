@@ -147,7 +147,7 @@ export function UserSearchCombobox({
             />
           </div>
           <div
-            className="max-h-[200px] overflow-y-auto overscroll-contain"
+            className="max-h-50 overflow-y-auto overscroll-contain"
             onWheel={(e) => e.stopPropagation()}
           >
             {isLoading && (

@@ -15,11 +15,7 @@ import {
   PasswordInputStrengthChecker,
 } from "@/components/ui/password-input";
 
-// ============================================
-// Types
-// ============================================
-
-//TODO need this from backend
+//TODO need these types from api
 type UserRole =
   | "REQUESTER"
   | "MANAGER"
@@ -82,6 +78,7 @@ export function UserForm({
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
+        //TODO need a better way to do this
         // For edit mode, only send changed fields
         const updateData: UpdateUserFormData = { id: initialData.id };
         if (value.name !== initialData.name) {

@@ -1,5 +1,4 @@
 import {
-  boolean,
   decimal,
   integer,
   jsonb,
@@ -50,7 +49,6 @@ export const manpowerRequest = pgTable("manpower_request", {
   requestCode: text("request_code").notNull().unique(),
   status: requestStatusEnum("status").notNull().default("DRAFT"),
   requestType: requestTypeEnum("request_type").notNull(),
-  isBudgeted: boolean("is_budgeted").notNull().default(false),
   replacementForUserId: text("replacement_for_user_id").references(
     () => user.id,
     {

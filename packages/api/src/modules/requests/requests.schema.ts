@@ -38,7 +38,6 @@ export const CONTRACT_DURATIONS = [
 // Base schema without refinements (needed for .partial() in Zod v4)
 const baseRequestSchema = z.object({
   requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
-  isBudgeted: z.boolean(),
   replacementForUserId: z.string().min(1).optional(),
   contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
   justificationText: z.string().min(1),
@@ -67,7 +66,6 @@ export const createRequestSchema = baseRequestSchema
 
 export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
   requestType: "NEW_POSITION",
-  isBudgeted: false,
   contractDuration: "FULL_TIME",
   justificationText: "",
   salaryRangeMin: 1000,

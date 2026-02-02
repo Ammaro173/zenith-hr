@@ -1,6 +1,5 @@
 import { CONTRACT_DURATIONS } from "@zenith-hr/api/modules/requests/requests.schema";
 import { FormField } from "@/components/shared/form-field";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,26 +19,6 @@ export function ContractBudgetSection() {
       <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">
         Contract & Budget
       </h3>
-
-      <form.Field name="isBudgeted">
-        {(field) => (
-          <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
-            <Checkbox
-              checked={field.state.value}
-              id={field.name}
-              onCheckedChange={(checked) => field.handleChange(!!checked)}
-            />
-            <div className="space-y-1 leading-none">
-              <Label className="font-semibold" htmlFor={field.name}>
-                Is this position budgeted?
-              </Label>
-              <p className="text-muted-foreground text-xs">
-                Uncheck if this request requires extraordinary budget approval.
-              </p>
-            </div>
-          </div>
-        )}
-      </form.Field>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <form.Field name="contractDuration">
