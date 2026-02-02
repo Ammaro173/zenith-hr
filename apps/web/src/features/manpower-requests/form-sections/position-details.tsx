@@ -1,5 +1,6 @@
 import { REQUEST_TYPES } from "@zenith-hr/api/modules/requests/requests.schema";
 import { Info } from "lucide-react";
+import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
 import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Input } from "@/components/ui/input";
@@ -37,10 +38,8 @@ export function PositionDetailsSection() {
         <form.Field name="positionDetails.department">
           {(field) => (
             <FormField field={field} label="Department" required>
-              <Input
-                id={field.name}
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
+              <DepartmentSelect
+                onChange={(val) => field.handleChange(val ?? "")}
                 value={field.state.value}
               />
             </FormField>
