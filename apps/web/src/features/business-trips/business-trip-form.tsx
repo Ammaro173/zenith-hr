@@ -275,10 +275,9 @@ export function BusinessTripForm({
                 <form.Field name="delegatedUserId">
                   {(field) => (
                     <FormField
-                      description="(Required per policy)"
+                      description="Person who will handle your responsibilities while you're away"
                       field={field}
-                      label="Select Replacement"
-                      required
+                      label="Select Replacement (Optional)"
                     >
                       <UserSearchCombobox
                         onChange={field.handleChange}
