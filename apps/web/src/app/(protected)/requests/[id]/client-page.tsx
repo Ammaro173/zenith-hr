@@ -99,8 +99,6 @@ export function RequestDetailClientPage({
   };
   const budgetDetails = request.budgetDetails as {
     currency: string;
-    costCenter?: string;
-    budgetCode?: string;
   };
 
   return (
@@ -221,7 +219,7 @@ export function RequestDetailClientPage({
                 Budget & Financials
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-6 pt-6 md:grid-cols-3">
+            <CardContent className="pt-6">
               <div className="space-y-1">
                 <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
                   SALARY RANGE
@@ -232,14 +230,6 @@ export function RequestDetailClientPage({
                   {budgetDetails.currency}
                 </div>
               </div>
-              <DetailItem
-                label="COST CENTER"
-                value={budgetDetails.costCenter || "Not specified"}
-              />
-              <DetailItem
-                label="BUDGET CODE"
-                value={budgetDetails.budgetCode || "Not specified"}
-              />
             </CardContent>
           </Card>
 

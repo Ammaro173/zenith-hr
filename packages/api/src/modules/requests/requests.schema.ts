@@ -12,8 +12,6 @@ const positionDetailsSchema = z.object({
 const budgetDetailsSchema = z.object({
   currency: z.string().min(1),
   notes: z.string().optional(),
-  costCenter: z.string().optional(),
-  budgetCode: z.string().optional(),
 });
 
 export const REQUEST_TYPES = [

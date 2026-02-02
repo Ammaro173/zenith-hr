@@ -102,32 +102,6 @@ export function AdvancedOptionsSection() {
                 </FormField>
               )}
             </form.Field>
-
-            <form.Field name="budgetDetails.costCenter">
-              {(field) => (
-                <FormField field={field} label="Cost Center">
-                  <Input
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. CC-123"
-                    value={field.state.value}
-                  />
-                </FormField>
-              )}
-            </form.Field>
-
-            <form.Field name="budgetDetails.budgetCode">
-              {(field) => (
-                <FormField field={field} label="Budget Code">
-                  <Input
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="e.g. BC-456"
-                    value={field.state.value}
-                  />
-                </FormField>
-              )}
-            </form.Field>
           </div>
         </div>
       )}

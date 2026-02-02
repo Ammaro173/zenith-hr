@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { addExpenseSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+import { addExpenseSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
 import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
@@ -110,7 +110,9 @@ export function BusinessTripDetailClientPage({
 
   const expenseForm = useForm({
     defaultValues: expenseDefaults,
-    //TODO validators !
+    validators: {
+      onSubmit: addExpenseSchema,
+    },
     onSubmit: async ({ value }) => {
       await addExpense(value);
     },
