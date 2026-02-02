@@ -1,10 +1,12 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
 import type { UserResponse } from "@zenith-hr/api/modules/users/users.schema";
 import { Loader2 } from "lucide-react";
+import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
+import { RoleSelect } from "@/components/shared/role-select";
+import { StatusSelect } from "@/components/shared/status-select";
 import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,20 +14,12 @@ import {
   PasswordInput,
   PasswordInputStrengthChecker,
 } from "@/components/ui/password-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ROLE_OPTIONS, USER_STATUS_OPTIONS } from "@/types/users";
-import { client } from "@/utils/orpc";
 
 // ============================================
 // Types
 // ============================================
 
+//TODO need this from backend
 type UserRole =
   | "REQUESTER"
   | "MANAGER"
@@ -65,63 +59,6 @@ export interface UpdateUserFormData {
   departmentId?: string | null;
   reportsToManagerId?: string | null;
 }
-
-// ============================================
-// Department Select Component
-// ============================================
-
-interface DepartmentSelectProps {
-  value?: string | null;
-  onChange: (val: string | null) => void;
-  placeholder?: string;
-}
-
-function DepartmentSelect({
-  value,
-  onChange,
-  placeholder = "Select department...",
-}: DepartmentSelectProps) {
-  const { data: departments, isLoading } = useQuery({
-    queryKey: ["departments"],
-    queryFn: () => client.users.getDepartments(),
-  });
-
-  if (isLoading) {
-    return (
-      <Select disabled>
-        <SelectTrigger>
-          <Loader2 className="mr-2 size-4 animate-spin" />
-          <span className="text-muted-foreground">Loading...</span>
-        </SelectTrigger>
-      </Select>
-    );
-  }
-
-  return (
-    <Select
-      onValueChange={(val) => onChange(val === "__none__" ? null : val)}
-      value={value ?? "__none__"}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="__none__">
-          <span className="text-muted-foreground">None</span>
-        </SelectItem>
-        {departments?.map((dept) => (
-          <SelectItem key={dept.id} value={dept.id}>
-            {dept.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-// ============================================
-// User Form Component
-// ============================================
 
 export function UserForm({
   mode,
@@ -260,23 +197,12 @@ export function UserForm({
           <form.Field name="role">
             {(field) => (
               <FormField field={field} label="Role" required>
-                <Select
-                  onValueChange={(val) =>
+                <RoleSelect
+                  onChange={(val) =>
                     field.handleChange(val as CreateUserFormData["role"])
                   }
                   value={field.state.value}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </FormField>
             )}
           </form.Field>
@@ -285,23 +211,12 @@ export function UserForm({
           <form.Field name="status">
             {(field) => (
               <FormField field={field} label="Status" required>
-                <Select
-                  onValueChange={(val) =>
+                <StatusSelect
+                  onChange={(val) =>
                     field.handleChange(val as CreateUserFormData["status"])
                   }
                   value={field.state.value}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {USER_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </FormField>
             )}
           </form.Field>
@@ -312,8 +227,10 @@ export function UserForm({
           {(field) => (
             <FormField field={field} label="Department">
               <DepartmentSelect
+                nullable
                 onChange={(val) => field.handleChange(val)}
                 value={field.state.value}
+                valueKey="id"
               />
             </FormField>
           )}
