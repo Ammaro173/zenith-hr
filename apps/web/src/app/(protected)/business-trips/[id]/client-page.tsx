@@ -24,6 +24,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -95,7 +102,7 @@ export function BusinessTripDetailClientPage({
     tripId: params.id,
     category: "MEAL",
     amount: 1,
-    currency: "USD",
+    currency: "QAR",
     date: new Date(),
     description: "",
     receiptUrl: "",
@@ -103,8 +110,7 @@ export function BusinessTripDetailClientPage({
 
   const expenseForm = useForm({
     defaultValues: expenseDefaults,
-    //TODO
-    // validators
+    //TODO validators !
     onSubmit: async ({ value }) => {
       await addExpense(value);
     },
@@ -272,15 +278,18 @@ export function BusinessTripDetailClientPage({
                         {(field) => (
                           <div className="space-y-2">
                             <Label htmlFor={field.name}>Currency</Label>
-                            <Input
-                              id={field.name}
-                              name={field.name}
-                              onBlur={field.handleBlur}
-                              onChange={(e) =>
-                                field.handleChange(e.target.value)
-                              }
+                            <Select
+                              onValueChange={field.handleChange}
                               value={field.state.value}
-                            />
+                            >
+                              <SelectTrigger id={field.name}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="QAR">QAR</SelectItem>
+                                <SelectItem value="USD">USD</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         )}
                       </expenseForm.Field>
