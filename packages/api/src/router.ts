@@ -5,6 +5,7 @@ import { contractsRouter } from "./modules/contracts";
 import { dashboardRouter } from "./modules/dashboard";
 import { departmentsRouter } from "./modules/departments";
 import { importsRouter } from "./modules/imports";
+import { jobDescriptionsRouter } from "./modules/job-descriptions";
 import { performanceRouter } from "./modules/performance";
 import { requestsRouter } from "./modules/requests";
 import { separationsRouter } from "./modules/separations";
@@ -27,6 +28,7 @@ export const appRouter = o.router({
   dashboard: dashboardRouter,
   departments: departmentsRouter,
   imports: importsRouter,
+  jobDescriptions: jobDescriptionsRouter,
   businessTrips: businessTripsRouter,
   performance: performanceRouter,
   separations: separationsRouter,

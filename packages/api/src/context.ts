@@ -17,6 +17,7 @@ import { createContractsService } from "./modules/contracts";
 import { createDashboardService } from "./modules/dashboard";
 import { createDepartmentsService } from "./modules/departments";
 import { createImportsService } from "./modules/imports";
+import { createJobDescriptionsService } from "./modules/job-descriptions";
 import { createPerformanceService } from "./modules/performance";
 import { createRequestsService } from "./modules/requests";
 import { createSeparationsService } from "./modules/separations";
@@ -61,6 +62,7 @@ export async function createContext({ context }: CreateContextOptions) {
     performance: createPerformanceService(db),
     separations: createSeparationsService(db, storage),
     imports: createImportsService(db),
+    jobDescriptions: createJobDescriptionsService(db),
     users: createUsersService(db),
     departments: createDepartmentsService(db),
     webhooks: createWebhooksService(db),
