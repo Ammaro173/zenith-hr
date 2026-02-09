@@ -33,11 +33,28 @@ export const CONTRACT_DURATIONS = [
   { value: "CONSULTANT", label: "Consultant" },
 ] as const;
 
+export const EMPLOYMENT_TYPES = [
+  { value: "FULL_TIME", label: "Full-time" },
+  { value: "PART_TIME", label: "Part-time" },
+  { value: "FREELANCER", label: "Freelancer" },
+  { value: "FIXED_TERM_CONTRACT", label: "Fixed-term Contract" },
+  { value: "TEMPORARY", label: "Temporary" },
+] as const;
+
 // Base schema without refinements (needed for .partial() in Zod v4)
 const baseRequestSchema = z.object({
   requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
   replacementForUserId: z.string().min(1).optional(),
   contractDuration: z.enum(["FULL_TIME", "TEMPORARY", "CONSULTANT"]),
+  employmentType: z.enum([
+    "FULL_TIME",
+    "PART_TIME",
+    "FREELANCER",
+    "FIXED_TERM_CONTRACT",
+    "TEMPORARY",
+  ]),
+  headcount: z.number().int().positive(),
+  jobDescriptionId: z.string().uuid().optional(),
   justificationText: z.string().min(1),
   salaryRangeMin: z.number().positive(),
   salaryRangeMax: z.number().positive(),
@@ -65,6 +82,8 @@ export const createRequestSchema = baseRequestSchema
 export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
   requestType: "NEW_POSITION",
   contractDuration: "FULL_TIME",
+  employmentType: "FULL_TIME",
+  headcount: 1,
   justificationText: "",
   salaryRangeMin: 1000,
   salaryRangeMax: 2000,
