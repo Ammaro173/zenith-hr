@@ -10,6 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { user, userRoleEnum } from "./auth";
+import { jobDescription } from "./job-descriptions";
 
 export const manpowerRequestSeq = pgSequence("manpower_requests_seq", {
   startWith: 1,
@@ -41,6 +42,14 @@ export const contractDurationEnum = pgEnum("contract_duration", [
   "CONSULTANT",
 ]);
 
+export const employmentTypeEnum = pgEnum("employment_type", [
+  "FULL_TIME",
+  "PART_TIME",
+  "FREELANCER",
+  "FIXED_TERM_CONTRACT",
+  "TEMPORARY",
+]);
+
 export const manpowerRequest = pgTable("manpower_request", {
   id: uuid("id").primaryKey().defaultRandom(),
   requesterId: text("requester_id")
@@ -56,6 +65,14 @@ export const manpowerRequest = pgTable("manpower_request", {
     },
   ),
   contractDuration: contractDurationEnum("contract_duration").notNull(),
+  employmentType: employmentTypeEnum("employment_type")
+    .notNull()
+    .default("FULL_TIME"),
+  headcount: integer("headcount").notNull().default(1),
+  jobDescriptionId: uuid("job_description_id").references(
+    () => jobDescription.id,
+    { onDelete: "set null" },
+  ),
   justificationText: text("justification_text").notNull(),
   salaryRangeMin: decimal("salary_range_min", {
     precision: 12,
