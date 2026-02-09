@@ -2,10 +2,12 @@ import { REQUEST_TYPES } from "@zenith-hr/api/modules/requests/requests.schema";
 import { Info } from "lucide-react";
 import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
+import { JobDescriptionCombobox } from "@/components/shared/job-description-combobox";
 import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useManpowerRequestFormContext } from "../manpower-request-form-context";
 
@@ -41,6 +43,44 @@ export function PositionDetailsSection() {
               <DepartmentSelect
                 onChange={(val) => field.handleChange(val ?? "")}
                 value={field.state.value}
+              />
+            </FormField>
+          )}
+        </form.Field>
+      </div>
+
+      <div className="space-y-4">
+        <form.Field name="jobDescriptionId">
+          {(field) => (
+            <FormField field={field} label="Job Description Template">
+              <JobDescriptionCombobox
+                onChange={(id, details) => {
+                  field.handleChange(id);
+                  // Auto-populate description when a template is selected
+                  if (details?.description) {
+                    form.setFieldValue(
+                      "positionDetails.description",
+                      details.description,
+                    );
+                  }
+                }}
+                placeholder="Select a job template to auto-fill description (optional)"
+                value={field.state.value}
+              />
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="positionDetails.description">
+          {(field) => (
+            <FormField field={field} label="Job Description">
+              <Textarea
+                id={field.name}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Describe the role responsibilities and requirements..."
+                rows={4}
+                value={field.state.value ?? ""}
               />
             </FormField>
           )}
