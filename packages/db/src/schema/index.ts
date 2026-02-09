@@ -6,6 +6,7 @@ export * from "./candidates";
 export * from "./contracts";
 export * from "./departments";
 export * from "./import-history";
+export * from "./job-descriptions";
 export * from "./manpower-requests";
 export * from "./notifications";
 export * from "./performance";
