@@ -1,5 +1,6 @@
 import {
   Building2,
+  ClipboardList,
   FileText,
   Goal,
   LayoutDashboard,
@@ -61,6 +62,13 @@ export const protectedNavigationItems: {
     icon: Building2,
     description: "Manage organization departments",
     allowedRoles: ["ADMIN", "HR"],
+  },
+  {
+    title: "Job Descriptions",
+    href: "/job-descriptions",
+    icon: ClipboardList,
+    description: "Manage job description templates",
+    allowedRoles: ["ADMIN", "HR", "MANAGER"],
   },
   {
     title: "Organization Chart",
