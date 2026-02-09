@@ -19,8 +19,10 @@ async function getSidebarOpenState(): Promise<boolean> {
 
 export default async function ProtectedLayout({
   children,
+  modal,
 }: {
   children: ReactNode;
+  modal: ReactNode;
 }) {
   const session = await getServerSession();
   if (session?.error || !session?.data?.user) {
@@ -40,6 +42,7 @@ export default async function ProtectedLayout({
           {children}
         </main>
       </SidebarInset>
+      {modal}
     </SidebarProvider>
   );
 }
