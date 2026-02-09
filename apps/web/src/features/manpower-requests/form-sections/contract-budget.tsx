@@ -1,4 +1,7 @@
-import { CONTRACT_DURATIONS } from "@zenith-hr/api/modules/requests/requests.schema";
+import {
+  CONTRACT_DURATIONS,
+  EMPLOYMENT_TYPES,
+} from "@zenith-hr/api/modules/requests/requests.schema";
 import { FormField } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +46,62 @@ export function ContractBudgetSection() {
                   ))}
                 </SelectContent>
               </Select>
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="employmentType">
+          {(field) => (
+            <FormField field={field} label="Employment Type" required>
+              <Select
+                onValueChange={(val) =>
+                  field.handleChange(
+                    val as
+                      | "FULL_TIME"
+                      | "PART_TIME"
+                      | "FREELANCER"
+                      | "FIXED_TERM_CONTRACT"
+                      | "TEMPORARY",
+                  )
+                }
+                value={field.state.value}
+              >
+                <SelectTrigger id={field.name}>
+                  <SelectValue placeholder="Select employment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMPLOYMENT_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
+        </form.Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <form.Field name="headcount">
+          {(field) => (
+            <FormField
+              field={field}
+              label="Number of Manpower Requested"
+              required
+            >
+              <Input
+                id={field.name}
+                min={1}
+                onBlur={field.handleBlur}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  field.handleChange(val === "" ? 1 : Number(val));
+                }}
+                placeholder="e.g. 1"
+                type="number"
+                value={field.state.value || 1}
+              />
             </FormField>
           )}
         </form.Field>
@@ -99,10 +158,10 @@ export function ContractBudgetSection() {
             {([minMeta, maxMeta]) => {
               const formatErrors = (errors: unknown[]) =>
                 errors
-                  .map((e) =>
-                    typeof e === "string"
-                      ? e
-                      : ((e as { message?: string })?.message ?? ""),
+                  .map((error) =>
+                    typeof error === "string"
+                      ? error
+                      : ((error as { message?: string })?.message ?? ""),
                   )
                   .filter(Boolean)
                   .join(", ");
