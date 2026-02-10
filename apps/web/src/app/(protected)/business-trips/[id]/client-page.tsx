@@ -258,9 +258,24 @@ export function BusinessTripDetailClientPage({
               <Badge variant="outline">{trip.status}</Badge>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Purpose</span>
-              <span>{trip.purpose}</span>
+              <span className="text-muted-foreground">Destination</span>
+              <span className="flex items-center gap-1">
+                <MapPin className="size-3" />
+                {trip.city}, {trip.country}
+              </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Purpose</span>
+              <span>{formatPurposeType(trip.purposeType)}</span>
+            </div>
+            {trip.purposeDetails && (
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-sm">
+                  Purpose Details
+                </span>
+                <p className="text-sm">{trip.purposeDetails}</p>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estimated Cost</span>
               <span>
