@@ -406,13 +406,13 @@ export const createBusinessTripsService = (
       // But for simplicity/pattern matching, keeping here.
       await notifyUser({
         userId: trip.requesterId,
-        message: `Business trip ${trip.destination} updated to ${newStatus}`,
+        message: `Business trip to ${trip.city}, ${trip.country} updated to ${newStatus}`,
       });
 
       if (nextApproverId && nextApproverId !== trip.requesterId) {
         await notifyUser({
           userId: nextApproverId,
-          message: `New Business Trip Approval Required: ${trip.destination}`,
+          message: `New Business Trip Approval Required: ${trip.city}, ${trip.country}`,
         });
       }
 
