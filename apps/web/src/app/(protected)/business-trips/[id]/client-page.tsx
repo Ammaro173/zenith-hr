@@ -285,6 +285,75 @@ export function BusinessTripDetailClientPage({
           </CardContent>
         </Card>
 
+        {/* Flight Details (conditional) */}
+        {trip.needsFlightBooking && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plane className="size-4" />
+                Flight Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground text-sm">
+                  Departure City
+                </span>
+                <span className="text-sm">
+                  {trip.departureCity || "Not specified"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground text-sm">
+                  Arrival City
+                </span>
+                <span className="text-sm">
+                  {trip.arrivalCity || "Not specified"}
+                </span>
+              </div>
+              {trip.preferredDepartureDate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground text-sm">
+                    Preferred Departure
+                  </span>
+                  <span className="text-sm">
+                    {format(
+                      new Date(trip.preferredDepartureDate),
+                      "MMM d, yyyy",
+                    )}
+                  </span>
+                </div>
+              )}
+              {trip.preferredArrivalDate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground text-sm">
+                    Preferred Return
+                  </span>
+                  <span className="text-sm">
+                    {format(new Date(trip.preferredArrivalDate), "MMM d, yyyy")}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground text-sm">
+                  Travel Class
+                </span>
+                <span className="text-sm">
+                  {formatTravelClass(trip.travelClass)}
+                </span>
+              </div>
+              {trip.flightNotes && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-sm">
+                    Special Requests
+                  </span>
+                  <p className="text-sm">{trip.flightNotes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
