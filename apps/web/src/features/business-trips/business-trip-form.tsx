@@ -1,9 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import {
+  TRAVEL_CLASS_OPTIONS,
+  TRIP_PURPOSE_OPTIONS,
+} from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Plane, User } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
 import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,10 +28,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { orpc } from "@/utils/orpc";
 import { BusinessTripFormProvider } from "./business-trip-form-context";
 import { useBusinessTripForm } from "./use-business-trip-form";
+
+function formatRole(role: string): string {
+  return role
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 interface BusinessTripFormProps {
   mode?: "page" | "sheet";
