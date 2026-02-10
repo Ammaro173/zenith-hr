@@ -61,6 +61,15 @@ export const businessTrip = pgTable("business_trip", {
   needsFlightBooking: boolean("needs_flight_booking").notNull().default(false),
   needsHotelBooking: boolean("needs_hotel_booking").notNull().default(false),
   perDiemAllowance: decimal("per_diem_allowance", { precision: 10, scale: 2 }),
+
+  // Flight details (only relevant when needsFlightBooking is true)
+  departureCity: text("departure_city"),
+  arrivalCity: text("arrival_city"),
+  preferredDepartureDate: timestamp("preferred_departure_date"),
+  preferredArrivalDate: timestamp("preferred_arrival_date"),
+  travelClass: text("travel_class"),
+  flightNotes: text("flight_notes"),
+
   status: tripStatusEnum("status").default("DRAFT").notNull(),
 
   // Approval Workflow Fields
