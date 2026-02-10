@@ -398,6 +398,188 @@ export function BusinessTripForm({
               </CardContent>
             </Card>
 
+            {/* Flight Details (Conditional) */}
+            <form.Subscribe
+              selector={(state) => state.values.needsFlightBooking}
+            >
+              {(needsFlightBooking) =>
+                needsFlightBooking ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Plane className="size-5" />
+                        Flight Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <form.Field name="departureCity">
+                          {(field) => (
+                            <FormField field={field} label="Departure City">
+                              <Input
+                                id={field.name}
+                                onBlur={field.handleBlur}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                placeholder="e.g. Doha"
+                                value={field.state.value ?? ""}
+                              />
+                            </FormField>
+                          )}
+                        </form.Field>
+                        <form.Field name="arrivalCity">
+                          {(field) => (
+                            <FormField field={field} label="Arrival City">
+                              <Input
+                                id={field.name}
+                                onBlur={field.handleBlur}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                placeholder="e.g. London"
+                                value={field.state.value ?? ""}
+                              />
+                            </FormField>
+                          )}
+                        </form.Field>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <form.Field name="preferredDepartureDate">
+                          {(field) => (
+                            <FormField
+                              field={field}
+                              label="Preferred Departure Date"
+                            >
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !field.state.value &&
+                                        "text-muted-foreground",
+                                    )}
+                                    type="button"
+                                    variant="outline"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.state.value ? (
+                                      format(field.state.value, "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    initialFocus
+                                    mode="single"
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        field.handleChange(date);
+                                      }
+                                    }}
+                                    selected={field.state.value ?? undefined}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </FormField>
+                          )}
+                        </form.Field>
+
+                        <form.Field name="preferredArrivalDate">
+                          {(field) => (
+                            <FormField
+                              field={field}
+                              label="Preferred Return Date"
+                            >
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !field.state.value &&
+                                        "text-muted-foreground",
+                                    )}
+                                    type="button"
+                                    variant="outline"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.state.value ? (
+                                      format(field.state.value, "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    initialFocus
+                                    mode="single"
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        field.handleChange(date);
+                                      }
+                                    }}
+                                    selected={field.state.value ?? undefined}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </FormField>
+                          )}
+                        </form.Field>
+                      </div>
+
+                      <form.Field name="travelClass">
+                        {(field) => (
+                          <FormField field={field} label="Travel Class">
+                            <Select
+                              onValueChange={field.handleChange}
+                              value={field.state.value ?? ""}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select class..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TRAVEL_CLASS_OPTIONS.map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormField>
+                        )}
+                      </form.Field>
+
+                      <form.Field name="flightNotes">
+                        {(field) => (
+                          <FormField
+                            field={field}
+                            label="Special Requests / Notes"
+                          >
+                            <Textarea
+                              id={field.name}
+                              onBlur={field.handleBlur}
+                              onChange={(e) =>
+                                field.handleChange(e.target.value)
+                              }
+                              placeholder="Any special flight requirements or preferences..."
+                              value={field.state.value ?? ""}
+                            />
+                          </FormField>
+                        )}
+                      </form.Field>
+                    </CardContent>
+                  </Card>
+                ) : null
+              }
+            </form.Subscribe>
+
             {/* Delegation Section */}
             <Card>
               <CardHeader>
