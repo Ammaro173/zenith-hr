@@ -7,6 +7,7 @@ import {
   tripExpense,
   type tripStatusEnum,
 } from "@zenith-hr/db/schema/business-trips";
+import { department } from "@zenith-hr/db/schema/departments";
 import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
