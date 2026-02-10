@@ -113,6 +113,12 @@ export const createTripDefaults: z.input<typeof baseTripSchema> = {
   perDiemAllowance: undefined,
   estimatedCost: undefined,
   currency: "USD",
+  departureCity: "",
+  arrivalCity: "",
+  preferredDepartureDate: undefined,
+  preferredArrivalDate: undefined,
+  travelClass: "",
+  flightNotes: "",
 };
 
 export const tripActionSchema = z.object({
