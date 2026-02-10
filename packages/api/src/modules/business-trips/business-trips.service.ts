@@ -232,7 +232,7 @@ export const createBusinessTripsService = (
     }
 
     if (search) {
-      conditions.push(ilike(businessTrip.destination, `%${search}%`));
+      conditions.push(ilike(businessTrip.country, `%${search}%`));
     }
 
     const offset = (page - 1) * pageSize;
