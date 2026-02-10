@@ -91,8 +91,9 @@ export function PendingTripApprovalsGrid() {
         return true;
       }
       return (
-        t.destination.toLowerCase().includes(q) ||
-        t.purpose.toLowerCase().includes(q)
+        t.country.toLowerCase().includes(q) ||
+        t.city.toLowerCase().includes(q) ||
+        t.purposeType.toLowerCase().includes(q)
       );
     });
   }, [trips, globalFilter, statusFilter]);
@@ -152,26 +153,35 @@ export function PendingTripApprovalsGrid() {
 
   const columns = useMemo(() => {
     return [
-      columnHelper.accessor("destination", {
+      columnHelper.display({
+        id: "destination",
         header: ({ column }) => (
           <DataGridColumnHeader column={column} title="Destination" />
         ),
-        cell: ({ getValue }) => (
+        cell: ({ row }) => (
           <span className="font-medium text-black dark:text-white">
-            {getValue()}
+            {row.original.city}, {row.original.country}
           </span>
         ),
         size: 220,
         enableSorting: false,
         enableHiding: false,
       }),
-      columnHelper.accessor("purpose", {
+      columnHelper.accessor("purposeType", {
         header: ({ column }) => (
           <DataGridColumnHeader column={column} title="Purpose" />
         ),
-        cell: ({ getValue }) => (
-          <span className="text-muted-foreground text-sm">{getValue()}</span>
-        ),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          const label = value
+            .split("_")
+            .map(
+              (w: string) =>
+                w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+            )
+            .join(" ");
+          return <span className="text-muted-foreground text-sm">{label}</span>;
+        },
         size: 280,
         enableSorting: false,
       }),
