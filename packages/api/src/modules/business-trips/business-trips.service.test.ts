@@ -57,8 +57,10 @@ describe("BusinessTripsService", () => {
 
   it("should create a business trip", async () => {
     const input = {
-      destination: "New York",
-      purpose: "Conference",
+      country: "United States",
+      city: "New York",
+      purposeType: "CONFERENCE_EXHIBITION" as const,
+      purposeDetails: "Annual tech conference",
       startDate: new Date("2024-01-01T00:00:00Z"),
       endDate: new Date("2024-01-05T00:00:00Z"),
       estimatedCost: 1000,
@@ -66,6 +68,8 @@ describe("BusinessTripsService", () => {
       visaRequired: false,
       needsFlightBooking: true,
       needsHotelBooking: true,
+      departureCity: "Doha",
+      arrivalCity: "New York",
     };
     const requesterId = "user-1";
 
