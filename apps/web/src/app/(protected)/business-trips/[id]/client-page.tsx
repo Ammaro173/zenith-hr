@@ -211,6 +211,43 @@ export function BusinessTripDetailClientPage({
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Requester Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="size-4" />
+              Requester
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground text-sm">Name</span>
+              <span className="font-medium text-sm">{trip.requester.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground text-sm">Email</span>
+              <span className="text-sm">{trip.requester.email}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground text-sm">SAP Number</span>
+              <span className="font-mono text-sm">{trip.requester.sapNo}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground text-sm">Department</span>
+              <span className="text-sm">
+                {trip.departmentName ?? "Not assigned"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground text-sm">Position</span>
+              <Badge variant="outline">
+                {formatRole(trip.requester.role ?? "REQUESTER")}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Overview */}
         <Card>
           <CardHeader>
             <CardTitle>Overview</CardTitle>
