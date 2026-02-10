@@ -174,10 +174,14 @@ export const createBusinessTripsService = (
           name: user.name,
           email: user.email,
           image: user.image,
+          sapNo: user.sapNo,
+          role: user.role,
         },
+        departmentName: department.name,
       })
       .from(businessTrip)
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
+      .leftJoin(department, eq(user.departmentId, department.id))
       .where(eq(businessTrip.id, id))
       .limit(1);
 
