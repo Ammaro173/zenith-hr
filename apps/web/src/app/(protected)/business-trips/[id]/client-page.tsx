@@ -2,9 +2,13 @@
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addExpenseSchema } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+import {
+  addExpenseSchema,
+  TRAVEL_CLASS_OPTIONS,
+  TRIP_PURPOSE_OPTIONS,
+} from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, MapPin, Plane, Plus, User } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -42,6 +46,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { orpc } from "@/utils/orpc";
 
 type AddExpenseInput = z.input<typeof addExpenseSchema>;
+
+function formatPurposeType(type: string): string {
+  const option = TRIP_PURPOSE_OPTIONS.find((o) => o.value === type);
+  return option?.label ?? type;
+}
+
+function formatRole(role: string): string {
+  return role
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function formatTravelClass(cls: string | null): string {
+  if (!cls) {
+    return "Not specified";
+  }
+  const option = TRAVEL_CLASS_OPTIONS.find((o) => o.value === cls);
+  return option?.label ?? cls;
+}
 
 interface BusinessTripDetailClientPageProps {
   role: string | null;
