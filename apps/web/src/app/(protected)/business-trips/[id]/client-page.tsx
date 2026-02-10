@@ -173,7 +173,8 @@ export function BusinessTripDetailClientPage({
         <div>
           <h1 className="font-bold text-2xl tracking-tight">Trip Details</h1>
           <p className="text-muted-foreground">
-            {trip.destination} • {format(new Date(trip.startDate), "MMM d")} -{" "}
+            {trip.city}, {trip.country} •{" "}
+            {format(new Date(trip.startDate), "MMM d")} -{" "}
             {format(new Date(trip.endDate), "MMM d, yyyy")}
           </p>
         </div>
