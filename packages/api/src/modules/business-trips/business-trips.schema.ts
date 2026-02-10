@@ -1,9 +1,45 @@
 import { z } from "zod";
 
+export const TRIP_PURPOSE_OPTIONS = [
+  { value: "CLIENT_MEETING", label: "Client Meeting" },
+  { value: "BUSINESS_DEVELOPMENT", label: "Business Development" },
+  { value: "CONFERENCE_EXHIBITION", label: "Conference/Exhibition" },
+  { value: "TRAINING_WORKSHOP", label: "Training/Workshop" },
+  { value: "SITE_VISIT_INSPECTION", label: "Site Visit/Inspection" },
+  { value: "PROJECT_MEETING", label: "Project Meeting" },
+  { value: "PARTNERSHIP_NEGOTIATION", label: "Partnership Negotiation" },
+  { value: "INTERNAL_MEETING", label: "Internal Meeting" },
+  { value: "OTHER", label: "Other (specify)" },
+] as const;
+
+export const tripPurposeValues = [
+  "CLIENT_MEETING",
+  "BUSINESS_DEVELOPMENT",
+  "CONFERENCE_EXHIBITION",
+  "TRAINING_WORKSHOP",
+  "SITE_VISIT_INSPECTION",
+  "PROJECT_MEETING",
+  "PARTNERSHIP_NEGOTIATION",
+  "INTERNAL_MEETING",
+  "OTHER",
+] as const;
+
+export const TRAVEL_CLASS_OPTIONS = [
+  { value: "ECONOMY", label: "Economy" },
+  { value: "BUSINESS", label: "Business" },
+  { value: "FIRST", label: "First" },
+] as const;
+
 // Base schema without refinements (needed for .partial() in Zod v4)
 const baseTripSchema = z.object({
-  destination: z.string().min(1),
-  purpose: z.string().min(1),
+  // Destination (split into country + city)
+  country: z.string().min(1, "Country is required"),
+  city: z.string().min(1, "City is required"),
+
+  // Purpose
+  purposeType: z.enum(tripPurposeValues),
+  purposeDetails: z.string().optional(),
+
   startDate: z.date(),
   endDate: z.date(),
   delegatedUserId: z.string().min(1).optional(),
@@ -13,23 +49,61 @@ const baseTripSchema = z.object({
   perDiemAllowance: z.number().positive().optional(),
   estimatedCost: z.number().positive().optional(),
   currency: z.string(),
+
+  // Flight details (optional, conditionally required when needsFlightBooking)
+  departureCity: z.string().optional(),
+  arrivalCity: z.string().optional(),
+  preferredDepartureDate: z.date().optional(),
+  preferredArrivalDate: z.date().optional(),
+  travelClass: z.string().optional(),
+  flightNotes: z.string().optional(),
 });
 
-// Create schema with date validation refinement
-export const createTripSchema = baseTripSchema.refine(
-  (data) => data.startDate <= data.endDate,
-  {
+// Create schema with date validation and conditional flight validation
+export const createTripSchema = baseTripSchema
+  .refine((data) => data.startDate <= data.endDate, {
     message: "End date must be after start date",
     path: ["endDate"],
-  },
-);
+  })
+  .refine(
+    (data) => {
+      if (data.needsFlightBooking) {
+        return (
+          data.departureCity &&
+          data.departureCity.length > 0 &&
+          data.arrivalCity &&
+          data.arrivalCity.length > 0
+        );
+      }
+      return true;
+    },
+    {
+      message:
+        "Departure city and arrival city are required when flight booking is selected",
+      path: ["departureCity"],
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.purposeType === "OTHER") {
+        return data.purposeDetails && data.purposeDetails.length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Please provide details when purpose is 'Other'",
+      path: ["purposeDetails"],
+    },
+  );
 
 // Update schema uses partial of the base (without refinement)
 export const updateTripSchema = baseTripSchema.partial();
 
-export const createTripDefaults: z.infer<typeof createTripSchema> = {
-  destination: "",
-  purpose: "",
+export const createTripDefaults: z.input<typeof baseTripSchema> = {
+  country: "",
+  city: "",
+  purposeType: "CLIENT_MEETING",
+  purposeDetails: "",
   startDate: new Date(),
   endDate: new Date(),
   delegatedUserId: undefined,
