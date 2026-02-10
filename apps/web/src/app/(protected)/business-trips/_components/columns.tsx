@@ -20,17 +20,18 @@ import { type BusinessTrip, STATUS_VARIANTS } from "@/types/business-trips";
 const columnHelper = createColumnHelper<BusinessTrip>();
 
 export const columns = [
-  columnHelper.accessor("destination", {
+  columnHelper.display({
+    id: "destination",
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Destination" />
     ),
-    cell: ({ getValue }) => (
+    cell: ({ row }) => (
       <span className="font-medium text-black dark:text-white">
-        {getValue()}
+        {row.original.city}, {row.original.country}
       </span>
     ),
     size: 200,
-    enableSorting: true,
+    enableSorting: false,
     enableHiding: false,
   }),
   columnHelper.accessor("startDate", {
