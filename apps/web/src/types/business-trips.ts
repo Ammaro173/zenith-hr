@@ -4,8 +4,10 @@ export interface BusinessTrip {
   id: string;
   requesterId: string;
   delegatedUserId: string | null;
-  destination: string;
-  purpose: string;
+  country: string;
+  city: string;
+  purposeType: string;
+  purposeDetails: string | null;
   startDate: string | Date;
   endDate: string | Date;
   estimatedCost: string | null;
