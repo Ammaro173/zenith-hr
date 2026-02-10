@@ -24,6 +24,18 @@ export const tripStatusEnum = pgEnum("trip_status", [
   "CANCELLED",
 ]);
 
+export const tripPurposeEnum = pgEnum("trip_purpose", [
+  "CLIENT_MEETING",
+  "BUSINESS_DEVELOPMENT",
+  "CONFERENCE_EXHIBITION",
+  "TRAINING_WORKSHOP",
+  "SITE_VISIT_INSPECTION",
+  "PROJECT_MEETING",
+  "PARTNERSHIP_NEGOTIATION",
+  "INTERNAL_MEETING",
+  "OTHER",
+]);
+
 export const businessTrip = pgTable("business_trip", {
   id: uuid("id").primaryKey().defaultRandom(),
   requesterId: text("requester_id")
@@ -32,8 +44,15 @@ export const businessTrip = pgTable("business_trip", {
   delegatedUserId: text("delegated_user_id").references(() => user.id, {
     onDelete: "set null",
   }),
-  destination: text("destination").notNull(),
-  purpose: text("purpose").notNull(),
+
+  // Destination (split into country + city)
+  country: text("country").notNull(),
+  city: text("city").notNull(),
+
+  // Purpose (enum + optional details)
+  purposeType: tripPurposeEnum("purpose_type").notNull(),
+  purposeDetails: text("purpose_details"),
+
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
