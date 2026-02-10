@@ -157,7 +157,7 @@ export const getMyTripsSchema = z.object({
     )
     .optional(),
   sortBy: z
-    .enum(["createdAt", "destination", "status", "startDate", "estimatedCost"])
+    .enum(["createdAt", "country", "status", "startDate", "estimatedCost"])
     .default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
