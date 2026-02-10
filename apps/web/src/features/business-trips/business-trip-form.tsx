@@ -59,6 +59,20 @@ export function BusinessTripForm({
     onCancel,
   });
 
+  const { data: session } = authClient.useSession();
+  const sessionUser = session?.user;
+
+  // Fetch department name for the current user
+  const { data: userSearchResults } = useQuery({
+    ...orpc.users.search.queryOptions({
+      input: { query: sessionUser?.email ?? "", limit: 1 },
+    }),
+    enabled: !!sessionUser?.email,
+  });
+
+  const departmentName =
+    userSearchResults?.[0]?.departmentName ?? "Not assigned";
+
   return (
     <div
       className={cn(
@@ -76,40 +90,142 @@ export function BusinessTripForm({
       >
         <BusinessTripFormProvider form={form}>
           <div className="space-y-8">
+            {/* Requester Information (Read-Only) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="size-5" />
+                  Requester Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sessionUser ? (
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        Name
+                      </p>
+                      <p className="font-medium text-sm">{sessionUser.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        Email
+                      </p>
+                      <p className="text-sm">{sessionUser.email}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        SAP Number
+                      </p>
+                      <p className="font-mono text-sm">
+                        {(sessionUser as { sapNo?: string }).sapNo ?? "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        Department
+                      </p>
+                      <p className="text-sm">{departmentName}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        Position
+                      </p>
+                      <Badge variant="outline">
+                        {formatRole(
+                          (sessionUser as { role?: string }).role ??
+                            "REQUESTER",
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Loading user information...
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Trip Details Section */}
             <Card>
               <CardHeader>
                 <CardTitle>Trip Details</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-6">
-                <form.Field name="destination">
+                {/* Destination: Country + City */}
+                <div className="grid grid-cols-2 gap-4">
+                  <form.Field name="country">
+                    {(field) => (
+                      <FormField field={field} label="Country">
+                        <Input
+                          id={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="e.g. Qatar"
+                          value={field.state.value}
+                        />
+                      </FormField>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="city">
+                    {(field) => (
+                      <FormField field={field} label="City">
+                        <Input
+                          id={field.name}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="e.g. Doha"
+                          value={field.state.value}
+                        />
+                      </FormField>
+                    )}
+                  </form.Field>
+                </div>
+
+                {/* Purpose: Dropdown + Details */}
+                <form.Field name="purposeType">
                   {(field) => (
-                    <FormField field={field} label="Destination">
-                      <Input
-                        id={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="City, Country"
+                    <FormField field={field} label="Purpose of Trip">
+                      <Select
+                        onValueChange={(value) =>
+                          field.handleChange(value as typeof field.state.value)
+                        }
                         value={field.state.value}
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select purpose..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRIP_PURPOSE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormField>
                   )}
                 </form.Field>
 
-                <form.Field name="purpose">
+                <form.Field name="purposeDetails">
                   {(field) => (
-                    <FormField field={field} label="Purpose">
+                    <FormField field={field} label="Detailed Purpose">
                       <Textarea
                         id={field.name}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        placeholder="Reason for the trip..."
-                        value={field.state.value}
+                        placeholder="Provide additional details about the trip purpose..."
+                        value={field.state.value ?? ""}
                       />
                     </FormField>
                   )}
                 </form.Field>
 
+                <Separator />
+
+                {/* Dates */}
                 <div className="grid grid-cols-2 gap-4">
                   <form.Field name="startDate">
                     {(field) => (
