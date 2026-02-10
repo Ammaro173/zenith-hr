@@ -13,13 +13,13 @@ import { columns } from "../_components/columns";
 export type SortByField =
   | "status"
   | "createdAt"
-  | "destination"
+  | "country"
   | "startDate"
   | "estimatedCost";
 const validSortFields: SortByField[] = [
   "status",
   "createdAt",
-  "destination",
+  "country",
   "startDate",
   "estimatedCost",
 ];
