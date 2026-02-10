@@ -16,6 +16,12 @@ export interface BusinessTrip {
   needsFlightBooking: boolean;
   needsHotelBooking: boolean;
   perDiemAllowance: string | null;
+  departureCity: string | null;
+  arrivalCity: string | null;
+  preferredDepartureDate: string | Date | null;
+  preferredArrivalDate: string | Date | null;
+  travelClass: string | null;
+  flightNotes: string | null;
   status: string;
   currentApproverId: string | null;
   currentApproverRole: string | null;
