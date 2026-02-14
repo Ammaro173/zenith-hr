@@ -77,9 +77,10 @@ export const createUserSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
-  reportsToManagerId: z
+  reportsToSlotCode: z
     .string()
-    .uuid()
+    .trim()
+    .min(1)
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
@@ -101,9 +102,10 @@ export const updateUserSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
-  reportsToManagerId: z
+  reportsToSlotCode: z
     .string()
-    .uuid()
+    .trim()
+    .min(1)
     .nullable()
     .optional()
     .or(z.literal("").transform(() => null)),
@@ -180,7 +182,7 @@ export interface UserResponse {
   status: string;
   departmentId: string | null;
   departmentName: string | null;
-  reportsToManagerId: string | null;
+  managerSlotCode: string | null;
   managerName: string | null;
   createdAt: Date;
   updatedAt: Date;
