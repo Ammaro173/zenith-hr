@@ -267,21 +267,56 @@ export const createUsersService = (db: DbOrTx) => ({
     // Determine which users to include based on role and scope
     const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
 
-    // Fetch all relevant users with their department names
-    const allUsers = await db
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        sapNo: user.sapNo,
-        role: user.role,
-        status: user.status,
-        departmentName: department.name,
-        reportsToManagerId: user.reportsToManagerId,
-      })
-      .from(user)
-      .leftJoin(department, eq(user.departmentId, department.id))
-      .where(eq(user.status, "ACTIVE"));
+    const hierarchyResult = await db.execute(sql`
+      WITH active_assignments AS (
+        SELECT sa.user_id, sa.slot_id
+        FROM slot_assignment sa
+        WHERE sa.ends_at IS NULL
+      ),
+      parent_map AS (
+        SELECT
+          aa.user_id AS child_user_id,
+          parent_sa.user_id AS manager_user_id
+        FROM active_assignments aa
+        LEFT JOIN slot_reporting_line srl ON srl.child_slot_id = aa.slot_id
+        LEFT JOIN active_assignments parent_sa ON parent_sa.slot_id = srl.parent_slot_id
+      )
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.sap_no,
+        u.role,
+        u.status,
+        d.name AS department_name,
+        pm.manager_user_id
+      FROM "user" u
+      LEFT JOIN department d ON d.id = u.department_id
+      LEFT JOIN parent_map pm ON pm.child_user_id = u.id
+      WHERE u.status = 'ACTIVE'
+    `);
+
+    const allUsers = (
+      hierarchyResult.rows as Array<{
+        id: string;
+        name: string;
+        email: string;
+        sap_no: string;
+        role: string;
+        status: string;
+        department_name: string | null;
+        manager_user_id: string | null;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      sapNo: row.sap_no,
+      role: row.role,
+      status: row.status,
+      departmentName: row.department_name,
+      managerUserId: row.manager_user_id,
+    }));
 
     // Build a map for quick lookup
     const userMap = new Map<string, (typeof allUsers)[0]>();
@@ -304,7 +339,7 @@ export const createUsersService = (db: DbOrTx) => ({
     // Find all children for each user
     const childrenMap = new Map<string | null, (typeof allUsers)[0][]>();
     for (const u of allUsers) {
-      const managerId = u.reportsToManagerId;
+      const managerId = u.managerUserId;
       const existing = childrenMap.get(managerId);
       if (existing) {
         existing.push(u);
@@ -329,6 +364,11 @@ export const createUsersService = (db: DbOrTx) => ({
       return node;
     };
 
+    // Fall back to legacy manager links when no slot hierarchy has been seeded yet
+    if (allUsers.length === 0) {
+      return [];
+    }
+
     // For organization scope (full access roles only)
     if (scope === "organization" && isFullAccessRole) {
       // Find all root users (no manager)
@@ -348,14 +388,14 @@ export const createUsersService = (db: DbOrTx) => ({
 
     // For REQUESTER or other roles: show their manager and peers
     const currentUserData = userMap.get(currentUser.id);
-    if (!currentUserData?.reportsToManagerId) {
+    if (!currentUserData?.managerUserId) {
       // No manager - show just themselves
       const selfNode = currentUserData ? buildNode(currentUserData) : null;
       return selfNode ? [selfNode] : [];
     }
 
     // Show manager's tree (which includes the current user as a child)
-    const managerTree = buildTree(currentUserData.reportsToManagerId);
+    const managerTree = buildTree(currentUserData.managerUserId);
     return managerTree ? [managerTree] : [];
   },
 
