@@ -3,6 +3,7 @@ import { hashPassword } from "@zenith-hr/auth";
 import type { DbOrTx } from "@zenith-hr/db";
 import { account, session, user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
+import { slotAssignment } from "@zenith-hr/db/schema/position-slots";
 import {
   and,
   asc,
@@ -195,21 +196,50 @@ export const createUsersService = (db: DbOrTx) => ({
    * Get all subordinate user IDs recursively (direct reports + their reports, etc.)
    */
   async getSubordinateIds(managerId: string): Promise<string[]> {
-    // Use recursive CTE to find all subordinates
-    const result = await db.execute(sql`
-      WITH RECURSIVE subordinates AS (
-        -- Base case: direct reports
-        SELECT id FROM "user" WHERE reports_to_manager_id = ${managerId}
-        UNION ALL
-        -- Recursive case: reports of reports
-        SELECT u.id 
-        FROM "user" u
-        INNER JOIN subordinates s ON u.reports_to_manager_id = s.id
+    const [managerSlot] = await db
+      .select({ slotId: slotAssignment.slotId })
+      .from(slotAssignment)
+      .where(
+        and(
+          eq(slotAssignment.userId, managerId),
+          sql`${slotAssignment.endsAt} IS NULL`,
+        ),
       )
-      SELECT id FROM subordinates
+      .limit(1);
+
+    if (!managerSlot?.slotId) {
+      const legacyResult = await db.execute(sql`
+        WITH RECURSIVE subordinates AS (
+          SELECT id FROM "user" WHERE reports_to_manager_id = ${managerId}
+          UNION ALL
+          SELECT u.id 
+          FROM "user" u
+          INNER JOIN subordinates s ON u.reports_to_manager_id = s.id
+        )
+        SELECT id FROM subordinates
+      `);
+
+      return (legacyResult.rows as Array<{ id: string }>).map((row) => row.id);
+    }
+
+    const result = await db.execute(sql`
+      WITH RECURSIVE subordinate_slots AS (
+        SELECT child_slot_id AS slot_id
+        FROM slot_reporting_line
+        WHERE parent_slot_id = ${managerSlot.slotId}
+
+        UNION ALL
+
+        SELECT srl.child_slot_id AS slot_id
+        FROM slot_reporting_line srl
+        INNER JOIN subordinate_slots ss ON srl.parent_slot_id = ss.slot_id
+      )
+      SELECT sa.user_id AS id
+      FROM subordinate_slots ss
+      INNER JOIN slot_assignment sa ON sa.slot_id = ss.slot_id
+      WHERE sa.ends_at IS NULL
     `);
 
-    // Extract IDs from result
     return (result.rows as Array<{ id: string }>).map((row) => row.id);
   },
 
