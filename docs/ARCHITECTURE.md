@@ -3,18 +3,23 @@
 ## Architectural Decisions
 
 ### 1. oRPC over tRPC
+
 We use [oRPC](https://orpc.dev) for:
-*   OpenAPI-first design (automatic specs)
-*   Better Zod inference
-*   Simpler handler syntax
-*   Framework agnosticism (works with Elysia)
+
+- OpenAPI-first design (automatic specs)
+- Better Zod inference
+- Simpler handler syntax
+- Framework agnosticism (works with Elysia)
 
 ### 2. No Repository Pattern
+
 We **intentionally do not** use the Repository pattern.
-*   **Why**: Drizzle ORM is already a type-safe abstraction. Services should encapsulate business logic + data access directly.
-*   **Benefit**: Reduces unnecessary indirection.
+
+- **Why**: Drizzle ORM is already a type-safe abstraction. Services should encapsulate business logic + data access directly.
+- **Benefit**: Reduces unnecessary indirection.
 
 ### 3. Factory Functions for Services
+
 We use factory functions for DI instead of classes.
 
 ```typescript
@@ -24,7 +29,7 @@ export const createRequestsService = (db: Database) => ({
 });
 ```
 
-*   **Benefits**: Simple dependency injection, easy testing, better type inference.
+- **Benefits**: Simple dependency injection, easy testing, better type inference.
 
 ## Infrastructure
 
