@@ -1,7 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
-  foreignKey,
   integer,
   pgEnum,
   pgTableCreator,
@@ -29,45 +28,26 @@ export const userStatusEnum = pgEnum("user_status", [
   "ON_LEAVE",
 ]);
 
-export const user = pgTable(
-  "user",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    email: text("email").notNull().unique(),
-    emailVerified: boolean("email_verified").notNull(),
-    image: text("image"),
-    role: userRoleEnum("role").notNull().default("REQUESTER"),
-    status: userStatusEnum("status").notNull().default("ACTIVE"),
-    sapNo: text("sap_no").notNull().unique(),
-    departmentId: uuid("department_id").references(() => department.id, {
-      onDelete: "set null",
-    }),
-    reportsToManagerId: text("reports_to_manager_id"),
-    passwordHash: text("password_hash"),
-    signatureUrl: text("signature_url"),
-    failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
-    createdAt: timestamp("created_at").notNull(),
-    updatedAt: timestamp("updated_at").notNull(),
-  },
-  (table) => ({
-    reportsToManagerFk: foreignKey({
-      columns: [table.reportsToManagerId],
-      foreignColumns: [table.id],
-      name: "user_reports_to_manager_id_fkey",
-    }).onDelete("set null"),
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull(),
+  image: text("image"),
+  role: userRoleEnum("role").notNull().default("REQUESTER"),
+  status: userStatusEnum("status").notNull().default("ACTIVE"),
+  sapNo: text("sap_no").notNull().unique(),
+  departmentId: uuid("department_id").references(() => department.id, {
+    onDelete: "set null",
   }),
-);
+  passwordHash: text("password_hash"),
+  signatureUrl: text("signature_url"),
+  failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+});
 
-export const userRelations = relations(user, ({ one, many }) => ({
-  manager: one(user, {
-    fields: [user.reportsToManagerId],
-    references: [user.id],
-    relationName: "manager",
-  }),
-  reports: many(user, {
-    relationName: "manager",
-  }),
+export const userRelations = relations(user, ({ one }) => ({
   department: one(department, {
     fields: [user.departmentId],
     references: [department.id],
