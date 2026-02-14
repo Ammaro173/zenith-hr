@@ -6,6 +6,8 @@ import {
   separationChecklistTemplate,
   separationDocument,
   separationRequest,
+  slotAssignment,
+  slotReportingLine,
   user,
   userClearanceLane,
 } from "@zenith-hr/db";
@@ -80,6 +82,56 @@ export const createSeparationsService = (
     return Array.from(merged);
   };
 
+  const getActivePrimarySlotId = async (
+    txOrDb: DbOrTx,
+    userId: string,
+  ): Promise<string | null> => {
+    const [assignment] = await txOrDb
+      .select({ slotId: slotAssignment.slotId })
+      .from(slotAssignment)
+      .where(
+        and(
+          eq(slotAssignment.userId, userId),
+          eq(slotAssignment.isPrimary, true),
+          sql`${slotAssignment.endsAt} IS NULL`,
+        ),
+      )
+      .limit(1);
+
+    return assignment?.slotId ?? null;
+  };
+
+  const getParentSlotId = async (
+    txOrDb: DbOrTx,
+    childSlotId: string,
+  ): Promise<string | null> => {
+    const [parent] = await txOrDb
+      .select({ parentSlotId: slotReportingLine.parentSlotId })
+      .from(slotReportingLine)
+      .where(eq(slotReportingLine.childSlotId, childSlotId))
+      .limit(1);
+
+    return parent?.parentSlotId ?? null;
+  };
+
+  const getActiveSlotOccupant = async (
+    txOrDb: DbOrTx,
+    slotId: string,
+  ): Promise<string | null> => {
+    const [occupant] = await txOrDb
+      .select({ userId: slotAssignment.userId })
+      .from(slotAssignment)
+      .where(
+        and(
+          eq(slotAssignment.slotId, slotId),
+          sql`${slotAssignment.endsAt} IS NULL`,
+        ),
+      )
+      .limit(1);
+
+    return occupant?.userId ?? null;
+  };
+
   const enqueueOutbox = async (
     txOrDb: DbOrTx,
     payload: {
@@ -128,8 +180,14 @@ export const createSeparationsService = (
     if (request.employeeId === actorId) {
       return { request, actorRole };
     }
-    if (request.managerId && request.managerId === actorId) {
-      return { request, actorRole };
+    if (request.managerSlotId) {
+      const slotOccupant = await getActiveSlotOccupant(
+        db,
+        request.managerSlotId,
+      );
+      if (slotOccupant === actorId) {
+        return { request, actorRole };
+      }
     }
     throw new AppError("FORBIDDEN", "Not authorized to access separation", 403);
   };
@@ -143,13 +201,13 @@ export const createSeparationsService = (
         const actor = await getActor(db, employeeId);
         const requesterRole = actor?.role ?? "REQUESTER";
 
-        const [employeeRow] = await tx
-          .select({ managerId: user.reportsToManagerId })
-          .from(user)
-          .where(eq(user.id, employeeId))
-          .limit(1);
-
-        const managerId = employeeRow?.managerId ?? null;
+        const employeeSlotId = await getActivePrimarySlotId(tx, employeeId);
+        const managerSlotId = employeeSlotId
+          ? await getParentSlotId(tx, employeeSlotId)
+          : null;
+        const managerId = managerSlotId
+          ? await getActiveSlotOccupant(tx, managerSlotId)
+          : null;
 
         let status: "PENDING_MANAGER" | "PENDING_HR";
         if (
@@ -158,7 +216,7 @@ export const createSeparationsService = (
           requesterRole === "ADMIN"
         ) {
           status = "PENDING_HR";
-        } else if (managerId) {
+        } else if (managerSlotId) {
           status = "PENDING_MANAGER";
         } else {
           status = "PENDING_HR";
@@ -169,6 +227,7 @@ export const createSeparationsService = (
           .values({
             employeeId,
             managerId,
+            managerSlotId,
             type: input.type,
             reason: input.reason,
             lastWorkingDay: input.lastWorkingDay.toISOString().slice(0, 10),
@@ -268,7 +327,10 @@ export const createSeparationsService = (
         }
 
         // Only direct manager (or HR/Admin override).
-        const isDirectManager = request.managerId === actorId;
+        const isDirectManagerBySlot = request.managerSlotId
+          ? (await getActiveSlotOccupant(tx, request.managerSlotId)) === actorId
+          : false;
+        const isDirectManager = isDirectManagerBySlot;
         if (!isDirectManager && actorRole !== "HR" && actorRole !== "ADMIN") {
           throw new AppError("FORBIDDEN", "Not authorized as manager", 403);
         }

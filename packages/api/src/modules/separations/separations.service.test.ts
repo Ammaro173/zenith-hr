@@ -50,11 +50,21 @@ describe("SeparationsService", () => {
         })),
       })),
       transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
-        // tx.select for manager lookup
+        let txSelectCall = 0;
+        // tx.select for slot-based manager lookup
         (tx as { select?: unknown }).select = mock(() => ({
           from: mock(() => ({
             where: mock(() => ({
-              limit: mock(() => Promise.resolve([{ managerId: "mgr-1" }])),
+              limit: mock(() => {
+                txSelectCall++;
+                if (txSelectCall === 1) {
+                  return Promise.resolve([{ slotId: "slot-emp" }]);
+                }
+                if (txSelectCall === 2) {
+                  return Promise.resolve([{ parentSlotId: "slot-mgr" }]);
+                }
+                return Promise.resolve([{ userId: "mgr-1" }]);
+              }),
             })),
           })),
         }));
