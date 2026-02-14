@@ -4,6 +4,7 @@ import {
   notificationOutbox,
   separationReminderState,
   separationRequest,
+  slotAssignment,
   user,
   userClearanceLane,
 } from "@zenith-hr/db/schema";
@@ -172,7 +173,7 @@ async function separationReminderTick(): Promise<void> {
       .select({
         id: separationRequest.id,
         status: separationRequest.status,
-        managerId: separationRequest.managerId,
+        managerSlotId: separationRequest.managerSlotId,
         employeeId: separationRequest.employeeId,
         createdAt: separationRequest.createdAt,
       })
@@ -205,8 +206,18 @@ async function separationReminderTick(): Promise<void> {
       }
 
       const recipients: string[] = [];
-      if (r.status === "PENDING_MANAGER" && r.managerId) {
-        recipients.push(r.managerId);
+      if (r.status === "PENDING_MANAGER" && r.managerSlotId) {
+        const slotManagers = await db
+          .select({ userId: slotAssignment.userId })
+          .from(slotAssignment)
+          .where(
+            and(
+              eq(slotAssignment.slotId, r.managerSlotId),
+              sql`${slotAssignment.endsAt} IS NULL`,
+            ),
+          )
+          .limit(20);
+        recipients.push(...slotManagers.map((m) => m.userId));
       }
       if (r.status === "PENDING_HR") {
         const hrs = await db
