@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { db } from "./index";
 import {
   department,
+  positionSlot,
   separationChecklistTemplate,
+  slotAssignment,
+  slotReportingLine,
   user,
   userClearanceLane,
 } from "./schema";
@@ -181,6 +184,199 @@ async function seed() {
     },
   ];
 
+  const ceoSlotId = randomUUID();
+  const hrHodSlotId = randomUUID();
+  const financeHodSlotId = randomUUID();
+  const itHodSlotId = randomUUID();
+  const adminHodSlotId = randomUUID();
+  const hrManagerSlotId = randomUUID();
+  const hrStaffSlotId = randomUUID();
+
+  const slots = [
+    {
+      id: ceoSlotId,
+      code: "CEO",
+      name: "Chief Executive Officer",
+      departmentId: adminDeptId,
+      isDepartmentHead: false,
+      isWorkflowStageOwner: true,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: hrHodSlotId,
+      code: "HOD_HR",
+      name: "Head of Human Resources",
+      departmentId: hrDeptId,
+      isDepartmentHead: true,
+      isWorkflowStageOwner: true,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: financeHodSlotId,
+      code: "HOD_FINANCE",
+      name: "Head of Finance",
+      departmentId: financeDeptId,
+      isDepartmentHead: true,
+      isWorkflowStageOwner: true,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: itHodSlotId,
+      code: "HOD_IT",
+      name: "Head of IT",
+      departmentId: itDeptId,
+      isDepartmentHead: true,
+      isWorkflowStageOwner: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: adminHodSlotId,
+      code: "HOD_ADMIN",
+      name: "Head of Administration",
+      departmentId: adminDeptId,
+      isDepartmentHead: true,
+      isWorkflowStageOwner: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: hrManagerSlotId,
+      code: "MANAGER_HR",
+      name: "HR Line Manager",
+      departmentId: hrDeptId,
+      isDepartmentHead: false,
+      isWorkflowStageOwner: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: hrStaffSlotId,
+      code: "STAFF_HR_1",
+      name: "HR Staff",
+      departmentId: hrDeptId,
+      isDepartmentHead: false,
+      isWorkflowStageOwner: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  const slotAssignments = [
+    {
+      slotId: ceoSlotId,
+      userId: "seed-ceo",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      slotId: hrHodSlotId,
+      userId: "seed-hr",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      slotId: financeHodSlotId,
+      userId: "seed-finance",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      slotId: itHodSlotId,
+      userId: "seed-it",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      slotId: adminHodSlotId,
+      userId: "seed-admin-dept",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      slotId: hrManagerSlotId,
+      userId: "seed-manager",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      slotId: hrStaffSlotId,
+      userId: "seed-requester",
+      startsAt: now,
+      endsAt: null,
+      isPrimary: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  const slotReportingLines = [
+    {
+      childSlotId: hrHodSlotId,
+      parentSlotId: ceoSlotId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      childSlotId: financeHodSlotId,
+      parentSlotId: ceoSlotId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      childSlotId: itHodSlotId,
+      parentSlotId: ceoSlotId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      childSlotId: adminHodSlotId,
+      parentSlotId: ceoSlotId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      childSlotId: hrManagerSlotId,
+      parentSlotId: hrHodSlotId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      childSlotId: hrStaffSlotId,
+      parentSlotId: hrManagerSlotId,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
   const separationChecklistTemplates = [
     // Operations
     {
@@ -324,11 +520,17 @@ async function seed() {
   ];
 
   await db.transaction(async (tx) => {
+    await tx.delete(slotAssignment);
+    await tx.delete(slotReportingLine);
+    await tx.delete(positionSlot);
     await tx.delete(user);
     await tx.delete(department);
 
     await tx.insert(department).values(departments);
     await tx.insert(user).values(users);
+    await tx.insert(positionSlot).values(slots);
+    await tx.insert(slotReportingLine).values(slotReportingLines);
+    await tx.insert(slotAssignment).values(slotAssignments);
 
     // Reset and seed separation templates + lane memberships.
     await tx.delete(separationChecklistTemplate);
