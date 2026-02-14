@@ -20,12 +20,16 @@ interface UserOption {
   name: string;
   sapNo: string;
   departmentName: string | null;
+  primarySlotCode?: string | null;
 }
 
 interface UserSearchComboboxProps {
   value?: string | null;
   onChange: (val?: string) => void;
+  onOptionChange?: (option: UserOption | null) => void;
   placeholder?: string;
+  fallbackLabel?: string | null;
+  valueKey?: "id" | "primarySlotCode";
   excludeUserId?: string;
   nullable?: boolean;
   disabled?: boolean;
@@ -34,7 +38,10 @@ interface UserSearchComboboxProps {
 export function UserSearchCombobox({
   value,
   onChange,
+  onOptionChange,
   placeholder = "Search for an employee...",
+  fallbackLabel,
+  valueKey = "id",
   excludeUserId,
   nullable = false,
   disabled = false,
@@ -62,27 +69,39 @@ export function UserSearchCombobox({
     return users.filter((u) => u.id !== excludeUserId);
   }, [users, excludeUserId]);
 
+  const getOptionValue = React.useCallback(
+    (option: UserOption): string | null => {
+      if (valueKey === "primarySlotCode") {
+        return option.primarySlotCode ?? null;
+      }
+      return option.id;
+    },
+    [valueKey],
+  );
+
   // Find selected user - first check cache, then check current results
   const selectedUser = React.useMemo(() => {
     if (!value) {
       return null;
     }
     // First try to find in current results
-    const fromResults = filteredUsers.find((u) => u.id === value);
+    const fromResults = filteredUsers.find((u) => getOptionValue(u) === value);
     if (fromResults) {
       return fromResults;
     }
     // Fall back to cache if the user was previously selected
-    if (selectedUserCache?.id === value) {
+    if (selectedUserCache && getOptionValue(selectedUserCache) === value) {
       return selectedUserCache;
     }
     return null;
-  }, [value, filteredUsers, selectedUserCache]);
+  }, [value, filteredUsers, selectedUserCache, getOptionValue]);
 
   const handleSelect = (user: UserOption) => {
     // Cache the selected user so we can display their name even when they're not in results
     setSelectedUserCache(user);
-    onChange(user.id);
+    const selectedValue = getOptionValue(user);
+    onChange(selectedValue ?? undefined);
+    onOptionChange?.(user);
     setOpen(false);
     setSearch("");
   };
@@ -92,8 +111,19 @@ export function UserSearchCombobox({
     e.preventDefault();
     setSelectedUserCache(null);
     onChange(undefined);
+    onOptionChange?.(null);
     setSearch("");
   };
+
+  const hasFallbackSelection = Boolean(value && fallbackLabel);
+  let triggerLabel = placeholder;
+  if (selectedUser) {
+    triggerLabel = selectedUser.name;
+  } else if (hasFallbackSelection) {
+    triggerLabel = fallbackLabel ?? placeholder;
+  }
+
+  const shouldUseMutedStyle = !(selectedUser || hasFallbackSelection);
 
   return (
     <Popover onOpenChange={setOpen} open={open}>
@@ -102,15 +132,13 @@ export function UserSearchCombobox({
           aria-expanded={open}
           className={cn(
             "h-9 w-full justify-between px-3 font-normal",
-            !selectedUser && "text-muted-foreground",
+            shouldUseMutedStyle && "text-muted-foreground",
           )}
           disabled={disabled}
           role="combobox"
           variant="outline"
         >
-          <span className="truncate">
-            {selectedUser ? selectedUser.name : placeholder}
-          </span>
+          <span className="truncate">{triggerLabel}</span>
           <div className="flex shrink-0 items-center gap-1 pl-2">
             {nullable && value && (
               <span
@@ -163,7 +191,7 @@ export function UserSearchCombobox({
             {!isLoading && filteredUsers.length > 0 && (
               <CommandGroup className="p-1">
                 {filteredUsers.map((user) => {
-                  const isSelected = value === user.id;
+                  const isSelected = value === getOptionValue(user);
                   return (
                     <CommandItem
                       className={cn(
