@@ -36,6 +36,202 @@ export interface CurrentUser {
   role: string;
 }
 
+async function resolveManagerUserIdBySlotCode(
+  db: DbOrTx,
+  slotCode: string,
+): Promise<string> {
+  const normalizedCode = slotCode.trim();
+  if (!normalizedCode) {
+    throw AppError.badRequest("Manager slot code cannot be empty");
+  }
+
+  const [slot] = await db
+    .select({ id: positionSlot.id })
+    .from(positionSlot)
+    .where(eq(positionSlot.code, normalizedCode))
+    .limit(1);
+
+  if (!slot) {
+    throw AppError.badRequest("Manager slot code not found");
+  }
+
+  const [activeAssignment] = await db
+    .select({ userId: slotAssignment.userId })
+    .from(slotAssignment)
+    .where(
+      and(
+        eq(slotAssignment.slotId, slot.id),
+        sql`${slotAssignment.endsAt} IS NULL`,
+      ),
+    )
+    .limit(1);
+
+  if (!activeAssignment?.userId) {
+    throw AppError.badRequest(
+      "No active user assignment found for manager slot code",
+    );
+  }
+
+  return activeAssignment.userId;
+}
+
+async function getManagerInfoByUserIds(
+  db: DbOrTx,
+  userIds: string[],
+): Promise<
+  Map<
+    string,
+    {
+      managerUserId: string | null;
+      managerName: string | null;
+      managerSlotCode: string | null;
+    }
+  >
+> {
+  const managerMap = new Map<
+    string,
+    {
+      managerUserId: string | null;
+      managerName: string | null;
+      managerSlotCode: string | null;
+    }
+  >();
+
+  if (userIds.length === 0) {
+    return managerMap;
+  }
+
+  if (typeof (db as { execute?: unknown }).execute !== "function") {
+    return managerMap;
+  }
+
+  const userIdList = sql.join(
+    userIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+
+  const managerRows = await db.execute(sql`
+    WITH child_assignments AS (
+      SELECT sa.user_id, sa.slot_id
+      FROM slot_assignment sa
+      WHERE sa.ends_at IS NULL
+        AND sa.is_primary = TRUE
+        AND sa.user_id IN (${userIdList})
+    )
+    SELECT DISTINCT ON (ca.user_id)
+      ca.user_id AS user_id,
+      parent_sa.user_id AS manager_user_id,
+      manager_user.name AS manager_name,
+      parent_slot.code AS manager_slot_code
+    FROM child_assignments ca
+    LEFT JOIN slot_reporting_line srl ON srl.child_slot_id = ca.slot_id
+    LEFT JOIN position_slot parent_slot ON parent_slot.id = srl.parent_slot_id
+    LEFT JOIN slot_assignment parent_sa
+      ON parent_sa.slot_id = srl.parent_slot_id
+      AND parent_sa.ends_at IS NULL
+      AND parent_sa.is_primary = TRUE
+    LEFT JOIN "user" manager_user ON manager_user.id = parent_sa.user_id
+    ORDER BY ca.user_id, parent_sa.created_at DESC NULLS LAST
+  `);
+
+  for (const row of managerRows.rows as Array<{
+    user_id: string;
+    manager_user_id: string | null;
+    manager_name: string | null;
+    manager_slot_code: string | null;
+  }>) {
+    managerMap.set(row.user_id, {
+      managerUserId: row.manager_user_id,
+      managerName: row.manager_name,
+      managerSlotCode: row.manager_slot_code,
+    });
+  }
+
+  return managerMap;
+}
+
+async function withSlotManagers<
+  T extends {
+    id: string;
+    managerName?: string | null;
+    managerSlotCode?: string | null;
+  },
+>(
+  db: DbOrTx,
+  rows: T[],
+): Promise<
+  Array<
+    T & {
+      managerName: string | null;
+      managerSlotCode: string | null;
+    }
+  >
+> {
+  const supportsExecute =
+    typeof (db as { execute?: unknown }).execute === "function";
+  const managerMap = supportsExecute
+    ? await getManagerInfoByUserIds(
+        db,
+        rows.map((row) => row.id),
+      )
+    : new Map<
+        string,
+        {
+          managerUserId: string | null;
+          managerName: string | null;
+          managerSlotCode: string | null;
+        }
+      >();
+
+  return rows.map((row) => {
+    const manager = supportsExecute
+      ? managerMap.get(row.id)
+      : {
+          managerName: row.managerName ?? null,
+          managerSlotCode: row.managerSlotCode ?? null,
+        };
+
+    return {
+      ...row,
+      managerName: manager?.managerName ?? null,
+      managerSlotCode: manager?.managerSlotCode ?? null,
+    };
+  });
+}
+
+function toUserResponse(
+  row: Pick<
+    UserResponse,
+    | "id"
+    | "name"
+    | "email"
+    | "sapNo"
+    | "role"
+    | "status"
+    | "departmentId"
+    | "departmentName"
+    | "managerSlotCode"
+    | "managerName"
+    | "createdAt"
+    | "updatedAt"
+  >,
+): UserResponse {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    sapNo: row.sapNo,
+    role: row.role,
+    status: row.status,
+    departmentId: row.departmentId,
+    departmentName: row.departmentName,
+    managerSlotCode: row.managerSlotCode,
+    managerName: row.managerName,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 export const createUsersService = (db: DbOrTx) => ({
   /**
    * Search users by name, email, or SAP number (for autocomplete)
@@ -158,7 +354,6 @@ export const createUsersService = (db: DbOrTx) => ({
     const sortColumn = user[sortBy as keyof typeof user._.columns];
     const orderBy = orderFn(sortColumn);
 
-    // Alias for manager join
     const manager = db
       .select({
         id: user.id,
@@ -169,7 +364,7 @@ export const createUsersService = (db: DbOrTx) => ({
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [data, totalResult] = await Promise.all([
+    const [rows, totalResult] = await Promise.all([
       db
         .select({
           id: user.id,
@@ -180,13 +375,14 @@ export const createUsersService = (db: DbOrTx) => ({
           status: user.status,
           departmentId: user.departmentId,
           departmentName: department.name,
-          reportsToManagerId: user.reportsToManagerId,
-          managerName: manager.name,
+          managerSlotCode: sql<string | null>`null`,
+          managerName: sql<string | null>`null`,
           createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
         })
         .from(user)
         .leftJoin(department, eq(user.departmentId, department.id))
-        .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+        .leftJoin(manager, sql`1 = 0`)
         .where(whereClause)
         .orderBy(orderBy)
         .limit(pageSize)
@@ -195,6 +391,7 @@ export const createUsersService = (db: DbOrTx) => ({
     ]);
 
     const total = totalResult[0]?.count ?? 0;
+    const data = (await withSlotManagers(db, rows)).map(toUserResponse);
 
     return {
       data,
@@ -498,7 +695,6 @@ export const createUsersService = (db: DbOrTx) => ({
       updatedAt: now,
     });
 
-    // Fetch the created user with department and manager joins
     const manager = db
       .select({
         id: user.id,
@@ -507,7 +703,7 @@ export const createUsersService = (db: DbOrTx) => ({
       .from(user)
       .as("manager");
 
-    const [createdUser] = await db
+    const [createdUserRow] = await db
       .select({
         id: user.id,
         name: user.name,
@@ -517,22 +713,27 @@ export const createUsersService = (db: DbOrTx) => ({
         status: user.status,
         departmentId: user.departmentId,
         departmentName: department.name,
-        reportsToManagerId: user.reportsToManagerId,
-        managerName: manager.name,
+        managerSlotCode: sql<string | null>`null`,
+        managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
       .from(user)
       .leftJoin(department, eq(user.departmentId, department.id))
-      .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+      .leftJoin(manager, sql`1 = 0`)
       .where(eq(user.id, userId))
       .limit(1);
 
+    if (!createdUserRow) {
+      throw new AppError("INTERNAL_ERROR", "Failed to create user", 500);
+    }
+
+    const [createdUser] = await withSlotManagers(db, [createdUserRow]);
     if (!createdUser) {
       throw new AppError("INTERNAL_ERROR", "Failed to create user", 500);
     }
 
-    return createdUser;
+    return toUserResponse(createdUser);
   },
 
   /**
@@ -542,7 +743,6 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns null if user not found
    */
   async getById(userId: string): Promise<UserResponse | null> {
-    // Alias for manager join
     const manager = db
       .select({
         id: user.id,
@@ -551,7 +751,7 @@ export const createUsersService = (db: DbOrTx) => ({
       .from(user)
       .as("manager");
 
-    const [foundUser] = await db
+    const [foundUserRow] = await db
       .select({
         id: user.id,
         name: user.name,
@@ -561,18 +761,27 @@ export const createUsersService = (db: DbOrTx) => ({
         status: user.status,
         departmentId: user.departmentId,
         departmentName: department.name,
-        reportsToManagerId: user.reportsToManagerId,
-        managerName: manager.name,
+        managerSlotCode: sql<string | null>`null`,
+        managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
       .from(user)
       .leftJoin(department, eq(user.departmentId, department.id))
-      .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+      .leftJoin(manager, sql`1 = 0`)
       .where(eq(user.id, userId))
       .limit(1);
 
-    return foundUser ?? null;
+    if (!foundUserRow) {
+      return null;
+    }
+
+    const [foundUser] = await withSlotManagers(db, [foundUserRow]);
+    if (!foundUser) {
+      return null;
+    }
+
+    return toUserResponse(foundUser);
   },
 
   /**
@@ -691,7 +900,7 @@ export const createUsersService = (db: DbOrTx) => ({
       .from(user)
       .as("manager");
 
-    const [updatedUser] = await db
+    const [updatedUserRow] = await db
       .select({
         id: user.id,
         name: user.name,
@@ -701,22 +910,27 @@ export const createUsersService = (db: DbOrTx) => ({
         status: user.status,
         departmentId: user.departmentId,
         departmentName: department.name,
-        reportsToManagerId: user.reportsToManagerId,
-        managerName: manager.name,
+        managerSlotCode: sql<string | null>`null`,
+        managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       })
       .from(user)
       .leftJoin(department, eq(user.departmentId, department.id))
-      .leftJoin(manager, eq(user.reportsToManagerId, manager.id))
+      .leftJoin(manager, sql`1 = 0`)
       .where(eq(user.id, id))
       .limit(1);
 
+    if (!updatedUserRow) {
+      throw new AppError("INTERNAL_ERROR", "Failed to update user", 500);
+    }
+
+    const [updatedUser] = await withSlotManagers(db, [updatedUserRow]);
     if (!updatedUser) {
       throw new AppError("INTERNAL_ERROR", "Failed to update user", 500);
     }
 
-    return updatedUser;
+    return toUserResponse(updatedUser);
   },
 
   /**
