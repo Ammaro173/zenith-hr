@@ -3,8 +3,12 @@ import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
+import {
+  positionSlot,
+  slotAssignment,
+} from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
 import type {
   ApprovalAction,
@@ -15,6 +19,11 @@ import type {
 type TransitionResult = RequestStatus;
 type TransitionFn = (actorRole: UserRole) => TransitionResult;
 type TransitionTarget = TransitionResult | TransitionFn;
+type InitiatorRouteKey = "HR" | "FINANCE" | "CEO" | "OTHER";
+
+const HR_STAGE_SLOT_CODE = "HOD_HR";
+const FINANCE_STAGE_SLOT_CODE = "HOD_FINANCE";
+const CEO_STAGE_SLOT_CODE = "CEO";
 
 const WORKFLOW_TRANSITIONS: Partial<
   Record<RequestStatus, Partial<Record<ApprovalAction, TransitionTarget>>>
@@ -67,18 +76,119 @@ export const createWorkflowService = (db: DbOrTx) => {
     return stepMap[status] || status;
   };
 
-  // Helper functions now accept a transaction context
+  const getApproverForStatus = (status: RequestStatus): UserRole | null => {
+    const mapping: Partial<Record<RequestStatus, UserRole>> = {
+      PENDING_MANAGER: "MANAGER",
+      PENDING_HR: "HR",
+      PENDING_FINANCE: "FINANCE",
+      PENDING_CEO: "CEO",
+    };
+    return mapping[status] ?? null;
+  };
+
+  const getStageSlotCodeForStatus = (status: RequestStatus): string | null => {
+    const mapping: Partial<Record<RequestStatus, string>> = {
+      PENDING_HR: HR_STAGE_SLOT_CODE,
+      PENDING_FINANCE: FINANCE_STAGE_SLOT_CODE,
+      PENDING_CEO: CEO_STAGE_SLOT_CODE,
+    };
+    return mapping[status] ?? null;
+  };
+
+  const getApprovalSequenceForInitiator = (
+    routeKey: InitiatorRouteKey,
+  ): RequestStatus[] => {
+    switch (routeKey) {
+      case "HR":
+        return ["PENDING_FINANCE", "PENDING_CEO", "APPROVED_OPEN"];
+      case "FINANCE":
+        return ["PENDING_HR", "PENDING_CEO", "APPROVED_OPEN"];
+      case "CEO":
+        return ["PENDING_HR", "PENDING_FINANCE", "APPROVED_OPEN"];
+      default:
+        return [
+          "PENDING_HR",
+          "PENDING_FINANCE",
+          "PENDING_CEO",
+          "APPROVED_OPEN",
+        ];
+    }
+  };
+
+  const hasActiveSlotAssignment = async (
+    requesterId: string,
+    txOrDb: DbOrTx,
+  ): Promise<boolean> => {
+    const result = await txOrDb.execute(sql`
+      SELECT 1
+      FROM slot_assignment sa
+      WHERE sa.user_id = ${requesterId}
+        AND sa.ends_at IS NULL
+      LIMIT 1
+    `);
+    return result.rows.length > 0;
+  };
+
+  const getInitiatorRouteKey = async (
+    requesterId: string,
+    txOrDb: DbOrTx,
+  ): Promise<InitiatorRouteKey> => {
+    const result = await txOrDb.execute(sql`
+      SELECT ps.code AS slot_code, d.name AS department_name
+      FROM slot_assignment sa
+      INNER JOIN position_slot ps ON ps.id = sa.slot_id
+      LEFT JOIN department d ON d.id = ps.department_id
+      WHERE sa.user_id = ${requesterId}
+        AND sa.ends_at IS NULL
+      LIMIT 1
+    `);
+
+    const slotRow = result.rows[0] as
+      | { slot_code?: string | null; department_name?: string | null }
+      | undefined;
+
+    const normalizedSlotCode = slotRow?.slot_code?.toUpperCase() ?? "";
+    const normalizedDepartmentName =
+      slotRow?.department_name?.toUpperCase() ?? "";
+
+    if (
+      normalizedSlotCode.includes("CEO") ||
+      normalizedDepartmentName.includes("CHIEF EXECUTIVE")
+    ) {
+      return "CEO";
+    }
+
+    if (
+      normalizedSlotCode.includes("FINANCE") ||
+      normalizedDepartmentName.includes("FINANCE")
+    ) {
+      return "FINANCE";
+    }
+
+    if (
+      normalizedSlotCode.includes("HR") ||
+      normalizedSlotCode.includes("HUMAN_RESOURCES") ||
+      normalizedDepartmentName.includes("HUMAN RESOURCES") ||
+      normalizedDepartmentName === "HR"
+    ) {
+      return "HR";
+    }
+
+    return "OTHER";
+  };
+
   const createApprovalLog = async (
     tx: Transaction,
     requestId: string,
     actorId: string,
     action: ApprovalAction,
     stepName: string,
-    options?: { comment?: string; ipAddress?: string },
+    options?: { comment?: string; ipAddress?: string; actorSlotId?: string },
   ): Promise<void> => {
     await tx.insert(approvalLog).values({
       requestId,
       actorId,
+      actorSlotId: options?.actorSlotId || null,
       action,
       stepName,
       comment: options?.comment || null,
@@ -118,27 +228,45 @@ export const createWorkflowService = (db: DbOrTx) => {
     });
   };
 
-  const getApproverForStatus = (status: RequestStatus): UserRole | null => {
-    const mapping: Partial<Record<RequestStatus, UserRole>> = {
-      PENDING_MANAGER: "MANAGER",
-      PENDING_HR: "HR",
-      PENDING_FINANCE: "FINANCE",
-      PENDING_CEO: "CEO",
-    };
-    return mapping[status] ?? null;
-  };
-
   return {
     getApproverForStatus,
+
+    async getInitialStatusForRequester(
+      requesterId: string,
+      txOrDb: DbOrTx = db,
+      actorRole?: UserRole,
+    ): Promise<RequestStatus> {
+      const hasActiveSlot = await hasActiveSlotAssignment(requesterId, txOrDb);
+      if (!hasActiveSlot) {
+        if (actorRole === "MANAGER" || actorRole === "HR") {
+          return "PENDING_HR";
+        }
+
+        const [requester] = await txOrDb
+          .select({ role: user.role })
+          .from(user)
+          .where(eq(user.id, requesterId))
+          .limit(1);
+
+        return requester?.role === "MANAGER" || requester?.role === "HR"
+          ? "PENDING_HR"
+          : "PENDING_MANAGER";
+      }
+
+      const routeKey = await getInitiatorRouteKey(requesterId, txOrDb);
+      const sequence = getApprovalSequenceForInitiator(routeKey);
+      return sequence[0] ?? "PENDING_HR";
+    },
+
     async getNextApprover(requesterId: string): Promise<string | null> {
       const result = await db.execute(sql`
         WITH RECURSIVE manager_hierarchy AS (
           SELECT id, reports_to_manager_id, role
           FROM "user"
           WHERE id = ${requesterId}
-          
+
           UNION ALL
-          
+
           SELECT u.id, u.reports_to_manager_id, u.role
           FROM "user" u
           INNER JOIN manager_hierarchy mh ON u.id = mh.reports_to_manager_id
@@ -146,7 +274,7 @@ export const createWorkflowService = (db: DbOrTx) => {
         SELECT id, role
         FROM manager_hierarchy
         WHERE role IN ('MANAGER', 'HR', 'FINANCE', 'CEO')
-        ORDER BY 
+        ORDER BY
           CASE role
             WHEN 'MANAGER' THEN 1
             WHEN 'HR' THEN 2
