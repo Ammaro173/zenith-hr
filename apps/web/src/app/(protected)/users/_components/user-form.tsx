@@ -42,7 +42,7 @@ export interface CreateUserFormData {
   role: UserRole;
   status: UserStatus;
   departmentId: string | null;
-  reportsToManagerId: string | null;
+  reportsToSlotCode: string | null;
 }
 
 export interface UpdateUserFormData {
@@ -53,7 +53,7 @@ export interface UpdateUserFormData {
   role?: UserRole;
   status?: UserStatus;
   departmentId?: string | null;
-  reportsToManagerId?: string | null;
+  reportsToSlotCode?: string | null;
 }
 
 export function UserForm({
@@ -74,7 +74,7 @@ export function UserForm({
       role: (initialData?.role as UserRole) ?? "REQUESTER",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
       departmentId: initialData?.departmentId ?? null,
-      reportsToManagerId: initialData?.reportsToManagerId ?? null,
+      reportsToSlotCode: initialData?.managerSlotCode ?? null,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -99,8 +99,8 @@ export function UserForm({
         if (value.departmentId !== initialData.departmentId) {
           updateData.departmentId = value.departmentId;
         }
-        if (value.reportsToManagerId !== initialData.reportsToManagerId) {
-          updateData.reportsToManagerId = value.reportsToManagerId;
+        if (value.reportsToSlotCode !== (initialData.managerSlotCode ?? null)) {
+          updateData.reportsToSlotCode = value.reportsToSlotCode;
         }
 
         await onSubmit(updateData);
