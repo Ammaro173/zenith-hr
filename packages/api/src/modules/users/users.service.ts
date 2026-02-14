@@ -3,7 +3,10 @@ import { hashPassword } from "@zenith-hr/auth";
 import type { DbOrTx } from "@zenith-hr/db";
 import { account, session, user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
-import { slotAssignment } from "@zenith-hr/db/schema/position-slots";
+import {
+  positionSlot,
+  slotAssignment,
+} from "@zenith-hr/db/schema/position-slots";
 import {
   and,
   asc,
@@ -46,9 +49,19 @@ export const createUsersService = (db: DbOrTx) => ({
         email: user.email,
         sapNo: user.sapNo,
         departmentName: department.name,
+        primarySlotCode: positionSlot.code,
       })
       .from(user)
-      .leftJoin(department, eq(user.departmentId, department.id));
+      .leftJoin(department, eq(user.departmentId, department.id))
+      .leftJoin(
+        slotAssignment,
+        and(
+          eq(slotAssignment.userId, user.id),
+          sql`${slotAssignment.endsAt} IS NULL`,
+          eq(slotAssignment.isPrimary, true),
+        ),
+      )
+      .leftJoin(positionSlot, eq(positionSlot.id, slotAssignment.slotId));
 
     // If query is empty, return all users (up to limit)
     if (!query.trim()) {
