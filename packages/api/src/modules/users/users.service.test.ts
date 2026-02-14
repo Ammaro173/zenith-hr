@@ -1253,7 +1253,7 @@ function createMockDbForDeactivate(existingUser: {
   role: string;
   status: string;
   departmentId: string | null;
-  reportsToManagerId: string | null;
+  managerUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -1359,7 +1359,7 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
             role: userInput.role ?? "REQUESTER",
             status: initialStatus,
             departmentId: userInput.departmentId ?? null,
-            reportsToManagerId: userInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1393,7 +1393,7 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
         role: "REQUESTER" as const,
         status: initialStatus,
         departmentId: null,
-        reportsToManagerId: null,
+        managerUserId: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -1446,7 +1446,7 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
           role: userInput.role ?? "REQUESTER",
           status: "ACTIVE" as const,
           departmentId: userInput.departmentId ?? null,
-          reportsToManagerId: userInput.reportsToManagerId ?? null,
+          managerUserId: null,
           createdAt: originalDate,
           updatedAt: originalDate,
         };
@@ -1492,7 +1492,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
             role: userInput.role ?? "REQUESTER",
             status: "ACTIVE" as const,
             departmentId: userInput.departmentId ?? null,
-            reportsToManagerId: userInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1543,7 +1543,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           role: userInput.role ?? "REQUESTER",
           status: "ACTIVE" as const,
           departmentId: userInput.departmentId ?? null,
-          reportsToManagerId: userInput.reportsToManagerId ?? null,
+          managerUserId: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -1583,7 +1583,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           role: userInput.role ?? "REQUESTER",
           status: "ACTIVE" as const,
           departmentId: userInput.departmentId ?? null,
-          reportsToManagerId: userInput.reportsToManagerId ?? null,
+          managerUserId: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -1659,7 +1659,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
             role: userInput.role ?? "REQUESTER",
             status: "ACTIVE" as const,
             departmentId: userInput.departmentId ?? null,
-            reportsToManagerId: userInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1714,7 +1714,7 @@ function createMockDbForDelete(existingUser: {
   role: string;
   status: string;
   departmentId: string | null;
-  reportsToManagerId: string | null;
+  managerUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -1790,7 +1790,7 @@ describe("delete method - hard delete user", () => {
       role: "REQUESTER" as const,
       status: "ACTIVE" as const,
       departmentId: null,
-      reportsToManagerId: null,
+      managerUserId: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -1837,7 +1837,7 @@ describe("delete method - hard delete user", () => {
         role: "REQUESTER" as const,
         status,
         departmentId: null,
-        reportsToManagerId: null,
+        managerUserId: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -1865,7 +1865,7 @@ describe("delete method - hard delete user", () => {
         role,
         status: "ACTIVE" as const,
         departmentId: null,
-        reportsToManagerId: null,
+        managerUserId: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -1892,7 +1892,7 @@ describe("delete method - hard delete user", () => {
       role: "REQUESTER" as const,
       status: "ACTIVE" as const,
       departmentId: "dept-123",
-      reportsToManagerId: "manager-456",
+      managerUserId: "manager-456",
       createdAt: now,
       updatedAt: now,
     };
@@ -1926,7 +1926,7 @@ describe("Feature: user-management, Property 8: Hard delete cascade", () => {
           role: userInput.role ?? "REQUESTER",
           status: userInput.status ?? "ACTIVE",
           departmentId: userInput.departmentId ?? null,
-          reportsToManagerId: userInput.reportsToManagerId ?? null,
+          managerUserId: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -2814,7 +2814,7 @@ function createMockDbForResetPassword(existingUser: {
   role: string;
   status: string;
   departmentId: string | null;
-  reportsToManagerId: string | null;
+  managerUserId: string | null;
   passwordHash: string;
   createdAt: Date;
   updatedAt: Date;
@@ -2929,7 +2929,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: `original-hash-${originalPassword}`,
             createdAt: now,
             updatedAt: now,
@@ -2975,7 +2975,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3023,7 +3023,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3102,7 +3102,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3157,7 +3157,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3202,7 +3202,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3281,7 +3281,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3344,7 +3344,7 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3381,7 +3381,7 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
             role: "REQUESTER",
             status: "ACTIVE",
             departmentId: null,
-            reportsToManagerId: null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
@@ -3428,7 +3428,7 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
             role: userInput.role ?? "REQUESTER",
             status: userInput.status ?? "ACTIVE",
             departmentId: userInput.departmentId ?? null,
-            reportsToManagerId: userInput.reportsToManagerId ?? null,
+            managerUserId: null,
             passwordHash: "original-hash",
             createdAt: now,
             updatedAt: now,
