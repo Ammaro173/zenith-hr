@@ -14,7 +14,7 @@ export const userImportRowSchema = z.object({
   role: z.enum(["REQUESTER", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
   status: z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]).default("ACTIVE"),
   departmentId: z.string().uuid().optional().nullable(),
-  reportsToManagerId: z.string().optional().nullable(),
+  reportsToSlotCode: z.string().trim().min(1).optional().nullable(),
   password: z.string().min(8).optional(), // Optional - will be generated if not provided
 });
 
