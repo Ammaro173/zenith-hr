@@ -6,6 +6,7 @@ import {
   department,
   importHistory,
   importHistoryItem,
+  positionSlot,
   user,
 } from "@zenith-hr/db/schema";
 import { desc, eq, inArray } from "drizzle-orm";
@@ -128,7 +129,6 @@ export const createImportsService = (db = defaultDb) => ({
             role: row.role,
             status: row.status ?? "ACTIVE",
             departmentId: row.departmentId ?? null,
-            reportsToManagerId: row.reportsToManagerId ?? null,
             updatedAt: new Date(),
           };
 
@@ -180,7 +180,6 @@ export const createImportsService = (db = defaultDb) => ({
           status: row.status ?? "ACTIVE", // Default to ACTIVE if not provided
           sapNo: row.sapNo,
           departmentId: row.departmentId ?? null,
-          reportsToManagerId: row.reportsToManagerId ?? null,
           passwordHash: null, // Better Auth expects password in account table
           signatureUrl: null,
           failedLoginAttempts: 0,
@@ -439,8 +438,8 @@ export const createImportsService = (db = defaultDb) => ({
     const managerIds = [
       ...new Set(
         rows
-          .map((row) => row.reportsToManagerId)
-          .filter((id): id is string => id != null && id !== ""),
+          .map((row) => row.reportsToSlotCode?.trim())
+          .filter((code): code is string => code != null && code !== ""),
       ),
     ];
     // Normalize emails to lowercase for comparison
@@ -459,12 +458,12 @@ export const createImportsService = (db = defaultDb) => ({
     const validDepartmentIds = new Set(existingDepartments.map((d) => d.id));
 
     // Fetch existing users (for manager validation and email existence check)
-    const existingUsers =
+    const existingManagerSlots =
       managerIds.length > 0
         ? await db
-            .select({ id: user.id, email: user.email })
-            .from(user)
-            .where(inArray(user.id, managerIds))
+            .select({ code: positionSlot.code })
+            .from(positionSlot)
+            .where(inArray(positionSlot.code, managerIds))
         : [];
 
     // Also fetch users by email for willUpdate check
@@ -476,7 +475,7 @@ export const createImportsService = (db = defaultDb) => ({
             .where(inArray(user.email, emails))
         : [];
 
-    const validManagerIds = new Set(existingUsers.map((u) => u.id));
+    const validManagerCodes = new Set(existingManagerSlots.map((s) => s.code));
     const existingEmailSet = new Set(existingUsersByEmail.map((u) => u.email));
 
     // Validate each row
@@ -515,16 +514,16 @@ export const createImportsService = (db = defaultDb) => ({
         });
       }
 
-      // Validate reportsToManagerId exists in database
-      const managerId = row.reportsToManagerId;
+      // Validate reportsToSlotCode exists in database
+      const managerId = row.reportsToSlotCode;
       if (
         managerId != null &&
         managerId !== "" &&
-        !validManagerIds.has(managerId)
+        !validManagerCodes.has(managerId)
       ) {
         errors.push({
-          field: "reportsToManagerId",
-          message: "Manager does not exist",
+          field: "reportsToSlotCode",
+          message: "Manager slot code does not exist",
         });
       }
 
