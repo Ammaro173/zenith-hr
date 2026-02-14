@@ -623,7 +623,7 @@ export const createUsersService = (db: DbOrTx) => ({
       role,
       status,
       departmentId,
-      reportsToManagerId,
+      reportsToSlotCode,
     } = input;
 
     // Normalize email to lowercase (Better Auth does case-sensitive lookups)
@@ -667,6 +667,10 @@ export const createUsersService = (db: DbOrTx) => ({
     const accountId = randomUUID();
     const now = new Date();
 
+    if (reportsToSlotCode) {
+      await resolveManagerUserIdBySlotCode(db, reportsToSlotCode);
+    }
+
     // Insert user record (passwordHash is null - Better Auth stores password in account table)
     await db.insert(user).values({
       id: userId,
@@ -677,7 +681,6 @@ export const createUsersService = (db: DbOrTx) => ({
       role: role ?? "REQUESTER",
       status: status ?? "ACTIVE",
       departmentId: departmentId ?? null,
-      reportsToManagerId: reportsToManagerId ?? null,
       passwordHash: null,
       failedLoginAttempts: 0,
       createdAt: now,
@@ -800,7 +803,7 @@ export const createUsersService = (db: DbOrTx) => ({
       role,
       status,
       departmentId,
-      reportsToManagerId,
+      reportsToSlotCode,
     } = input;
 
     // Verify user exists
@@ -860,7 +863,6 @@ export const createUsersService = (db: DbOrTx) => ({
       role: "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
       status: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
       departmentId: string | null;
-      reportsToManagerId: string | null;
       updatedAt: Date;
     }> = {
       updatedAt: new Date(),
@@ -884,14 +886,13 @@ export const createUsersService = (db: DbOrTx) => ({
     if (departmentId !== undefined) {
       updateData.departmentId = departmentId;
     }
-    if (reportsToManagerId !== undefined) {
-      updateData.reportsToManagerId = reportsToManagerId;
+    if (reportsToSlotCode) {
+      await resolveManagerUserIdBySlotCode(db, reportsToSlotCode);
     }
 
     // Update user record
     await db.update(user).set(updateData).where(eq(user.id, id));
 
-    // Fetch the updated user with department and manager joins
     const manager = db
       .select({
         id: user.id,
