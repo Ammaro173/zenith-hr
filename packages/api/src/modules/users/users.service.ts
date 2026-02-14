@@ -418,18 +418,7 @@ export const createUsersService = (db: DbOrTx) => ({
       .limit(1);
 
     if (!managerSlot?.slotId) {
-      const legacyResult = await db.execute(sql`
-        WITH RECURSIVE subordinates AS (
-          SELECT id FROM "user" WHERE reports_to_manager_id = ${managerId}
-          UNION ALL
-          SELECT u.id 
-          FROM "user" u
-          INNER JOIN subordinates s ON u.reports_to_manager_id = s.id
-        )
-        SELECT id FROM subordinates
-      `);
-
-      return (legacyResult.rows as Array<{ id: string }>).map((row) => row.id);
+      return [];
     }
 
     const result = await db.execute(sql`
