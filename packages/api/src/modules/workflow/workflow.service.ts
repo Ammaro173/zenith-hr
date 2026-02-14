@@ -309,29 +309,46 @@ export const createWorkflowService = (db: DbOrTx) => {
       txOrDb?: DbOrTx,
     ): Promise<string | null> {
       const queryDb = txOrDb || db;
+      const stageSlotCode = getStageSlotCodeForStatus(status);
+
+      if (stageSlotCode) {
+        const slotResult = await queryDb.execute(sql`
+          SELECT sa.user_id AS user_id
+          FROM position_slot ps
+          INNER JOIN slot_assignment sa ON sa.slot_id = ps.id
+          WHERE ps.code = ${stageSlotCode}
+            AND sa.ends_at IS NULL
+          LIMIT 1
+        `);
+        const slotOccupant = slotResult.rows[0] as
+          | { user_id?: string | null }
+          | undefined;
+
+        if (slotOccupant?.user_id) {
+          return slotOccupant.user_id;
+        }
+      }
+
       const targetRole = getApproverForStatus(status);
       if (!targetRole) {
         return null;
       }
 
-      // For manager review, try to find direct manager first
       if (status === "PENDING_MANAGER") {
         const managerId = await this.getNextApprover(requesterId);
         if (managerId) {
           return managerId;
         }
 
-        // If no manager found, fall through to finding anyone with HR role as per user request
         const [hrUser] = await queryDb
           .select({ id: user.id })
           .from(user)
           .where(eq(user.role, "HR"))
           .limit(1);
+
         return hrUser?.id || null;
       }
 
-      // For other roles, find the first user with that role
-      // (Simplified logic - could be enhanced to use department heads)
       const [targetUser] = await queryDb
         .select({ id: user.id })
         .from(user)
