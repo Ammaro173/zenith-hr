@@ -38,7 +38,6 @@ const createUserInputArb: fc.Arbitrary<CreateUserInput> = fc.record({
   role: fc.constantFrom(...VALID_ROLES),
   status: fc.constantFrom(...VALID_STATUSES),
   departmentId: fc.option(fc.uuid(), { nil: null }),
-  reportsToManagerId: fc.option(fc.uuid(), { nil: null }),
 });
 
 /**
@@ -56,7 +55,7 @@ function createMockDbForCreate() {
     role: string;
     status: string;
     departmentId: string | null;
-    reportsToManagerId: string | null;
+    managerUserId: string | null;
     passwordHash: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -108,7 +107,7 @@ function createMockDbForCreate() {
                         status: lastUser.status,
                         departmentId: lastUser.departmentId,
                         departmentName: null,
-                        reportsToManagerId: lastUser.reportsToManagerId,
+                        managerUserId: lastUser.managerUserId,
                         managerName: null,
                         createdAt: lastUser.createdAt,
                         updatedAt: lastUser.updatedAt,
@@ -151,7 +150,7 @@ function createMockDbForCreate() {
               role: string;
               status: string;
               departmentId: string | null;
-              reportsToManagerId: string | null;
+              managerUserId: string | null;
               passwordHash: string | null;
               createdAt: Date;
               updatedAt: Date;
@@ -239,7 +238,7 @@ function createMockDbWithDuplicateSapNo() {
  *
  *
  * For any valid user creation input (name, email, sapNo, role, status,
- * departmentId, reportsToManagerId), when the user is created successfully,
+ * departmentId), when the user is created successfully,
  * the returned user object SHALL contain all the provided input values
  * (except password).
  */
@@ -262,9 +261,7 @@ describe("Feature: user-management, Property 1: User creation preserves input da
         expect(result.role).toBe(input.role);
         expect(result.status).toBe(input.status);
         expect(result.departmentId).toBe(input.departmentId ?? null);
-        expect(result.reportsToManagerId).toBe(
-          input.reportsToManagerId ?? null,
-        );
+        expect(result.managerSlotCode).toBeNull();
 
         // Verify the response has required fields
         expect(result.id).toBeDefined();
@@ -298,7 +295,7 @@ describe("Feature: user-management, Property 1: User creation preserves input da
         expect(result.role).toBe("REQUESTER");
         expect(result.status).toBe("ACTIVE");
         expect(result.departmentId).toBeNull();
-        expect(result.reportsToManagerId).toBeNull();
+        expect(result.managerSlotCode).toBeNull();
       }),
       { numRuns: 20 },
     );
@@ -556,7 +553,7 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
       "status",
       "departmentId",
       "departmentName",
-      "reportsToManagerId",
+      "managerSlotCode",
       "managerName",
       "createdAt",
       "updatedAt",
@@ -607,9 +604,6 @@ const updateUserInputArb: fc.Arbitrary<Omit<UpdateUserInput, "id">> = fc.record(
     departmentId: fc.option(fc.option(fc.uuid(), { nil: null }), {
       nil: undefined,
     }),
-    reportsToManagerId: fc.option(fc.option(fc.uuid(), { nil: null }), {
-      nil: undefined,
-    }),
   },
   { requiredKeys: [] },
 );
@@ -626,7 +620,7 @@ function createMockDbForUpdate(existingUser: {
   role: string;
   status: string;
   departmentId: string | null;
-  reportsToManagerId: string | null;
+  managerUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
@@ -674,7 +668,7 @@ function createMockDbForUpdate(existingUser: {
                       status: currentUser.status,
                       departmentId: currentUser.departmentId,
                       departmentName: null,
-                      reportsToManagerId: currentUser.reportsToManagerId,
+                      managerUserId: currentUser.managerUserId,
                       managerName: null,
                       createdAt: currentUser.createdAt,
                       updatedAt: currentUser.updatedAt,
@@ -709,8 +703,8 @@ function createMockDbForUpdate(existingUser: {
           if (updateData.departmentId !== undefined) {
             currentUser.departmentId = updateData.departmentId as string | null;
           }
-          if (updateData.reportsToManagerId !== undefined) {
-            currentUser.reportsToManagerId = updateData.reportsToManagerId as
+          if (updateData.managerUserId !== undefined) {
+            currentUser.managerUserId = updateData.managerUserId as
               | string
               | null;
           }
@@ -915,7 +909,7 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
           role: originalInput.role ?? "REQUESTER",
           status: originalInput.status ?? "ACTIVE",
           departmentId: originalInput.departmentId ?? null,
-          reportsToManagerId: originalInput.reportsToManagerId ?? null,
+          managerUserId: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -950,7 +944,7 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
           role: originalInput.role ?? "REQUESTER",
           status: originalInput.status ?? "ACTIVE",
           departmentId: originalInput.departmentId ?? null,
-          reportsToManagerId: originalInput.reportsToManagerId ?? null,
+          managerUserId: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -997,7 +991,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             role: originalInput.role ?? "REQUESTER",
             status: originalInput.status ?? "ACTIVE",
             departmentId: originalInput.departmentId ?? null,
-            reportsToManagerId: originalInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1019,9 +1013,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.role).toBe(existingUser.role);
           expect(result.status).toBe(existingUser.status);
           expect(result.departmentId).toBe(existingUser.departmentId);
-          expect(result.reportsToManagerId).toBe(
-            existingUser.reportsToManagerId,
-          );
+          expect(result.managerSlotCode).toBeNull();
         },
       ),
       { numRuns: 20 },
@@ -1043,7 +1035,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             role: originalInput.role ?? "REQUESTER",
             status: originalInput.status ?? "ACTIVE",
             departmentId: originalInput.departmentId ?? null,
-            reportsToManagerId: originalInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1065,9 +1057,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.sapNo).toBe(existingUser.sapNo);
           expect(result.status).toBe(existingUser.status);
           expect(result.departmentId).toBe(existingUser.departmentId);
-          expect(result.reportsToManagerId).toBe(
-            existingUser.reportsToManagerId,
-          );
+          expect(result.managerSlotCode).toBeNull();
         },
       ),
       { numRuns: 20 },
@@ -1089,7 +1079,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             role: originalInput.role ?? "REQUESTER",
             status: originalInput.status ?? "ACTIVE",
             departmentId: originalInput.departmentId ?? null,
-            reportsToManagerId: originalInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1111,21 +1101,19 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.sapNo).toBe(existingUser.sapNo);
           expect(result.role).toBe(existingUser.role);
           expect(result.status).toBe(existingUser.status);
-          expect(result.reportsToManagerId).toBe(
-            existingUser.reportsToManagerId,
-          );
+          expect(result.managerSlotCode).toBeNull();
         },
       ),
       { numRuns: 20 },
     );
   });
 
-  it("should preserve all fields when updating only reportsToManagerId", async () => {
+  it("should preserve all fields when clearing manager via reportsToSlotCode", async () => {
     await fc.assert(
       fc.asyncProperty(
         createUserInputArb,
-        fc.option(fc.uuid(), { nil: null }),
-        async (originalInput, newManagerId) => {
+        fc.uuid(),
+        async (originalInput, existingManagerId) => {
           const now = new Date();
           const existingUser = {
             id: "existing-user-id",
@@ -1135,7 +1123,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             role: originalInput.role ?? "REQUESTER",
             status: originalInput.status ?? "ACTIVE",
             departmentId: originalInput.departmentId ?? null,
-            reportsToManagerId: originalInput.reportsToManagerId ?? null,
+            managerUserId: existingManagerId,
             createdAt: now,
             updatedAt: now,
           };
@@ -1147,11 +1135,11 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
 
           const result = await service.update({
             id: existingUser.id,
-            reportsToManagerId: newManagerId,
+            reportsToSlotCode: null,
           });
 
-          // Property: Only reportsToManagerId should change, all other fields preserved (Requirement 2.7)
-          expect(result.reportsToManagerId).toBe(newManagerId);
+          // Property: Only manager link should change, all other fields preserved
+          expect(result.managerSlotCode).toBeNull();
           expect(result.name).toBe(existingUser.name);
           expect(result.email).toBe(existingUser.email);
           expect(result.sapNo).toBe(existingUser.sapNo);
@@ -1180,7 +1168,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             role: originalInput.role ?? "REQUESTER",
             status: originalInput.status ?? "ACTIVE",
             departmentId: originalInput.departmentId ?? null,
-            reportsToManagerId: originalInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1203,9 +1191,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.sapNo).toBe(existingUser.sapNo);
           expect(result.status).toBe(existingUser.status);
           expect(result.departmentId).toBe(existingUser.departmentId);
-          expect(result.reportsToManagerId).toBe(
-            existingUser.reportsToManagerId,
-          );
+          expect(result.managerSlotCode).toBeNull();
         },
       ),
       { numRuns: 20 },
@@ -1227,7 +1213,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             role: originalInput.role ?? "REQUESTER",
             status: originalInput.status ?? "ACTIVE",
             departmentId: originalInput.departmentId ?? null,
-            reportsToManagerId: originalInput.reportsToManagerId ?? null,
+            managerUserId: null,
             createdAt,
             updatedAt: createdAt,
           };
