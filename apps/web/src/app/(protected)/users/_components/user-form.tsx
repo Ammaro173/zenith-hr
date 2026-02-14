@@ -234,15 +234,17 @@ export function UserForm({
         </form.Field>
 
         {/* Manager Field */}
-        <form.Field name="reportsToManagerId">
+        <form.Field name="reportsToSlotCode">
           {(field) => (
             <FormField field={field} label="Reports To (Manager)">
               <UserSearchCombobox
                 excludeUserId={initialData?.id}
+                fallbackLabel={initialData?.managerName}
                 nullable
                 onChange={(val) => field.handleChange(val ?? null)}
                 placeholder="Search for a manager..."
                 value={field.state.value}
+                valueKey="primarySlotCode"
               />
             </FormField>
           )}
