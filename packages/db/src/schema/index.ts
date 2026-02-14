@@ -20,6 +20,7 @@ import { approvalLog } from "./approval-logs";
 import { user } from "./auth";
 import { contract } from "./contracts";
 import { manpowerRequest } from "./manpower-requests";
+import { positionSlot } from "./position-slots";
 import { requestVersion } from "./request-versions";
 
 // Re-export relations using export-from syntax
@@ -56,6 +57,14 @@ export const manpowerRequestRelations = relations(
     requester: one(user, {
       fields: [manpowerRequest.requesterId],
       references: [user.id],
+    }),
+    requesterSlot: one(positionSlot, {
+      fields: [manpowerRequest.requesterSlotId],
+      references: [positionSlot.id],
+    }),
+    currentApproverSlot: one(positionSlot, {
+      fields: [manpowerRequest.currentApproverSlotId],
+      references: [positionSlot.id],
     }),
     approvalLogs: many(approvalLog),
     contracts: many(contract),

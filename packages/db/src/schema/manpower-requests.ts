@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user, userRoleEnum } from "./auth";
 import { jobDescription } from "./job-descriptions";
+import { positionSlot } from "./position-slots";
 
 export const manpowerRequestSeq = pgSequence("manpower_requests_seq", {
   startWith: 1,
@@ -55,6 +56,9 @@ export const manpowerRequest = pgTable("manpower_request", {
   requesterId: text("requester_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  requesterSlotId: uuid("requester_slot_id").references(() => positionSlot.id, {
+    onDelete: "set null",
+  }),
   requestCode: text("request_code").notNull().unique(),
   status: requestStatusEnum("status").notNull().default("DRAFT"),
   requestType: requestTypeEnum("request_type").notNull(),
@@ -85,6 +89,12 @@ export const manpowerRequest = pgTable("manpower_request", {
   currentApproverId: text("current_approver_id").references(() => user.id, {
     onDelete: "set null",
   }),
+  currentApproverSlotId: uuid("current_approver_slot_id").references(
+    () => positionSlot.id,
+    {
+      onDelete: "set null",
+    },
+  ),
   currentApproverRole: userRoleEnum("current_approver_role"),
   positionDetails: jsonb("position_details").notNull(),
   budgetDetails: jsonb("budget_details").notNull(),
