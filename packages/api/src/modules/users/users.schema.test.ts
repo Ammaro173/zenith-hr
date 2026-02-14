@@ -236,7 +236,10 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             role: fc.constantFrom(...VALID_ROLES),
             status: fc.constantFrom(...VALID_STATUSES),
             departmentId: fc.option(fc.uuid(), { nil: null }),
-            reportsToManagerId: fc.option(fc.uuid(), { nil: null }),
+            reportsToSlotCode: fc.option(
+              fc.constantFrom("MGR-001", "FIN-LEAD", "HR-HEAD"),
+              { nil: null },
+            ),
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
