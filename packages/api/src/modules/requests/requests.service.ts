@@ -17,18 +17,6 @@ import type {
 type CreateRequestInput = z.infer<typeof createRequestSchema>;
 type UpdateRequestInput = z.infer<typeof updateRequestSchema>;
 
-const PENDING_VIEW_MAP: Partial<
-  Record<
-    string,
-    "PENDING_MANAGER" | "PENDING_HR" | "PENDING_FINANCE" | "PENDING_CEO"
-  >
-> = {
-  MANAGER: "PENDING_MANAGER",
-  HR: "PENDING_HR",
-  FINANCE: "PENDING_FINANCE",
-  CEO: "PENDING_CEO",
-};
-
 /**
  * Factory function to create RequestService with injected dependencies
  */
@@ -274,30 +262,10 @@ export const createRequestsService = (
      * Get pending approvals based on user role
      */
     async getPendingApprovals(userId: string) {
-      const [userRecord] = await db
-        .select()
-        .from(user)
-        .where(eq(user.id, userId))
-        .limit(1);
-
-      const userRole = (userRecord?.role ||
-        "REQUESTER") as (typeof userRoleEnum.enumValues)[number];
-
-      const statusFilter = PENDING_VIEW_MAP[userRole];
-
-      if (!statusFilter) {
-        return [];
-      }
-
       return await db
         .select()
         .from(manpowerRequest)
-        .where(
-          and(
-            eq(manpowerRequest.status, statusFilter as "PENDING_MANAGER"),
-            eq(manpowerRequest.currentApproverId, userId),
-          ),
-        );
+        .where(eq(manpowerRequest.currentApproverId, userId));
     },
 
     /**
