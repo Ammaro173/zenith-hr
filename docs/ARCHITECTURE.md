@@ -45,3 +45,9 @@ const storage: StorageService = new S3StorageService();
 // ❌ WRONG
 const storage = new S3StorageService();
 ```
+
+## Organizational Hierarchy
+
+- Source of truth for reporting lines is slot data (`position_slot`, `slot_assignment`, `slot_reporting_line`).
+- Services should resolve manager relationships from active slot assignments rather than recursive user-manager foreign keys.
+- Public API contracts should expose slot-based manager metadata (`managerSlotCode`) for assignment/edit workflows.

@@ -23,6 +23,12 @@ Zenith HR is a manpower request and HR management system.
 - **Finance** - Budget approval authority
 - **CEO** - Final approval for all requests
 
+## Hierarchy Source of Truth
+
+- Reporting and manager relationships are derived from active `slot_assignment` + `slot_reporting_line`.
+- API writes accept `reportsToSlotCode` for manager assignment and resolve the manager through slot ownership.
+- Legacy direct user manager links are treated as compatibility data only during migration windows.
+
 ## Workflow States
 
 The overarching approval state machine:
