@@ -10,6 +10,7 @@ export * from "./job-descriptions";
 export * from "./manpower-requests";
 export * from "./notifications";
 export * from "./performance";
+export * from "./position-slots";
 export * from "./request-versions";
 export * from "./separations";
 
@@ -42,6 +43,11 @@ export {
   performanceGoalRelations,
   performanceReviewRelations,
 } from "./performance";
+export {
+  positionSlotRelations,
+  slotAssignmentRelations,
+  slotReportingLineRelations,
+} from "./position-slots";
 export { requestVersionRelations } from "./request-versions";
 
 export const manpowerRequestRelations = relations(
