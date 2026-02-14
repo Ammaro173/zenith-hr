@@ -368,10 +368,7 @@ export const createWorkflowService = (db: DbOrTx) => {
       previousStatus: RequestStatus;
       newStatus: RequestStatus;
     }> {
-      // Execute the entire transition within a database transaction
-      // This ensures atomicity - all changes succeed or all fail together
       return await db.transaction(async (tx) => {
-        // Get request and actor within transaction
         const [request] = await tx
           .select()
           .from(manpowerRequest)
@@ -395,19 +392,35 @@ export const createWorkflowService = (db: DbOrTx) => {
         const actorRole = (actor.role || "REQUESTER") as UserRole;
         const currentStatus = request.status as RequestStatus;
 
-        let newStatus: RequestStatus;
+        const requiresActiveApprover =
+          currentStatus !== "DRAFT" && action !== "REQUEST_CHANGE";
+        if (requiresActiveApprover) {
+          if (
+            request.currentApproverId &&
+            request.currentApproverId !== actorId &&
+            actorRole !== "ADMIN"
+          ) {
+            throw new AppError(
+              "FORBIDDEN",
+              "Not authorized for this action",
+              403,
+            );
+          }
 
-        const approverForCurrent = getApproverForStatus(currentStatus);
-        if (
-          approverForCurrent &&
-          actorRole !== approverForCurrent &&
-          action !== "REQUEST_CHANGE"
-        ) {
-          throw new AppError(
-            "FORBIDDEN",
-            "Not authorized for this action",
-            403,
-          );
+          if (!request.currentApproverId) {
+            const requiredRole = getApproverForStatus(currentStatus);
+            if (
+              requiredRole &&
+              actorRole !== requiredRole &&
+              actorRole !== "ADMIN"
+            ) {
+              throw new AppError(
+                "FORBIDDEN",
+                "Not authorized for this action",
+                403,
+              );
+            }
+          }
         }
 
         const statusTransitions = WORKFLOW_TRANSITIONS[currentStatus];
@@ -422,24 +435,81 @@ export const createWorkflowService = (db: DbOrTx) => {
           );
         }
 
-        if (typeof transition === "function") {
+        let newStatus: RequestStatus;
+        if (currentStatus === "DRAFT" && action === "SUBMIT") {
+          newStatus = await this.getInitialStatusForRequester(
+            request.requesterId,
+            tx,
+            actorRole,
+          );
+        } else if (
+          action === "APPROVE" &&
+          ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO"].includes(
+            currentStatus,
+          )
+        ) {
+          const hasActiveSlot = await hasActiveSlotAssignment(
+            request.requesterId,
+            tx,
+          );
+          if (hasActiveSlot) {
+            const routeKey = await getInitiatorRouteKey(
+              request.requesterId,
+              tx,
+            );
+            const sequence = getApprovalSequenceForInitiator(routeKey);
+            const currentIndex = sequence.indexOf(currentStatus);
+            if (currentIndex < 0 || !sequence[currentIndex + 1]) {
+              throw AppError.badRequest(
+                `Invalid action ${action} from ${currentStatus}`,
+              );
+            }
+            newStatus = sequence[currentIndex + 1] as RequestStatus;
+          } else if (typeof transition === "function") {
+            newStatus = transition(actorRole);
+          } else {
+            newStatus = transition;
+          }
+        } else if (typeof transition === "function") {
           newStatus = transition(actorRole);
         } else {
           newStatus = transition;
         }
 
-        // Update request status within transaction
         const nextApproverId = await this.getNextApproverIdForStatus(
           request.requesterId,
           newStatus,
           tx,
         );
 
+        let nextApproverSlotId: string | null = null;
+        const nextApproverSlotCode = getStageSlotCodeForStatus(newStatus);
+        if (nextApproverSlotCode) {
+          const [stageSlot] = await tx
+            .select({ id: positionSlot.id })
+            .from(positionSlot)
+            .where(eq(positionSlot.code, nextApproverSlotCode))
+            .limit(1);
+          nextApproverSlotId = stageSlot?.id ?? null;
+        }
+
+        const [actorSlot] = await tx
+          .select({ slotId: slotAssignment.slotId })
+          .from(slotAssignment)
+          .where(
+            and(
+              eq(slotAssignment.userId, actorId),
+              isNull(slotAssignment.endsAt),
+            ),
+          )
+          .limit(1);
+
         await tx
           .update(manpowerRequest)
           .set({
             status: newStatus,
             currentApproverId: nextApproverId,
+            currentApproverSlotId: nextApproverSlotId,
             currentApproverRole: getApproverForStatus(newStatus),
             revisionVersion:
               newStatus === "DRAFT" && currentStatus !== "DRAFT"
@@ -449,22 +519,20 @@ export const createWorkflowService = (db: DbOrTx) => {
           })
           .where(eq(manpowerRequest.id, requestId));
 
-        // Create approval log within transaction
         const stepName =
           action === "SUBMIT" ? "Submission" : getStepName(currentStatus);
         await createApprovalLog(tx, requestId, actorId, action, stepName, {
           comment,
           ipAddress,
+          actorSlotId: actorSlot?.slotId,
         });
 
-        // Create audit log
         await createAuditLog(tx, requestId, actorId, action, {
           from: currentStatus,
           to: newStatus,
           comment,
         });
 
-        // Archive version if reverting to DRAFT - within transaction
         if (newStatus === "DRAFT" && currentStatus !== "DRAFT") {
           await archiveVersion(tx, requestId, request.revisionVersion + 1, {
             status: currentStatus,
