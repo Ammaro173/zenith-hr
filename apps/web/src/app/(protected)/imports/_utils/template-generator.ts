@@ -15,7 +15,7 @@ const USER_TEMPLATE_HEADERS = [
   "role",
   "status",
   "departmentId",
-  "reportsToManagerId",
+  "reportsToSlotCode",
   "password",
 ] as const;
 
@@ -58,7 +58,7 @@ const USER_COMMENT_ROW = [
   "(Required: REQUESTER|MANAGER|HR|FINANCE|CEO|IT|ADMIN)",
   "(Optional: ACTIVE|INACTIVE|ON_LEAVE - defaults to ACTIVE)",
   "(Optional: Department UUID)",
-  "(Optional: Manager's SAP number or UUID)",
+  "(Optional: Manager slot code, e.g. HOD_SALES)",
   "(Optional: Min 8 chars - auto-generated if empty)",
 ];
 

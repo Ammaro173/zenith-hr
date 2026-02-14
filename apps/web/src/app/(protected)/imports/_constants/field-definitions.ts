@@ -48,10 +48,10 @@ export const USER_FIELD_DEFINITIONS: FieldDefinition[] = [
     description: "UUID of the department",
   },
   {
-    key: "reportsToManagerId",
-    label: "Reports To Manager ID",
+    key: "reportsToSlotCode",
+    label: "Reports To Slot Code",
     required: false,
-    description: "UUID of the manager this employee reports to",
+    description: "Slot code of the manager position this employee reports to",
   },
   {
     key: "password",

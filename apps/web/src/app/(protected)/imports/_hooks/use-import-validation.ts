@@ -31,7 +31,7 @@ export interface UserImportRow {
   role: "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
   status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
   departmentId?: string | null;
-  reportsToManagerId?: string | null;
+  reportsToSlotCode?: string | null;
   password?: string;
 }
 

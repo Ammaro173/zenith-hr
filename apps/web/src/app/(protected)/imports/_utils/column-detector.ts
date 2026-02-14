@@ -20,7 +20,7 @@ export const USER_FIELDS = [
   "role",
   "status",
   "departmentId",
-  "reportsToManagerId",
+  "reportsToSlotCode",
   "password",
 ] as const;
 
@@ -93,17 +93,19 @@ const FIELD_VARIATIONS: Record<string, string> = {
   deptid: "departmentId",
   dept_id: "departmentId",
 
-  // User fields - reportsToManagerId
-  reportstomanagerid: "reportsToManagerId",
-  reports_to_manager_id: "reportsToManagerId",
-  reportsto: "reportsToManagerId",
-  reports_to: "reportsToManagerId",
-  managerid: "reportsToManagerId",
-  manager_id: "reportsToManagerId",
-  manager: "reportsToManagerId",
-  supervisorid: "reportsToManagerId",
-  supervisor_id: "reportsToManagerId",
-  supervisor: "reportsToManagerId",
+  // User fields - reportsToSlotCode
+  reportstoslotcode: "reportsToSlotCode",
+  reports_to_slot_code: "reportsToSlotCode",
+  managerslot: "reportsToSlotCode",
+  manager_slot: "reportsToSlotCode",
+  managerslotcode: "reportsToSlotCode",
+  manager_slot_code: "reportsToSlotCode",
+  supervisorslot: "reportsToSlotCode",
+  supervisor_slot: "reportsToSlotCode",
+  reportsto: "reportsToSlotCode",
+  reports_to: "reportsToSlotCode",
+  manager: "reportsToSlotCode",
+  supervisor: "reportsToSlotCode",
 
   // User fields - password
   password: "password",
