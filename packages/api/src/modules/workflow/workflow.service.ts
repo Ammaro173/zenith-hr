@@ -260,22 +260,33 @@ export const createWorkflowService = (db: DbOrTx) => {
 
     async getNextApprover(requesterId: string): Promise<string | null> {
       const result = await db.execute(sql`
-        WITH RECURSIVE manager_hierarchy AS (
-          SELECT id, reports_to_manager_id, role
-          FROM "user"
-          WHERE id = ${requesterId}
+        WITH requester_slot AS (
+          SELECT sa.slot_id AS slot_id
+          FROM slot_assignment sa
+          WHERE sa.user_id = ${requesterId}
+            AND sa.ends_at IS NULL
+          LIMIT 1
+        ),
+        ancestor_slots AS (
+          SELECT srl.parent_slot_id AS slot_id, 1 AS depth
+          FROM slot_reporting_line srl
+          INNER JOIN requester_slot rs ON rs.slot_id = srl.child_slot_id
 
           UNION ALL
 
-          SELECT u.id, u.reports_to_manager_id, u.role
-          FROM "user" u
-          INNER JOIN manager_hierarchy mh ON u.id = mh.reports_to_manager_id
+          SELECT srl.parent_slot_id AS slot_id, ancestor_slots.depth + 1 AS depth
+          FROM slot_reporting_line srl
+          INNER JOIN ancestor_slots ON ancestor_slots.slot_id = srl.child_slot_id
         )
-        SELECT id, role
-        FROM manager_hierarchy
-        WHERE role IN ('MANAGER', 'HR', 'FINANCE', 'CEO')
+        SELECT u.id, u.role, ancestor_slots.depth
+        FROM ancestor_slots
+        INNER JOIN slot_assignment sa ON sa.slot_id = ancestor_slots.slot_id
+        INNER JOIN "user" u ON u.id = sa.user_id
+        WHERE sa.ends_at IS NULL
+          AND u.role IN ('MANAGER', 'HR', 'FINANCE', 'CEO')
         ORDER BY
-          CASE role
+          ancestor_slots.depth ASC,
+          CASE u.role
             WHEN 'MANAGER' THEN 1
             WHEN 'HR' THEN 2
             WHEN 'FINANCE' THEN 3
