@@ -29,8 +29,7 @@ const WORKFLOW_TRANSITIONS: Partial<
   Record<RequestStatus, Partial<Record<ApprovalAction, TransitionTarget>>>
 > = {
   DRAFT: {
-    SUBMIT: (role) =>
-      role === "MANAGER" || role === "HR" ? "PENDING_HR" : "PENDING_MANAGER",
+    SUBMIT: "PENDING_HR",
   },
   PENDING_MANAGER: {
     APPROVE: "PENDING_HR",
@@ -234,23 +233,11 @@ export const createWorkflowService = (db: DbOrTx) => {
     async getInitialStatusForRequester(
       requesterId: string,
       txOrDb: DbOrTx = db,
-      actorRole?: UserRole,
+      _actorRole?: UserRole,
     ): Promise<RequestStatus> {
       const hasActiveSlot = await hasActiveSlotAssignment(requesterId, txOrDb);
       if (!hasActiveSlot) {
-        if (actorRole === "MANAGER" || actorRole === "HR") {
-          return "PENDING_HR";
-        }
-
-        const [requester] = await txOrDb
-          .select({ role: user.role })
-          .from(user)
-          .where(eq(user.id, requesterId))
-          .limit(1);
-
-        return requester?.role === "MANAGER" || requester?.role === "HR"
-          ? "PENDING_HR"
-          : "PENDING_MANAGER";
+        return "PENDING_HR";
       }
 
       const routeKey = await getInitiatorRouteKey(requesterId, txOrDb);

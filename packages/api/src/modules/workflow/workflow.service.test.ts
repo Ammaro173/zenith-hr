@@ -166,7 +166,7 @@ describe("WorkflowService", () => {
   // ============================================================================
 
   describe("transitionRequest - DRAFT status", () => {
-    it("SUBMIT by EMPLOYEE → PENDING_MANAGER", async () => {
+    it("SUBMIT by EMPLOYEE → PENDING_HR", async () => {
       const mockDb = createMockDb({
         request: { status: "DRAFT", requesterId: "user-1" },
         actor: { id: "user-1", role: "EMPLOYEE" },
@@ -180,7 +180,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("DRAFT");
-      expect(result.newStatus).toBe("PENDING_MANAGER");
+      expect(result.newStatus).toBe("PENDING_HR");
     });
 
     it("SUBMIT by MANAGER → PENDING_HR (skips PENDING_MANAGER)", async () => {
