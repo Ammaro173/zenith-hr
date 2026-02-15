@@ -101,6 +101,14 @@ export function RequestDetailClientPage({
     currency: string;
   };
 
+  const getApproverNameForStep = (stepName: string): string | undefined => {
+    return history
+      ?.slice()
+      .reverse()
+      .find((log) => log.stepName === stepName && log.action === "APPROVE")
+      ?.actor?.name;
+  };
+
   return (
     <div className="container max-w-6xl space-y-8 py-8">
       {/* Header */}
@@ -340,7 +348,7 @@ export function RequestDetailClientPage({
                   Approval Chain
                 </CardTitle>
                 <Badge className="text-[10px]" variant="secondary">
-                  STEP {getStepNumber(request.status)} OF 5
+                  STEP {getStepNumber(request.status)} OF 4
                 </Badge>
               </div>
             </CardHeader>
@@ -348,25 +356,24 @@ export function RequestDetailClientPage({
               <div className="relative space-y-8 before:absolute before:top-2 before:bottom-2 before:left-3 before:w-px before:bg-muted">
                 <ChainStep
                   actor={request.requester?.name}
+                  actorPrefix="Submitted by"
                   label="Requester"
                   status="COMPLETED"
                 />
                 <ChainStep
-                  isActive={request.status === "PENDING_MANAGER"}
-                  label="Line Manager"
-                  status={getChainStepStatus(request.status, "PENDING_MANAGER")}
-                />
-                <ChainStep
+                  actor={getApproverNameForStep("HR Review")}
                   isActive={request.status === "PENDING_HR"}
                   label="HR"
                   status={getChainStepStatus(request.status, "PENDING_HR")}
                 />
                 <ChainStep
+                  actor={getApproverNameForStep("Finance Review")}
                   isActive={request.status === "PENDING_FINANCE"}
                   label="Finance"
                   status={getChainStepStatus(request.status, "PENDING_FINANCE")}
                 />
                 <ChainStep
+                  actor={getApproverNameForStep("CEO Review")}
                   isActive={request.status === "PENDING_CEO"}
                   label="CEO"
                   status={getChainStepStatus(request.status, "PENDING_CEO")}
@@ -401,7 +408,6 @@ function getChainStepStatus(
 ): "COMPLETED" | "PENDING" | "WAITING" {
   const statuses = [
     "DRAFT",
-    "PENDING_MANAGER",
     "PENDING_HR",
     "PENDING_FINANCE",
     "PENDING_CEO",
@@ -422,11 +428,10 @@ function getChainStepStatus(
 function getStepNumber(status: string): number {
   const mapping: Record<string, number> = {
     DRAFT: 1,
-    PENDING_MANAGER: 2,
-    PENDING_HR: 3,
-    PENDING_FINANCE: 4,
-    PENDING_CEO: 5,
-    APPROVED_OPEN: 5,
+    PENDING_HR: 2,
+    PENDING_FINANCE: 3,
+    PENDING_CEO: 4,
+    APPROVED_OPEN: 4,
   };
   return mapping[status] || 1;
 }
@@ -461,11 +466,13 @@ function DetailItem({
 function ChainStep({
   label,
   actor,
+  actorPrefix,
   status,
   isActive,
 }: {
   label: string;
   actor?: string;
+  actorPrefix?: string;
   status: "COMPLETED" | "PENDING" | "WAITING";
   isActive?: boolean;
 }) {
@@ -494,10 +501,14 @@ function ChainStep({
           {label}
         </div>
         {actor ? (
-          <div className="text-muted-foreground text-xs">{actor}</div>
+          <div className="text-muted-foreground text-xs">
+            {status === "COMPLETED"
+              ? `${actorPrefix ?? "Approved by"} ${actor}`
+              : actor}
+          </div>
         ) : (
           <div className="text-muted-foreground text-xs italic">
-            {status === "WAITING" ? "Final Approval" : "Pending Approval"}
+            {status === "COMPLETED" ? "Approved" : "Pending Approval"}
           </div>
         )}
       </div>

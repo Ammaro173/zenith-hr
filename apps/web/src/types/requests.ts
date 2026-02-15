@@ -58,7 +58,6 @@ export const STATUS_VARIANTS: Record<
   }
 > = {
   DRAFT: { variant: "secondary", label: "Draft" },
-  PENDING_MANAGER: { variant: "warning", label: "Pending Manager" },
   PENDING_HR: { variant: "warning", label: "Pending HR" },
   PENDING_FINANCE: { variant: "warning", label: "Pending Finance" },
   PENDING_CEO: { variant: "warning", label: "Pending CEO" },
