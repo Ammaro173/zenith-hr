@@ -260,7 +260,7 @@ export const createWorkflowService = (db: DbOrTx) => {
 
     async getNextApprover(requesterId: string): Promise<string | null> {
       const result = await db.execute(sql`
-        WITH requester_slot AS (
+        WITH RECURSIVE requester_slot AS (
           SELECT sa.slot_id AS slot_id
           FROM slot_assignment sa
           WHERE sa.user_id = ${requesterId}
@@ -400,7 +400,7 @@ export const createWorkflowService = (db: DbOrTx) => {
           throw AppError.notFound("Actor not found");
         }
 
-        const actorRole = (actor.role || "REQUESTER") as UserRole;
+        const actorRole = (actor.role || "EMPLOYEE") as UserRole;
         const currentStatus = request.status as RequestStatus;
 
         const requiresActiveApprover =
