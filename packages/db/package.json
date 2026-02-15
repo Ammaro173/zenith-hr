@@ -36,6 +36,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
     "@t3-oss/env-core": "catalog:",
+    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "ws": "^8.19.0",
     "zod": "catalog:"

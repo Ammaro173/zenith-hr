@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
 import { db } from "./index";
 import {
+  account,
   department,
   positionSlot,
   separationChecklistTemplate,
@@ -12,6 +14,7 @@ import {
 
 async function seed() {
   const now = new Date();
+  const defaultPasswordHash = await hashPassword("Test123!");
 
   const hrDeptId = randomUUID();
   const financeDeptId = randomUUID();
@@ -160,8 +163,8 @@ async function seed() {
       updatedAt: now,
     },
     {
-      id: "seed-requester",
-      name: "Employee Requester",
+      id: "seed-employee",
+      name: "Employee",
       email: "employee@example.com",
       emailVerified: true,
       role: "EMPLOYEE" as const,
@@ -176,6 +179,7 @@ async function seed() {
     },
   ];
 
+  //TODO slot maybe like we did in MPR-0006 ?
   const ceoSlotId = randomUUID();
   const hrHodSlotId = randomUUID();
   const financeHodSlotId = randomUUID();
@@ -321,7 +325,7 @@ async function seed() {
     },
     {
       slotId: hrStaffSlotId,
-      userId: "seed-requester",
+      userId: "seed-employee",
       startsAt: now,
       endsAt: null,
       isPrimary: true,
@@ -511,6 +515,16 @@ async function seed() {
     },
   ];
 
+  const accounts = users.map((seedUser) => ({
+    id: randomUUID(),
+    accountId: seedUser.id,
+    providerId: "credential",
+    userId: seedUser.id,
+    password: defaultPasswordHash,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
   await db.transaction(async (tx) => {
     await tx.delete(slotAssignment);
     await tx.delete(slotReportingLine);
@@ -520,6 +534,7 @@ async function seed() {
 
     await tx.insert(department).values(departments);
     await tx.insert(user).values(users);
+    await tx.insert(account).values(accounts);
     await tx.insert(positionSlot).values(slots);
     await tx.insert(slotReportingLine).values(slotReportingLines);
     await tx.insert(slotAssignment).values(slotAssignments);
