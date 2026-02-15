@@ -357,7 +357,7 @@ export const createSeparationsService = (
         const [hrUser] = await tx
           .select({ id: user.id })
           .from(user)
-          .where(eq(user.role, "HR"))
+          .where(and(eq(user.role, "HR"), eq(user.status, "ACTIVE")))
           .limit(1);
         if (hrUser?.id) {
           await enqueueOutbox(tx, {

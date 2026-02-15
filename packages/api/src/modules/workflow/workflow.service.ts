@@ -270,6 +270,7 @@ export const createWorkflowService = (db: DbOrTx) => {
         INNER JOIN slot_assignment sa ON sa.slot_id = ancestor_slots.slot_id
         INNER JOIN "user" u ON u.id = sa.user_id
         WHERE sa.ends_at IS NULL
+          AND u.status = 'ACTIVE'
           AND u.role IN ('MANAGER', 'HR', 'FINANCE', 'CEO')
         ORDER BY
           ancestor_slots.depth ASC,
@@ -314,8 +315,10 @@ export const createWorkflowService = (db: DbOrTx) => {
           SELECT sa.user_id AS user_id
           FROM position_slot ps
           INNER JOIN slot_assignment sa ON sa.slot_id = ps.id
+          INNER JOIN "user" u ON u.id = sa.user_id
           WHERE ps.code = ${stageSlotCode}
             AND sa.ends_at IS NULL
+            AND u.status = 'ACTIVE'
           LIMIT 1
         `);
         const slotOccupant = slotResult.rows[0] as
@@ -341,19 +344,35 @@ export const createWorkflowService = (db: DbOrTx) => {
         const [hrUser] = await queryDb
           .select({ id: user.id })
           .from(user)
-          .where(eq(user.role, "HR"))
+          .where(and(eq(user.role, "HR"), eq(user.status, "ACTIVE")))
           .limit(1);
 
-        return hrUser?.id || null;
+        if (hrUser?.id) {
+          return hrUser.id;
+        }
+
+        throw new AppError(
+          "CONFLICT",
+          "No ACTIVE approver available for manager step. Reassign reporting lines or activate an approver.",
+          409,
+        );
       }
 
       const [targetUser] = await queryDb
         .select({ id: user.id })
         .from(user)
-        .where(eq(user.role, targetRole))
+        .where(and(eq(user.role, targetRole), eq(user.status, "ACTIVE")))
         .limit(1);
 
-      return targetUser?.id || null;
+      if (targetUser?.id) {
+        return targetUser.id;
+      }
+
+      throw new AppError(
+        "CONFLICT",
+        `No ACTIVE approver available for ${status}. Reassign role ownership or activate an approver.`,
+        409,
+      );
     },
 
     async transitionRequest(
