@@ -467,18 +467,48 @@ export const createUsersService = (db: DbOrTx) => ({
     const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
 
     const hierarchyResult = await db.execute(sql`
-      WITH active_assignments AS (
+      WITH RECURSIVE active_assignments AS (
         SELECT sa.user_id, sa.slot_id
         FROM slot_assignment sa
         WHERE sa.ends_at IS NULL
       ),
-      parent_map AS (
+      slot_ancestors AS (
         SELECT
-          aa.user_id AS child_user_id,
-          parent_sa.user_id AS manager_user_id
+          aa.slot_id AS child_slot_id,
+          srl.parent_slot_id AS ancestor_slot_id,
+          1 AS depth
         FROM active_assignments aa
         LEFT JOIN slot_reporting_line srl ON srl.child_slot_id = aa.slot_id
-        LEFT JOIN active_assignments parent_sa ON parent_sa.slot_id = srl.parent_slot_id
+
+        UNION ALL
+
+        SELECT
+          sa.child_slot_id,
+          srl.parent_slot_id AS ancestor_slot_id,
+          sa.depth + 1 AS depth
+        FROM slot_ancestors sa
+        INNER JOIN slot_reporting_line srl ON srl.child_slot_id = sa.ancestor_slot_id
+        WHERE sa.ancestor_slot_id IS NOT NULL
+      ),
+      nearest_occupied_manager AS (
+        SELECT DISTINCT ON (aa.user_id)
+          aa.user_id AS child_user_id,
+          parent_sa.user_id AS manager_user_id,
+          sa.depth
+        FROM active_assignments aa
+        INNER JOIN slot_ancestors sa ON sa.child_slot_id = aa.slot_id
+        INNER JOIN active_assignments parent_sa ON parent_sa.slot_id = sa.ancestor_slot_id
+        ORDER BY aa.user_id, sa.depth ASC
+      ),
+      department_heads AS (
+        SELECT DISTINCT ON (ps.department_id)
+          ps.department_id,
+          sa.user_id AS hod_user_id
+        FROM position_slot ps
+        INNER JOIN slot_assignment sa ON sa.slot_id = ps.id
+        WHERE ps.is_department_head = TRUE
+          AND sa.ends_at IS NULL
+        ORDER BY ps.department_id, sa.starts_at DESC
       )
       SELECT
         u.id,
@@ -488,10 +518,19 @@ export const createUsersService = (db: DbOrTx) => ({
         u.role,
         u.status,
         d.name AS department_name,
-        pm.manager_user_id
+        CASE
+          WHEN nom.manager_user_id IS NOT NULL THEN nom.manager_user_id
+          WHEN self_assignment.user_id IS NULL
+            AND dh.hod_user_id IS NOT NULL
+            AND dh.hod_user_id <> u.id
+            THEN dh.hod_user_id
+          ELSE NULL
+        END AS manager_user_id
       FROM "user" u
       LEFT JOIN department d ON d.id = u.department_id
-      LEFT JOIN parent_map pm ON pm.child_user_id = u.id
+      LEFT JOIN active_assignments self_assignment ON self_assignment.user_id = u.id
+      LEFT JOIN nearest_occupied_manager nom ON nom.child_user_id = u.id
+      LEFT JOIN department_heads dh ON dh.department_id = u.department_id
       WHERE u.status = 'ACTIVE'
     `);
 
@@ -578,24 +617,35 @@ export const createUsersService = (db: DbOrTx) => ({
         .sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // For team scope or non-full-access roles
-    if (currentUser.role === "MANAGER") {
-      // Manager sees themselves as root with their reports
-      const managerTree = buildTree(currentUser.id);
-      return managerTree ? [managerTree] : [];
-    }
-
-    // For EMPLOYEE or other roles: show their manager and peers
+    // Team scope (and organization scope for non-full-access roles):
+    // - If user has direct reports, show their own subtree
+    // - Otherwise, show manager with direct reports only (peers view)
     const currentUserData = userMap.get(currentUser.id);
-    if (!currentUserData?.managerUserId) {
-      // No manager - show just themselves
-      const selfNode = currentUserData ? buildNode(currentUserData) : null;
-      return selfNode ? [selfNode] : [];
+    if (!currentUserData) {
+      return [];
     }
 
-    // Show manager's tree (which includes the current user as a child)
-    const managerTree = buildTree(currentUserData.managerUserId);
-    return managerTree ? [managerTree] : [];
+    const directReports = childrenMap.get(currentUser.id) ?? [];
+    if (directReports.length > 0) {
+      const selfTree = buildTree(currentUser.id);
+      return selfTree ? [selfTree] : [];
+    }
+
+    if (!currentUserData.managerUserId) {
+      return [buildNode(currentUserData)];
+    }
+
+    const managerData = userMap.get(currentUserData.managerUserId);
+    if (!managerData) {
+      return [buildNode(currentUserData)];
+    }
+
+    const managerNode = buildNode(managerData);
+    managerNode.children = (childrenMap.get(managerData.id) ?? [])
+      .map((peer) => buildNode(peer))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return [managerNode];
   },
 
   /**
