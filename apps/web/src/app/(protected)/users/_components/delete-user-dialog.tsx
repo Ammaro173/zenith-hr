@@ -105,6 +105,10 @@ export function DeleteUserDialog({
     mutationFn: () => client.users.forceDelete({ id: userId }),
     onSuccess: () => {
       toast.success("User force-deleted successfully");
+      toast.warning("Review downstream history", {
+        description:
+          "Force delete can affect historical links. Verify audit logs and request histories.",
+      });
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
