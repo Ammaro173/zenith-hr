@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Edit,
   Key,
@@ -38,6 +38,15 @@ import { DeleteUserDialog } from "./delete-user-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 import { UserSessionsDialog } from "./user-sessions-dialog";
+
+const BLOCKER_LABELS = {
+  slotAssignments: "Active slot assignments",
+  manpowerRequests: "Manpower requests",
+  businessTrips: "Business trips",
+  separations: "Separation requests",
+  performanceReviews: "Performance reviews",
+  importHistory: "Import history references",
+} as const;
 
 interface UserRowActionsProps {
   user: UserListItem;
@@ -83,6 +92,29 @@ export function UserRowActions({ user }: UserRowActionsProps) {
       toast.error(error.message || "Failed to deactivate user");
     },
   });
+
+  const deactivatePrecheckQuery = useQuery({
+    queryKey: ["users", "offboarding-precheck", user.id, "deactivate"],
+    queryFn: () => client.users.offboardingPrecheck({ id: user.id }),
+    enabled: showDeactivateAlert,
+  });
+
+  const deactivateBlockerSummary = deactivatePrecheckQuery.data
+    ? Object.entries(deactivatePrecheckQuery.data.counts)
+        .filter(([, count]) => count > 0)
+        .map(([key, count]) => {
+          const label =
+            BLOCKER_LABELS[key as keyof typeof BLOCKER_LABELS] ?? key;
+          return `${label}: ${count}`;
+        })
+    : [];
+
+  const deactivateDisabled =
+    deactivateMutation.isPending ||
+    deactivatePrecheckQuery.isLoading ||
+    (deactivatePrecheckQuery.data
+      ? !deactivatePrecheckQuery.data.canDeactivate
+      : false);
 
   const activateMutation = useMutation({
     mutationFn: () => client.users.update({ id: user.id, status: "ACTIVE" }),
@@ -211,18 +243,44 @@ export function UserRowActions({ user }: UserRowActionsProps) {
               Are you sure you want to deactivate{" "}
               <span className="font-semibold text-foreground">{user.name}</span>
               ? This will revoke all their active sessions.
+              {deactivatePrecheckQuery.isLoading ? (
+                <>
+                  <br />
+                  <br />
+                  Checking offboarding blockers...
+                </>
+              ) : null}
+              {deactivateBlockerSummary.length > 0 ? (
+                <>
+                  <br />
+                  <br />
+                  <span className="font-medium text-destructive">
+                    Deactivation is blocked until these are resolved:
+                  </span>
+                  <ul className="mt-2 list-disc pl-5 text-destructive">
+                    {deactivateBlockerSummary.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-warning text-warning-foreground hover:bg-warning/90"
+              disabled={deactivateDisabled}
               onClick={(e) => {
                 e.preventDefault();
                 deactivateMutation.mutate();
               }}
             >
-              {deactivateMutation.isPending ? "Deactivating..." : "Deactivate"}
+              {deactivateMutation.isPending
+                ? "Deactivating..."
+                : deactivatePrecheckQuery.isLoading
+                  ? "Checking..."
+                  : "Deactivate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
