@@ -48,6 +48,19 @@ const BLOCKER_LABELS = {
   importHistory: "Import history references",
 } as const;
 
+function getDeactivateActionLabel(
+  isPending: boolean,
+  isChecking: boolean,
+): string {
+  if (isPending) {
+    return "Deactivating...";
+  }
+  if (isChecking) {
+    return "Checking...";
+  }
+  return "Deactivate";
+}
+
 interface UserRowActionsProps {
   user: UserListItem;
 }
@@ -115,6 +128,10 @@ export function UserRowActions({ user }: UserRowActionsProps) {
     (deactivatePrecheckQuery.data
       ? !deactivatePrecheckQuery.data.canDeactivate
       : false);
+  const deactivateActionLabel = getDeactivateActionLabel(
+    deactivateMutation.isPending,
+    deactivatePrecheckQuery.isLoading,
+  );
 
   const activateMutation = useMutation({
     mutationFn: () => client.users.update({ id: user.id, status: "ACTIVE" }),
@@ -276,11 +293,7 @@ export function UserRowActions({ user }: UserRowActionsProps) {
                 deactivateMutation.mutate();
               }}
             >
-              {deactivateMutation.isPending
-                ? "Deactivating..."
-                : deactivatePrecheckQuery.isLoading
-                  ? "Checking..."
-                  : "Deactivate"}
+              {deactivateActionLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
