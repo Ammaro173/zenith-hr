@@ -26,19 +26,14 @@ export const jobDescriptionsRouter = {
       return await context.services.jobDescriptions.getById(input.id);
     }),
 
-  /**
-   * Create job description - ADMIN, HR, or MANAGER
-   */
-  create: requireRoles(["ADMIN", "HR", "MANAGER"])
+  create: requireRoles(["ADMIN", "HR", "MANAGER", "CEO", "FINANCE", "IT"])
     .input(createJobDescriptionSchema)
     .handler(async ({ input, context }) => {
       return await context.services.jobDescriptions.create(input);
     }),
 
-  /**
-   * Update job description - ADMIN, HR, or MANAGER
-   */
-  update: requireRoles(["ADMIN", "HR", "MANAGER"])
+  //TODO you can only update yours ? except if you are mb HR or admin or it ?
+  update: requireRoles(["ADMIN", "HR", "MANAGER", "CEO", "FINANCE", "IT"])
     .input(updateJobDescriptionSchema)
     .handler(async ({ input, context }) => {
       return await context.services.jobDescriptions.update(input);
@@ -47,7 +42,7 @@ export const jobDescriptionsRouter = {
   /**
    * Delete job description - ADMIN, HR, or MANAGER
    */
-  delete: requireRoles(["ADMIN", "HR", "MANAGER"])
+  delete: requireRoles(["ADMIN", "HR", "MANAGER", "CEO", "FINANCE", "IT"])
     .input(deleteJobDescriptionSchema)
     .handler(async ({ input, context }) => {
       return await context.services.jobDescriptions.delete(input);
