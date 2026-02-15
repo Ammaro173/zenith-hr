@@ -17,7 +17,7 @@ Zenith HR is a manpower request and HR management system.
 
 ### Target Users
 
-- **Requester** - Any employee submitting staffing requests
+- **Employee** - Any employee submitting staffing requests
 - **Manager** - First-level approval, team lead
 - **HR** - Human Resources staff, manages candidates and contracts
 - **Finance** - Budget approval authority

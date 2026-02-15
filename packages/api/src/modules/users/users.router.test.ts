@@ -18,7 +18,7 @@ type AnyORPCError = ORPCError<string, unknown>;
 
 // All valid user roles
 const ALL_ROLES: UserRole[] = [
-  "REQUESTER",
+  "EMPLOYEE",
   "MANAGER",
   "HR",
   "FINANCE",
@@ -211,7 +211,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
 
     it("should deny non-ADMIN/HR roles from accessing ADMIN/HR operations", async () => {
       const nonAdminHrRoles: UserRole[] = [
-        "REQUESTER",
+        "EMPLOYEE",
         "MANAGER",
         "FINANCE",
         "CEO",
@@ -254,7 +254,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
 
     it("should deny all non-ADMIN roles from accessing ADMIN-only operations", async () => {
       const nonAdminRoles: UserRole[] = [
-        "REQUESTER",
+        "EMPLOYEE",
         "MANAGER",
         "HR",
         "FINANCE",

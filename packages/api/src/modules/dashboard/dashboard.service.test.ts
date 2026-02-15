@@ -21,8 +21,8 @@ describe("DashboardService RBAC", () => {
 
   const service = createDashboardService(mockDb);
 
-  it("should fetch stats for REQUESTER without error", async () => {
-    const stats = await service.getDashboardStats("user-1", "REQUESTER");
+  it("should fetch stats for EMPLOYEE without error", async () => {
+    const stats = await service.getDashboardStats("user-1", "EMPLOYEE");
     expect(stats).toBeDefined();
     // totalRequests should be 10 based on our mock
     expect(stats.totalRequests).toBe(10);

@@ -42,9 +42,7 @@ describe("SeparationsService", () => {
         from: mock(() => ({
           where: mock(() => ({
             limit: mock(() =>
-              Promise.resolve([
-                { id: "emp-1", role: "REQUESTER", name: "Emp" },
-              ]),
+              Promise.resolve([{ id: "emp-1", role: "EMPLOYEE", name: "Emp" }]),
             ),
           })),
         })),

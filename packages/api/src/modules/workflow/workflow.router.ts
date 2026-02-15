@@ -4,7 +4,7 @@ import { requestIdSchema, transitionSchema } from "./workflow.schema";
 
 export const workflowRouter = o.router({
   transition: requireRoles([
-    "REQUESTER",
+    "EMPLOYEE",
     "MANAGER",
     "HR",
     "FINANCE",

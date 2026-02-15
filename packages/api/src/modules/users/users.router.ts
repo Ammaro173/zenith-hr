@@ -29,7 +29,7 @@ export const usersRouter = o.router({
     .handler(async ({ input, context }) => {
       const currentUser = {
         id: context.session.user.id,
-        role: (context.session.user as { role?: string }).role ?? "REQUESTER",
+        role: (context.session.user as { role?: string }).role ?? "EMPLOYEE",
       };
       return await context.services.users.list(input, currentUser);
     }),
@@ -52,7 +52,7 @@ export const usersRouter = o.router({
     .handler(async ({ input, context }) => {
       const currentUser = {
         id: context.session.user.id,
-        role: (context.session.user as { role?: string }).role ?? "REQUESTER",
+        role: (context.session.user as { role?: string }).role ?? "EMPLOYEE",
       };
       return await context.services.users.getHierarchy(
         currentUser,

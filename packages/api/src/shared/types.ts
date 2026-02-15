@@ -1,5 +1,5 @@
 export type UserRole =
-  | "REQUESTER"
+  | "EMPLOYEE"
   | "MANAGER"
   | "HR"
   | "FINANCE"

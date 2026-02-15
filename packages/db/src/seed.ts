@@ -164,7 +164,7 @@ async function seed() {
       name: "Employee Requester",
       email: "employee@example.com",
       emailVerified: true,
-      role: "REQUESTER" as const,
+      role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0008",
       departmentId: hrDeptId,

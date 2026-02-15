@@ -17,7 +17,7 @@ import {
 
 //TODO need these types from api
 type UserRole =
-  | "REQUESTER"
+  | "EMPLOYEE"
   | "MANAGER"
   | "HR"
   | "FINANCE"
@@ -71,7 +71,7 @@ export function UserForm({
       email: initialData?.email ?? "",
       password: "",
       sapNo: initialData?.sapNo ?? "",
-      role: (initialData?.role as UserRole) ?? "REQUESTER",
+      role: (initialData?.role as UserRole) ?? "EMPLOYEE",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
       departmentId: initialData?.departmentId ?? null,
       reportsToSlotCode: initialData?.managerSlotCode ?? null,

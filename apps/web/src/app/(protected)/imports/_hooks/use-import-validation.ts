@@ -28,7 +28,7 @@ export interface UserImportRow {
   name: string;
   email: string;
   sapNo: string;
-  role: "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
+  role: "EMPLOYEE" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
   status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
   departmentId?: string | null;
   reportsToSlotCode?: string | null;

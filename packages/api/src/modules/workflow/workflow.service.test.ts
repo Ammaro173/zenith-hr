@@ -36,7 +36,7 @@ function createMockDb(
 
   const defaultActor = {
     id: "user-1",
-    role: "REQUESTER" as UserRole,
+    role: "EMPLOYEE" as UserRole,
     name: "Test User",
   };
 
@@ -146,10 +146,8 @@ describe("WorkflowService", () => {
       expect(service.shouldSkipStep("HR", "PENDING_HR")).toBe(true);
     });
 
-    it("returns false for REQUESTER at PENDING_MANAGER", () => {
-      expect(service.shouldSkipStep("REQUESTER", "PENDING_MANAGER")).toBe(
-        false,
-      );
+    it("returns false for EMPLOYEE at PENDING_MANAGER", () => {
+      expect(service.shouldSkipStep("EMPLOYEE", "PENDING_MANAGER")).toBe(false);
     });
 
     it("returns false for MANAGER at PENDING_HR", () => {
@@ -159,7 +157,7 @@ describe("WorkflowService", () => {
     it("returns false for any role at DRAFT", () => {
       expect(service.shouldSkipStep("MANAGER", "DRAFT")).toBe(false);
       expect(service.shouldSkipStep("HR", "DRAFT")).toBe(false);
-      expect(service.shouldSkipStep("REQUESTER", "DRAFT")).toBe(false);
+      expect(service.shouldSkipStep("EMPLOYEE", "DRAFT")).toBe(false);
     });
   });
 
@@ -168,10 +166,10 @@ describe("WorkflowService", () => {
   // ============================================================================
 
   describe("transitionRequest - DRAFT status", () => {
-    it("SUBMIT by REQUESTER → PENDING_MANAGER", async () => {
+    it("SUBMIT by EMPLOYEE → PENDING_MANAGER", async () => {
       const mockDb = createMockDb({
         request: { status: "DRAFT", requesterId: "user-1" },
-        actor: { id: "user-1", role: "REQUESTER" },
+        actor: { id: "user-1", role: "EMPLOYEE" },
       });
       const service = createWorkflowService(mockDb);
 

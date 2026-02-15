@@ -9,12 +9,12 @@ import { count, eq, type SQL } from "drizzle-orm";
 
 type RequestFilterStrategy = (userId: string) => SQL | undefined;
 
-const REQUESTER_STRATEGY: RequestFilterStrategy = (userId) =>
+const EMPLOYEE_STRATEGY: RequestFilterStrategy = (userId) =>
   eq(manpowerRequest.requesterId, userId);
 
 const REQUEST_FILTERS: Record<string, RequestFilterStrategy> = {
-  REQUESTER: REQUESTER_STRATEGY,
-  MANAGER: REQUESTER_STRATEGY, // Managers see their own + pending for them (handled separately in pending)
+  EMPLOYEE: EMPLOYEE_STRATEGY,
+  MANAGER: EMPLOYEE_STRATEGY, // Managers see their own + pending for them (handled separately in pending)
   // HR/Finance/CEO see all by default (strategies return undefined for no filter)
   HR: () => undefined,
   FINANCE: () => undefined,
@@ -53,13 +53,13 @@ const ACTION_STRATEGIES: Record<string, ActionFilterStrategy> = {
     link: "/approvals",
     type: "urgent",
   }),
-  REQUESTER: () => null,
+  EMPLOYEE: () => null,
 };
 
 export const createDashboardService = (db: DbOrTx) => {
   return {
     async getTotalRequests(userId: string, role: string): Promise<number> {
-      const strategy = REQUEST_FILTERS[role] || REQUESTER_STRATEGY;
+      const strategy = REQUEST_FILTERS[role] || EMPLOYEE_STRATEGY;
       const filter = strategy(userId);
 
       const query = db.select({ count: count() }).from(manpowerRequest);
@@ -77,13 +77,13 @@ export const createDashboardService = (db: DbOrTx) => {
       // it usually means "My Requests that are Pending".
       // Actions are handled by getActionsRequired.
 
-      // Re-using logic: Requesters see their own pending.
+      // Re-using logic: Employees see their own pending.
       // Others might see what's pending for them?
       // Let's keep the previous logic but implemented cleanly.
 
       let whereClause: SQL | undefined;
 
-      if (role === "REQUESTER") {
+      if (role === "EMPLOYEE") {
         whereClause = eq(manpowerRequest.requesterId, userId);
         // In a real scenario we'd add .and(status != CLOSED)
       } else {

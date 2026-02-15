@@ -11,7 +11,7 @@ export const userImportRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email format"),
   sapNo: z.string().min(1, "SAP number is required"),
-  role: z.enum(["REQUESTER", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
+  role: z.enum(["EMPLOYEE", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
   status: z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]).default("ACTIVE"),
   departmentId: z.string().uuid().optional().nullable(),
   reportsToSlotCode: z.string().trim().min(1).optional().nullable(),

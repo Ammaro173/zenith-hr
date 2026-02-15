@@ -26,7 +26,7 @@ const ROLE_VIEWS: Record<
   string,
   React.ComponentType<{ stats: DashboardStats }>
 > = {
-  REQUESTER: RequesterView,
+  EMPLOYEE: RequesterView,
   MANAGER: ManagerView,
   HR: HRView,
   FINANCE: ManagerView, // Fallback to ManagerView for now
@@ -53,7 +53,7 @@ export default function DashboardPage() {
         <Show.When isTrue={!(session && stats)}>{null}</Show.When>
         <Show.Else
           render={() => {
-            const role = session?.user.role || "REQUESTER";
+            const role = session?.user.role || "EMPLOYEE";
             const ViewComponent = ROLE_VIEWS[role] || RequesterView;
             return <ViewComponent stats={stats as DashboardStats} />;
           }}

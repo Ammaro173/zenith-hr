@@ -8,7 +8,7 @@ import {
   tripActionSchema,
 } from "./business-trips.schema";
 
-const create = requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN", "CEO"])
+const create = requireRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN", "CEO"])
   .input(createTripSchema)
   .handler(
     async ({ input, context }) =>
@@ -49,7 +49,7 @@ const getPendingApprovals = requireRoles([
 );
 
 const transition = requireRoles([
-  "REQUESTER",
+  "EMPLOYEE",
   "MANAGER",
   "HR",
   "FINANCE",

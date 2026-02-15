@@ -199,7 +199,7 @@ export const createSeparationsService = (
     ) {
       return await db.transaction(async (tx) => {
         const actor = await getActor(db, employeeId);
-        const requesterRole = actor?.role ?? "REQUESTER";
+        const requesterRole = actor?.role ?? "EMPLOYEE";
 
         const employeeSlotId = await getActivePrimarySlotId(tx, employeeId);
         const managerSlotId = employeeSlotId

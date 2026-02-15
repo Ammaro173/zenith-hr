@@ -1,6 +1,6 @@
 // User types for the User Directory
 export type UserRole =
-  | "REQUESTER"
+  | "EMPLOYEE"
   | "MANAGER"
   | "HR"
   | "FINANCE"
@@ -56,7 +56,7 @@ export const ROLE_VARIANTS: Record<
   FINANCE: { variant: "warning", label: "Finance" },
   IT: { variant: "secondary", label: "IT" },
   MANAGER: { variant: "success", label: "Manager" },
-  REQUESTER: { variant: "secondary", label: "Employee" },
+  EMPLOYEE: { variant: "secondary", label: "Employee" },
 };
 
 // Status display configuration

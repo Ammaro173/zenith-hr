@@ -310,7 +310,7 @@ export const createUsersService = (db: DbOrTx) => ({
       }
       conditions.push(inArray(user.id, subordinateIds));
     } else if (!FULL_ACCESS_ROLES.includes(currentUser.role)) {
-      // REQUESTER or unknown role - no access
+      // EMPLOYEE or unknown role - no access
       return {
         data: [],
         total: 0,
@@ -585,7 +585,7 @@ export const createUsersService = (db: DbOrTx) => ({
       return managerTree ? [managerTree] : [];
     }
 
-    // For REQUESTER or other roles: show their manager and peers
+    // For EMPLOYEE or other roles: show their manager and peers
     const currentUserData = userMap.get(currentUser.id);
     if (!currentUserData?.managerUserId) {
       // No manager - show just themselves
@@ -667,7 +667,7 @@ export const createUsersService = (db: DbOrTx) => ({
       email,
       emailVerified: false,
       sapNo,
-      role: role ?? "REQUESTER",
+      role: role ?? "EMPLOYEE",
       status: status ?? "ACTIVE",
       departmentId: departmentId ?? null,
       passwordHash: null,
@@ -849,7 +849,7 @@ export const createUsersService = (db: DbOrTx) => ({
       name: string;
       email: string;
       sapNo: string;
-      role: "REQUESTER" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
+      role: "EMPLOYEE" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
       status: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
       departmentId: string | null;
       updatedAt: Date;

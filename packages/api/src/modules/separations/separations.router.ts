@@ -14,7 +14,7 @@ import {
 } from "./separations.schema";
 
 export const separationsRouter = o.router({
-  create: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
+  create: requireRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN"])
     .input(createSeparationSchema)
     .handler(
       async ({ input, context }) =>
@@ -93,7 +93,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  uploadDocument: requireRoles(["REQUESTER", "MANAGER", "HR", "ADMIN"])
+  uploadDocument: requireRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN"])
     .input(uploadSeparationDocumentSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.uploadDocument(

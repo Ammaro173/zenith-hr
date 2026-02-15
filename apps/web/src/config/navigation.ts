@@ -14,7 +14,7 @@ import {
 import type { Route } from "next";
 
 export type UserRole =
-  | "REQUESTER"
+  | "EMPLOYEE"
   | "MANAGER"
   | "HR"
   | "FINANCE"
@@ -114,7 +114,7 @@ export function getRoleFromSessionUser(user: unknown): UserRole | null {
   }
   const role = (user as { role?: unknown }).role;
   if (
-    role === "REQUESTER" ||
+    role === "EMPLOYEE" ||
     role === "MANAGER" ||
     role === "HR" ||
     role === "FINANCE" ||
@@ -164,6 +164,6 @@ export function getDefaultRouteForRole(role: UserRole | null): string {
   ) {
     return "/approvals";
   }
-  // REQUESTER, IT, and unknown roles go to dashboard
+  // EMPLOYEE, IT, and unknown roles go to dashboard
   return "/dashboard";
 }

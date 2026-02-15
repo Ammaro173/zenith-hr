@@ -13,7 +13,7 @@ import { department } from "./departments";
 const pgTable = pgTableCreator((name) => name);
 
 export const userRoleEnum = pgEnum("user_role", [
-  "REQUESTER",
+  "EMPLOYEE",
   "MANAGER",
   "HR",
   "FINANCE",
@@ -34,7 +34,7 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull(),
   image: text("image"),
-  role: userRoleEnum("role").notNull().default("REQUESTER"),
+  role: userRoleEnum("role").notNull().default("EMPLOYEE"),
   status: userStatusEnum("status").notNull().default("ACTIVE"),
   sapNo: text("sap_no").notNull().unique(),
   departmentId: uuid("department_id").references(() => department.id, {

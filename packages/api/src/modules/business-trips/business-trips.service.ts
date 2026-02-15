@@ -89,7 +89,7 @@ export const createBusinessTripsService = (
     const requesterRole = await getActorRole(db, requesterId);
 
     // Determine initial status based on role map, default to PENDING_MANAGER
-    // (If user is ADMIN or REQUESTER or others not in map, they start at PENDING_MANAGER logic)
+    // (If user is ADMIN or EMPLOYEE or others not in map, they start at PENDING_MANAGER logic)
     // Note: The original logic had:
     // if MANAGER -> PENDING_HR
     // if HR -> PENDING_FINANCE

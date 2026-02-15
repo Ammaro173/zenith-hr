@@ -33,7 +33,7 @@ export const USER_FIELD_DEFINITIONS: FieldDefinition[] = [
     key: "role",
     label: "Role",
     required: true,
-    description: "User role (REQUESTER, MANAGER, HR, FINANCE, CEO, IT, ADMIN)",
+    description: "User role (EMPLOYEE, MANAGER, HR, FINANCE, CEO, IT, ADMIN)",
   },
   {
     key: "status",

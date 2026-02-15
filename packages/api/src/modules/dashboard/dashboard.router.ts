@@ -22,9 +22,9 @@ export const dashboardRouter = o.router({
     }
 
     // Get statistics from service
-    // Default to REQUESTER if no role (shouldn't happen with typed auth)
-    // Default to REQUESTER if no role or invalid
-    const role = user.role || "REQUESTER";
+    // Default to EMPLOYEE if no role (shouldn't happen with typed auth)
+    // Default to EMPLOYEE if no role or invalid
+    const role = user.role || "EMPLOYEE";
 
     const stats = await context.services.dashboard.getDashboardStats(
       user.id,
@@ -46,7 +46,7 @@ export const dashboardRouter = o.router({
 
   getPendingCount: protectedProcedure.handler(async ({ context }) => {
     const { user } = context.session;
-    const role = user.role || "REQUESTER";
+    const role = user.role || "EMPLOYEE";
     const count = await context.services.dashboard.getPendingRequests(
       user.id,
       role,
@@ -75,7 +75,7 @@ export const dashboardRouter = o.router({
 
   getActionsRequired: protectedProcedure.handler(async ({ context }) => {
     const { user } = context.session;
-    const role = user.role || "REQUESTER";
+    const role = user.role || "EMPLOYEE";
 
     const actions = await context.services.dashboard.getActionsRequired(
       user.id,

@@ -241,7 +241,7 @@ export function BusinessTripDetailClientPage({
             <div className="flex justify-between">
               <span className="text-muted-foreground text-sm">Position</span>
               <Badge variant="outline">
-                {formatRole(trip.requester.role ?? "REQUESTER")}
+                {formatRole(trip.requester.role ?? "EMPLOYEE")}
               </Badge>
             </div>
           </CardContent>

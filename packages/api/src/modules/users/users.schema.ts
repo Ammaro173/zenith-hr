@@ -14,7 +14,7 @@ export const listUsersSchema = z.object({
   search: z.string().optional(),
   role: z
     .array(
-      z.enum(["REQUESTER", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
+      z.enum(["EMPLOYEE", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
     )
     .optional(),
   status: z.array(z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"])).optional(),
@@ -52,7 +52,7 @@ export interface HierarchyNode {
 
 // Enums matching database
 export const userRoleSchema = z.enum([
-  "REQUESTER",
+  "EMPLOYEE",
   "MANAGER",
   "HR",
   "FINANCE",
@@ -69,7 +69,7 @@ export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
   sapNo: z.string().min(1).max(50),
-  role: userRoleSchema.default("REQUESTER"),
+  role: userRoleSchema.default("EMPLOYEE"),
   status: userStatusSchema.default("ACTIVE"),
   departmentId: z
     .string()

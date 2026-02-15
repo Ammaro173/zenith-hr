@@ -14,7 +14,7 @@ const UUID_REGEX =
 
 // Valid enum values
 const VALID_ROLES = [
-  "REQUESTER",
+  "EMPLOYEE",
   "MANAGER",
   "HR",
   "FINANCE",

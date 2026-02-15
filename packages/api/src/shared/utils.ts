@@ -17,7 +17,7 @@ export async function getActorRole(
     .from(user)
     .where(eq(user.id, userId))
     .limit(1);
-  return (result?.role ?? "REQUESTER") as UserRole;
+  return (result?.role ?? "EMPLOYEE") as UserRole;
 }
 
 /**

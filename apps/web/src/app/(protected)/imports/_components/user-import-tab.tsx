@@ -137,7 +137,7 @@ export function UserImportTab() {
         name: userRow.name ?? "",
         email: userRow.email ?? "",
         sapNo: userRow.sapNo ?? "",
-        role: userRow.role ?? "REQUESTER",
+        role: userRow.role ?? "EMPLOYEE",
         status: userRow.status,
         departmentId: userRow.departmentId,
         reportsToSlotCode: userRow.reportsToSlotCode,

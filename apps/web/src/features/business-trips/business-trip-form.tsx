@@ -133,8 +133,7 @@ export function BusinessTripForm({
                       </p>
                       <Badge variant="outline">
                         {formatRole(
-                          (sessionUser as { role?: string }).role ??
-                            "REQUESTER",
+                          (sessionUser as { role?: string }).role ?? "EMPLOYEE",
                         )}
                       </Badge>
                     </div>

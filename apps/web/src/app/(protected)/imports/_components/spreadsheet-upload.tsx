@@ -263,7 +263,7 @@ function PasteSection({
           disabled={isLoading || hasData}
           id="paste-csv"
           onChange={(e) => onTextChange(e.target.value)}
-          placeholder="name,email,sapNo,role&#10;John Doe,john@example.com,SAP001,REQUESTER&#10;Jane Smith,jane@example.com,SAP002,MANAGER"
+          placeholder="name,email,sapNo,role&#10;John Doe,john@example.com,SAP001,EMPLOYEE&#10;Jane Smith,jane@example.com,SAP002,MANAGER"
           rows={8}
           value={text}
         />
