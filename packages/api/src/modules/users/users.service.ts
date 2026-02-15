@@ -2,11 +2,16 @@ import { randomUUID } from "node:crypto";
 import { hashPassword } from "@zenith-hr/auth";
 import type { DbOrTx } from "@zenith-hr/db";
 import { account, session, user } from "@zenith-hr/db/schema/auth";
+import { businessTrip } from "@zenith-hr/db/schema/business-trips";
 import { department } from "@zenith-hr/db/schema/departments";
+import { importHistory } from "@zenith-hr/db/schema/import-history";
+import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
+import { performanceReview } from "@zenith-hr/db/schema/performance";
 import {
   positionSlot,
   slotAssignment,
 } from "@zenith-hr/db/schema/position-slots";
+import { separationRequest } from "@zenith-hr/db/schema/separations";
 import {
   and,
   asc,
@@ -23,6 +28,7 @@ import type {
   CreateUserInput,
   HierarchyNode,
   ListUsersInput,
+  OffboardingPrecheckResult,
   UpdateUserInput,
   UserResponse,
   UserSession,
@@ -34,6 +40,81 @@ const FULL_ACCESS_ROLES = ["ADMIN", "HR", "CEO", "IT", "FINANCE"];
 export interface CurrentUser {
   id: string;
   role: string;
+}
+
+const MANPOWER_OPERATIONAL_STATUSES = [
+  "PENDING_MANAGER",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+  "APPROVED_OPEN",
+  "HIRING_IN_PROGRESS",
+] as const;
+
+const BUSINESS_TRIP_OPERATIONAL_STATUSES = [
+  "PENDING_MANAGER",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+  "APPROVED",
+] as const;
+
+const SEPARATION_OPERATIONAL_STATUSES = [
+  "REQUESTED",
+  "PENDING_MANAGER",
+  "PENDING_HR",
+  "CLEARANCE_IN_PROGRESS",
+] as const;
+
+const PERFORMANCE_OPERATIONAL_STATUSES = [
+  "DRAFT",
+  "SELF_REVIEW",
+  "MANAGER_REVIEW",
+  "IN_REVIEW",
+  "SUBMITTED",
+  "ACKNOWLEDGED",
+] as const;
+
+function createEmptyPrecheck(userId: string): OffboardingPrecheckResult {
+  return {
+    userId,
+    counts: {
+      slotAssignments: 0,
+      manpowerRequests: 0,
+      businessTrips: 0,
+      separations: 0,
+      performanceReviews: 0,
+      importHistory: 0,
+    },
+    details: {
+      slotAssignments: [],
+      manpowerRequests: [],
+      businessTrips: [],
+      separations: [],
+      performanceReviews: [],
+      importHistory: [],
+    },
+    hasOperationalBlockers: false,
+    hasDeleteBlockers: false,
+    canDeactivate: true,
+    canDelete: true,
+  };
+}
+
+function computePrecheckFlags(precheck: OffboardingPrecheckResult) {
+  const hasOperationalBlockers =
+    precheck.counts.slotAssignments > 0 ||
+    precheck.counts.manpowerRequests > 0 ||
+    precheck.counts.businessTrips > 0 ||
+    precheck.counts.separations > 0 ||
+    precheck.counts.performanceReviews > 0;
+  const hasDeleteBlockers =
+    hasOperationalBlockers || precheck.counts.importHistory > 0;
+
+  precheck.hasOperationalBlockers = hasOperationalBlockers;
+  precheck.hasDeleteBlockers = hasDeleteBlockers;
+  precheck.canDeactivate = !hasOperationalBlockers;
+  precheck.canDelete = !hasDeleteBlockers;
 }
 
 async function resolveManagerUserIdBySlotCode(
@@ -990,6 +1071,15 @@ export const createUsersService = (db: DbOrTx) => ({
       throw new AppError("NOT_FOUND", "User not found", 404);
     }
 
+    const precheck = await this.offboardingPrecheck(userId);
+    if (!precheck.canDeactivate) {
+      throw new AppError(
+        "CONFLICT",
+        "Cannot deactivate user due to active offboarding blockers. Run offboarding precheck and resolve blockers first.",
+        409,
+      );
+    }
+
     // Update user status to INACTIVE
     await db
       .update(user)
@@ -1020,8 +1110,203 @@ export const createUsersService = (db: DbOrTx) => ({
       throw new AppError("NOT_FOUND", "User not found", 404);
     }
 
+    const precheck = await this.offboardingPrecheck(userId);
+    if (!precheck.canDelete) {
+      throw new AppError(
+        "CONFLICT",
+        "Cannot delete user due to active offboarding blockers. Run offboarding precheck and resolve blockers first.",
+        409,
+      );
+    }
+
     // Delete user record - sessions/accounts cascade delete via FK constraints
     await db.delete(user).where(eq(user.id, userId));
+  },
+
+  async forceDelete(userId: string): Promise<void> {
+    // Verify user exists
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      throw new AppError("NOT_FOUND", "User not found", 404);
+    }
+
+    const precheck = await this.offboardingPrecheck(userId);
+    if (precheck.counts.importHistory > 0) {
+      throw new AppError(
+        "CONFLICT",
+        "Cannot force delete user with import history references. Preserve history or migrate references first.",
+        409,
+      );
+    }
+
+    // Delete user record - sessions/accounts cascade delete via FK constraints
+    await db.delete(user).where(eq(user.id, userId));
+  },
+
+  async offboardingPrecheck(
+    userId: string,
+  ): Promise<OffboardingPrecheckResult> {
+    // Verify user exists
+    const [existingUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!existingUser) {
+      throw new AppError("NOT_FOUND", "User not found", 404);
+    }
+
+    const precheck = createEmptyPrecheck(userId);
+    const supportsExecute =
+      typeof (db as { execute?: unknown }).execute === "function";
+
+    if (!supportsExecute) {
+      computePrecheckFlags(precheck);
+      return precheck;
+    }
+
+    const [
+      activeSlots,
+      manpowerRows,
+      tripRows,
+      separationRows,
+      performanceRows,
+      importHistoryRows,
+    ] = await Promise.all([
+      db
+        .select({ id: slotAssignment.id })
+        .from(slotAssignment)
+        .where(
+          and(
+            eq(slotAssignment.userId, userId),
+            sql`${slotAssignment.endsAt} IS NULL`,
+          ),
+        )
+        .limit(25),
+      db
+        .select({
+          id: manpowerRequest.id,
+          status: manpowerRequest.status,
+        })
+        .from(manpowerRequest)
+        .where(
+          and(
+            inArray(manpowerRequest.status, MANPOWER_OPERATIONAL_STATUSES),
+            or(
+              eq(manpowerRequest.requesterId, userId),
+              eq(manpowerRequest.currentApproverId, userId),
+            ),
+          ),
+        )
+        .limit(50),
+      db
+        .select({
+          id: businessTrip.id,
+          status: businessTrip.status,
+        })
+        .from(businessTrip)
+        .where(
+          and(
+            inArray(businessTrip.status, BUSINESS_TRIP_OPERATIONAL_STATUSES),
+            or(
+              eq(businessTrip.requesterId, userId),
+              eq(businessTrip.currentApproverId, userId),
+            ),
+          ),
+        )
+        .limit(50),
+      db
+        .select({
+          id: separationRequest.id,
+          status: separationRequest.status,
+        })
+        .from(separationRequest)
+        .where(
+          and(
+            inArray(separationRequest.status, SEPARATION_OPERATIONAL_STATUSES),
+            or(
+              eq(separationRequest.employeeId, userId),
+              eq(separationRequest.managerId, userId),
+              eq(separationRequest.hrOwnerId, userId),
+            ),
+          ),
+        )
+        .limit(50),
+      db
+        .select({
+          id: performanceReview.id,
+          status: performanceReview.status,
+        })
+        .from(performanceReview)
+        .where(
+          and(
+            inArray(performanceReview.status, PERFORMANCE_OPERATIONAL_STATUSES),
+            or(
+              eq(performanceReview.employeeId, userId),
+              eq(performanceReview.reviewerId, userId),
+            ),
+          ),
+        )
+        .limit(50),
+      db
+        .select({ id: importHistory.id })
+        .from(importHistory)
+        .where(eq(importHistory.userId, userId))
+        .limit(25),
+    ]);
+
+    precheck.counts.slotAssignments = activeSlots.length;
+    precheck.details.slotAssignments = activeSlots.map((row) => ({
+      id: row.id,
+      status: null,
+      reason: "Active slot assignment must be ended or reassigned",
+    }));
+
+    precheck.counts.manpowerRequests = manpowerRows.length;
+    precheck.details.manpowerRequests = manpowerRows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      reason:
+        "User is requester or current approver on an active manpower request",
+    }));
+
+    precheck.counts.businessTrips = tripRows.length;
+    precheck.details.businessTrips = tripRows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      reason:
+        "User is requester or current approver on an active business trip",
+    }));
+
+    precheck.counts.separations = separationRows.length;
+    precheck.details.separations = separationRows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      reason: "User is employee, manager, or HR owner on an active separation",
+    }));
+
+    precheck.counts.performanceReviews = performanceRows.length;
+    precheck.details.performanceReviews = performanceRows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      reason: "User is employee or reviewer on an active performance review",
+    }));
+
+    precheck.counts.importHistory = importHistoryRows.length;
+    precheck.details.importHistory = importHistoryRows.map((row) => ({
+      id: row.id,
+      status: null,
+      reason: "Import history references this user and can block hard delete",
+    }));
+
+    computePrecheckFlags(precheck);
+    return precheck;
   },
 
   /**

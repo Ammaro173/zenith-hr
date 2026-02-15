@@ -33,12 +33,14 @@ const ADMIN_HR_OPERATIONS = [
   "update",
   "getById",
   "deactivate",
+  "offboardingPrecheck",
   "resetPassword",
 ] as const;
 
 // Operations that require ADMIN only
 const ADMIN_ONLY_OPERATIONS = [
   "delete",
+  "forceDelete",
   "getSessions",
   "revokeSession",
   "revokeAllSessions",
@@ -121,7 +123,9 @@ function createMockContext(role: UserRole) {
         update: mock(() => Promise.resolve({ id: "updated-user-id" })),
         getById: mock(() => Promise.resolve({ id: "user-id" })),
         deactivate: mock(() => Promise.resolve()),
+        offboardingPrecheck: mock(() => Promise.resolve({ canDelete: true })),
         delete: mock(() => Promise.resolve()),
+        forceDelete: mock(() => Promise.resolve()),
         getSessions: mock(() => Promise.resolve([])),
         revokeSession: mock(() => Promise.resolve()),
         revokeAllSessions: mock(() => Promise.resolve()),
@@ -161,8 +165,14 @@ async function simulateRouterCall(
       case "deactivate":
         await service.deactivate();
         break;
+      case "offboardingPrecheck":
+        await service.offboardingPrecheck();
+        break;
       case "delete":
         await service.delete();
+        break;
+      case "forceDelete":
+        await service.forceDelete();
         break;
       case "getSessions":
         await service.getSessions();
@@ -190,7 +200,7 @@ async function simulateRouterCall(
 }
 
 describe("Feature: user-management, Property 4: Role-based access control enforcement", () => {
-  describe("ADMIN/HR operations (create, update, getById, deactivate, resetPassword)", () => {
+  describe("ADMIN/HR operations (create, update, getById, deactivate, offboardingPrecheck, resetPassword)", () => {
     it("should allow ADMIN and HR roles to access ADMIN/HR operations", async () => {
       await fc.assert(
         fc.asyncProperty(
@@ -237,7 +247,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
     });
   });
 
-  describe("ADMIN-only operations (delete, getSessions, revokeSession, revokeAllSessions)", () => {
+  describe("ADMIN-only operations (delete, forceDelete, getSessions, revokeSession, revokeAllSessions)", () => {
     it("should allow only ADMIN role to access ADMIN-only operations", async () => {
       await fc.assert(
         fc.asyncProperty(adminOnlyOperationArb, async (operation) => {
@@ -331,8 +341,10 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
       { operation: "update", allowedRoles: ["ADMIN", "HR"] },
       { operation: "getById", allowedRoles: ["ADMIN", "HR"] },
       { operation: "deactivate", allowedRoles: ["ADMIN", "HR"] },
+      { operation: "offboardingPrecheck", allowedRoles: ["ADMIN", "HR"] },
       { operation: "resetPassword", allowedRoles: ["ADMIN", "HR"] },
       { operation: "delete", allowedRoles: ["ADMIN"] },
+      { operation: "forceDelete", allowedRoles: ["ADMIN"] },
       { operation: "getSessions", allowedRoles: ["ADMIN"] },
       { operation: "revokeSession", allowedRoles: ["ADMIN"] },
       { operation: "revokeAllSessions", allowedRoles: ["ADMIN"] },

@@ -127,12 +127,26 @@ export const deactivateUserSchema = z.object({
 
 export type DeactivateUserInput = z.infer<typeof deactivateUserSchema>;
 
+export const offboardingPrecheckSchema = z.object({
+  id: z.string(),
+});
+
+export type OffboardingPrecheckInput = z.infer<
+  typeof offboardingPrecheckSchema
+>;
+
 // Delete User
 export const deleteUserSchema = z.object({
   id: z.string(),
 });
 
 export type DeleteUserInput = z.infer<typeof deleteUserSchema>;
+
+export const forceDeleteUserSchema = z.object({
+  id: z.string(),
+});
+
+export type ForceDeleteUserInput = z.infer<typeof forceDeleteUserSchema>;
 
 // Get User Sessions
 export const getUserSessionsSchema = z.object({
@@ -186,4 +200,28 @@ export interface UserResponse {
   managerName: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export type OffboardingBlockerModule =
+  | "slotAssignments"
+  | "manpowerRequests"
+  | "businessTrips"
+  | "separations"
+  | "performanceReviews"
+  | "importHistory";
+
+export interface OffboardingBlockerDetail {
+  id: string;
+  status: string | null;
+  reason: string;
+}
+
+export interface OffboardingPrecheckResult {
+  userId: string;
+  counts: Record<OffboardingBlockerModule, number>;
+  details: Record<OffboardingBlockerModule, OffboardingBlockerDetail[]>;
+  hasOperationalBlockers: boolean;
+  hasDeleteBlockers: boolean;
+  canDeactivate: boolean;
+  canDelete: boolean;
 }

@@ -3,10 +3,12 @@ import {
   createUserSchema,
   deactivateUserSchema,
   deleteUserSchema,
+  forceDeleteUserSchema,
   getHierarchySchema,
   getUserByIdSchema,
   getUserSessionsSchema,
   listUsersSchema,
+  offboardingPrecheckSchema,
   resetPasswordSchema,
   revokeAllSessionsSchema,
   revokeSessionSchema,
@@ -88,11 +90,25 @@ export const usersRouter = o.router({
       return await context.services.users.deactivate(input.id);
     }),
 
+  // Offboarding precheck (ADMIN, HR)
+  offboardingPrecheck: requireRoles(["ADMIN", "HR"])
+    .input(offboardingPrecheckSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.users.offboardingPrecheck(input.id);
+    }),
+
   // Delete user (ADMIN only)
   delete: requireRoles(["ADMIN"])
     .input(deleteUserSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.delete(input.id);
+    }),
+
+  // Force delete user (ADMIN only)
+  forceDelete: requireRoles(["ADMIN"])
+    .input(forceDeleteUserSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.users.forceDelete(input.id);
     }),
 
   // Get user sessions (ADMIN only)
