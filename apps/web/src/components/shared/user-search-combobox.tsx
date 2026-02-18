@@ -21,6 +21,7 @@ interface UserOption {
   sapNo: string;
   departmentName: string | null;
   primarySlotCode?: string | null;
+  primaryPositionCode?: string | null;
 }
 
 interface UserSearchComboboxProps {
@@ -29,7 +30,7 @@ interface UserSearchComboboxProps {
   onOptionChange?: (option: UserOption | null) => void;
   placeholder?: string;
   fallbackLabel?: string | null;
-  valueKey?: "id" | "primarySlotCode";
+  valueKey?: "id" | "primarySlotCode" | "primaryPositionCode";
   excludeUserId?: string;
   nullable?: boolean;
   disabled?: boolean;
@@ -73,6 +74,9 @@ export function UserSearchCombobox({
     (option: UserOption): string | null => {
       if (valueKey === "primarySlotCode") {
         return option.primarySlotCode ?? null;
+      }
+      if (valueKey === "primaryPositionCode") {
+        return option.primaryPositionCode ?? null;
       }
       return option.id;
     },
