@@ -5,7 +5,8 @@ import { CreateJobDescriptionContent } from "./_components/create-content";
 
 export const metadata: Metadata = {
   title: "Create Job Description | Zenith HR",
-  description: "Create a new job description template.",
+  description:
+    "Create a template that defines assigned role and default department for positions.",
 };
 
 export default function CreateJobDescriptionPage() {
@@ -16,7 +17,8 @@ export default function CreateJobDescriptionPage() {
           Create Job Description
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Create a reusable job description template for manpower requests.
+          Create a template that sets assigned role and default department for
+          linked positions.
         </p>
       </div>
 

@@ -67,7 +67,7 @@ export const protectedNavigationItems: {
     title: "Job Descriptions",
     href: "/job-descriptions",
     icon: ClipboardList,
-    description: "Manage job description templates",
+    description: "Manage role and department defaults for positions",
     allowedRoles: ["ADMIN", "HR", "MANAGER"],
   },
   {

@@ -35,7 +35,8 @@ export default function CreateJobDescriptionModal() {
         <DialogHeader>
           <DialogTitle>Create Job Description</DialogTitle>
           <DialogDescription>
-            Create a reusable job description template for manpower requests.
+            Create a template that defines default role and department for
+            linked positions.
           </DialogDescription>
         </DialogHeader>
         <JobDescriptionForm

@@ -77,7 +77,7 @@ export default function EditJobDescriptionModal() {
         <DialogHeader>
           <DialogTitle>Edit Job Description</DialogTitle>
           <DialogDescription>
-            Update the job description template.
+            Update default role and department behavior for linked positions.
           </DialogDescription>
         </DialogHeader>
         {renderContent()}

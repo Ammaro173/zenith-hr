@@ -5,7 +5,8 @@ import { EditJobDescriptionContent } from "./_components/edit-content";
 
 export const metadata: Metadata = {
   title: "Edit Job Description | Zenith HR",
-  description: "Edit job description template.",
+  description:
+    "Update assigned role and default department rules used by linked positions.",
 };
 
 interface EditJobDescriptionPageProps {
@@ -24,7 +25,7 @@ export default async function EditJobDescriptionPage({
           Edit Job Description
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Update the job description template.
+          Update role and department defaults applied through linked positions.
         </p>
       </div>
 

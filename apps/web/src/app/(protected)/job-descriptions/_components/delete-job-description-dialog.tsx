@@ -70,11 +70,15 @@ export function DeleteJobDescriptionDialog({
             Delete Job Description
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
-            <p>
+            <span className="block">
               Are you sure you want to delete{" "}
               <span className="font-semibold">{jobDescription.title}</span>?
-            </p>
-            <p>This action cannot be undone.</p>
+            </span>
+            <span className="block">
+              Linked positions will lose this template's default role and
+              department mapping.
+            </span>
+            <span className="block">This action cannot be undone.</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

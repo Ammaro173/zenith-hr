@@ -5,7 +5,8 @@ import { JobDescriptionsDataGrid } from "./_components/job-descriptions-data-gri
 
 export const metadata: Metadata = {
   title: "Job Descriptions | Zenith HR",
-  description: "Manage reusable job description templates.",
+  description:
+    "Manage role templates that define assigned role and default department for positions.",
 };
 
 export default function JobDescriptionsPage() {
@@ -16,7 +17,8 @@ export default function JobDescriptionsPage() {
           Job Descriptions
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Manage reusable job description templates for manpower requests.
+          Manage templates that set the assigned role and default department for
+          linked positions.
         </p>
       </div>
 
