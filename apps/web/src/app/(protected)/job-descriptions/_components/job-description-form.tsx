@@ -2,10 +2,13 @@
 
 import { useForm } from "@tanstack/react-form";
 import { Loader2 } from "lucide-react";
+import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
+import { RoleSelect } from "@/components/shared/role-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { UserRole } from "@/types/users";
 
 // ============================================
 // Types
@@ -15,6 +18,8 @@ export interface JobDescriptionFormData {
   title: string;
   description: string;
   responsibilities: string | null;
+  departmentId: string | null;
+  assignedRole: UserRole;
 }
 
 export interface JobDescriptionListItem {
@@ -22,6 +27,8 @@ export interface JobDescriptionListItem {
   title: string;
   description: string;
   responsibilities: string | null;
+  departmentId: string | null;
+  assignedRole: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,12 +59,16 @@ export function JobDescriptionForm({
       title: initialData?.title ?? "",
       description: initialData?.description ?? "",
       responsibilities: initialData?.responsibilities ?? "",
+      departmentId: initialData?.departmentId ?? null,
+      assignedRole: initialData?.assignedRole ?? "EMPLOYEE",
     },
     onSubmit: async ({ value }) => {
       await onSubmit({
         title: value.title,
         description: value.description,
         responsibilities: value.responsibilities || null,
+        departmentId: value.departmentId,
+        assignedRole: value.assignedRole,
       });
     },
   });
@@ -71,6 +82,11 @@ export function JobDescriptionForm({
         form.handleSubmit();
       }}
     >
+      <p className="text-muted-foreground text-sm">
+        These defaults are applied when this job description is linked to a
+        position and that position is assigned to a user.
+      </p>
+
       <div className="grid gap-4">
         {/* Title Field */}
         <form.Field name="title">
@@ -95,7 +111,7 @@ export function JobDescriptionForm({
                 id={field.name}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Describe the role, key duties, and requirements..."
+                placeholder="Describe the role and how linked positions should be used..."
                 rows={4}
                 value={field.state.value}
               />
@@ -114,6 +130,31 @@ export function JobDescriptionForm({
                 placeholder="List key responsibilities (optional)..."
                 rows={3}
                 value={field.state.value}
+              />
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="assignedRole">
+          {(field) => (
+            <FormField field={field} label="Default Assigned Role" required>
+              <RoleSelect
+                onChange={(val) => field.handleChange(val as UserRole)}
+                value={field.state.value}
+              />
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="departmentId">
+          {(field) => (
+            <FormField field={field} label="Default Department (Optional)">
+              <DepartmentSelect
+                nullable
+                onChange={(val) => field.handleChange(val)}
+                placeholder="Select default department..."
+                value={field.state.value}
+                valueKey="id"
               />
             </FormField>
           )}
