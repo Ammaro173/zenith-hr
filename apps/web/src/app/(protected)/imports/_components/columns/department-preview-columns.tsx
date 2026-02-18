@@ -163,17 +163,4 @@ export const departmentPreviewColumns = [
     enableResizing: true,
     enablePinning: true,
   }),
-  columnHelper.accessor("headOfDepartmentId", {
-    header: ({ column }) => (
-      <DataGridColumnHeader column={column} title="Head of Department" />
-    ),
-    cell: ({ getValue }) => (
-      <span className="text-muted-foreground text-xs">{getValue() ?? "—"}</span>
-    ),
-    size: 200,
-    enableSorting: false,
-    enableHiding: true,
-    enableResizing: true,
-    enablePinning: true,
-  }),
 ];

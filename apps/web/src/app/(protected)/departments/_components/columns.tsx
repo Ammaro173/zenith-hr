@@ -38,19 +38,6 @@ export const columns = [
     enableResizing: true,
     enablePinning: true,
   }),
-  columnHelper.accessor("headOfDepartmentName", {
-    header: ({ column }) => (
-      <DataGridColumnHeader column={column} title="Head of Department" />
-    ),
-    cell: ({ getValue }) => (
-      <span className="text-muted-foreground">{getValue() ?? "—"}</span>
-    ),
-    size: 200,
-    enableSorting: false,
-    enableHiding: true,
-    enableResizing: true,
-    enablePinning: true,
-  }),
   columnHelper.accessor("createdAt", {
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Created" />
