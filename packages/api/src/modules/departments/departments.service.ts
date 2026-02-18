@@ -1,5 +1,4 @@
 import type { DbOrTx } from "@zenith-hr/db";
-import { user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
 import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
@@ -42,28 +41,16 @@ export const createDepartmentsService = (db: DbOrTx) => ({
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Alias for head of department join
-    const headOfDept = db
-      .select({
-        id: user.id,
-        name: user.name,
-      })
-      .from(user)
-      .as("head_of_dept");
-
     const [data, totalResult] = await Promise.all([
       db
         .select({
           id: department.id,
           name: department.name,
           costCenterCode: department.costCenterCode,
-          headOfDepartmentId: department.headOfDepartmentId,
-          headOfDepartmentName: headOfDept.name,
           createdAt: department.createdAt,
           updatedAt: department.updatedAt,
         })
         .from(department)
-        .leftJoin(headOfDept, eq(department.headOfDepartmentId, headOfDept.id))
         .where(whereClause)
         .orderBy(orderBy)
         .limit(pageSize)
@@ -86,27 +73,15 @@ export const createDepartmentsService = (db: DbOrTx) => ({
    * Get a department by ID with head of department info
    */
   async getById(id: string): Promise<DepartmentResponse | null> {
-    // Alias for head of department join
-    const headOfDept = db
-      .select({
-        id: user.id,
-        name: user.name,
-      })
-      .from(user)
-      .as("head_of_dept");
-
     const [foundDepartment] = await db
       .select({
         id: department.id,
         name: department.name,
         costCenterCode: department.costCenterCode,
-        headOfDepartmentId: department.headOfDepartmentId,
-        headOfDepartmentName: headOfDept.name,
         createdAt: department.createdAt,
         updatedAt: department.updatedAt,
       })
       .from(department)
-      .leftJoin(headOfDept, eq(department.headOfDepartmentId, headOfDept.id))
       .where(eq(department.id, id))
       .limit(1);
 
@@ -119,7 +94,7 @@ export const createDepartmentsService = (db: DbOrTx) => ({
    * - Validates head of department exists if provided
    */
   async create(input: CreateDepartmentInput): Promise<DepartmentResponse> {
-    const { name, costCenterCode, headOfDepartmentId } = input;
+    const { name, costCenterCode } = input;
 
     // Check for duplicate cost center code
     const existingByCode = await db
@@ -136,23 +111,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       );
     }
 
-    // Validate head of department exists if provided
-    if (headOfDepartmentId) {
-      const headExists = await db
-        .select({ id: user.id })
-        .from(user)
-        .where(eq(user.id, headOfDepartmentId))
-        .limit(1);
-
-      if (headExists.length === 0) {
-        throw new AppError(
-          "NOT_FOUND",
-          "Head of department user not found",
-          404,
-        );
-      }
-    }
-
     const now = new Date();
 
     // Insert department
@@ -161,7 +119,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       .values({
         name,
         costCenterCode,
-        headOfDepartmentId: headOfDepartmentId ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -191,7 +148,7 @@ export const createDepartmentsService = (db: DbOrTx) => ({
    * - Validates head of department exists if provided
    */
   async update(input: UpdateDepartmentInput): Promise<DepartmentResponse> {
-    const { id, name, costCenterCode, headOfDepartmentId } = input;
+    const { id, name, costCenterCode } = input;
 
     // Verify department exists
     const [existing] = await db
@@ -227,28 +184,10 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       }
     }
 
-    // Validate head of department exists if provided and not null
-    if (headOfDepartmentId !== undefined && headOfDepartmentId !== null) {
-      const headExists = await db
-        .select({ id: user.id })
-        .from(user)
-        .where(eq(user.id, headOfDepartmentId))
-        .limit(1);
-
-      if (headExists.length === 0) {
-        throw new AppError(
-          "NOT_FOUND",
-          "Head of department user not found",
-          404,
-        );
-      }
-    }
-
     // Build update object with only provided fields
     const updateData: Partial<{
       name: string;
       costCenterCode: string;
-      headOfDepartmentId: string | null;
       updatedAt: Date;
     }> = {
       updatedAt: new Date(),
@@ -259,9 +198,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
     }
     if (costCenterCode !== undefined) {
       updateData.costCenterCode = costCenterCode;
-    }
-    if (headOfDepartmentId !== undefined) {
-      updateData.headOfDepartmentId = headOfDepartmentId;
     }
 
     // Update department
@@ -295,21 +231,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
 
     if (!existing) {
       throw new AppError("NOT_FOUND", "Department not found", 404);
-    }
-
-    // Check for assigned users
-    const assignedUsers = await db
-      .select({ id: user.id })
-      .from(user)
-      .where(eq(user.departmentId, id))
-      .limit(1);
-
-    if (assignedUsers.length > 0) {
-      throw new AppError(
-        "CONFLICT",
-        "Cannot delete department with assigned users",
-        409,
-      );
     }
 
     // Delete department

@@ -15,12 +15,6 @@ export type ListDepartmentsInput = z.infer<typeof listDepartmentsSchema>;
 export const createDepartmentSchema = z.object({
   name: z.string().min(1).max(255),
   costCenterCode: z.string().min(1).max(50),
-  headOfDepartmentId: z
-    .string()
-    .min(1)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
 });
 
 export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
@@ -30,12 +24,6 @@ export const updateDepartmentSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(255).optional(),
   costCenterCode: z.string().min(1).max(50).optional(),
-  headOfDepartmentId: z
-    .string()
-    .min(1)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
 });
 
 export type UpdateDepartmentInput = z.infer<typeof updateDepartmentSchema>;
@@ -59,8 +47,6 @@ export interface DepartmentResponse {
   id: string;
   name: string;
   costCenterCode: string;
-  headOfDepartmentId: string | null;
-  headOfDepartmentName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
