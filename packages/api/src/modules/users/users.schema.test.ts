@@ -150,7 +150,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should reject invalid role values", () => {
+    it("should reject invalid UUID for positionId", () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -158,7 +158,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
-            role: invalidRoleArb,
+            positionId: invalidUuidArb,
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
@@ -188,7 +188,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should reject invalid UUID for departmentId", () => {
+    it("should reject missing positionId", () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -196,7 +196,6 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
-            departmentId: invalidUuidArb,
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
@@ -215,6 +214,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
+            positionId: fc.uuid(),
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
@@ -225,7 +225,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should accept valid input with optional fields", () => {
+    it("should accept valid input with optional status", () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -233,13 +233,8 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
-            role: fc.constantFrom(...VALID_ROLES),
+            positionId: fc.uuid(),
             status: fc.constantFrom(...VALID_STATUSES),
-            departmentId: fc.option(fc.uuid(), { nil: null }),
-            reportsToSlotCode: fc.option(
-              fc.constantFrom("MGR-001", "FIN-LEAD", "HR-HEAD"),
-              { nil: null },
-            ),
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
@@ -300,12 +295,12 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should reject invalid role values when provided", () => {
+    it("should reject invalid UUID for positionId when provided", () => {
       fc.assert(
         fc.property(
           fc.record({
             id: fc.string({ minLength: 1 }),
-            role: invalidRoleArb,
+            positionId: invalidUuidArb,
           }),
           (input) => {
             const result = updateUserSchema.safeParse(input);
@@ -322,22 +317,6 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
           fc.record({
             id: fc.string({ minLength: 1 }),
             status: invalidStatusArb,
-          }),
-          (input) => {
-            const result = updateUserSchema.safeParse(input);
-            expect(result.success).toBe(false);
-          },
-        ),
-        { numRuns: 100 },
-      );
-    });
-
-    it("should reject invalid UUID for departmentId when provided", () => {
-      fc.assert(
-        fc.property(
-          fc.record({
-            id: fc.string({ minLength: 1 }),
-            departmentId: invalidUuidArb,
           }),
           (input) => {
             const result = updateUserSchema.safeParse(input);
