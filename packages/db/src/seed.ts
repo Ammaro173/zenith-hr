@@ -4,12 +4,12 @@ import { db } from "./index";
 import {
   account,
   department,
-  positionSlot,
+  jobDescription,
+  jobPosition,
   separationChecklistTemplate,
-  slotAssignment,
-  slotReportingLine,
   user,
   userClearanceLane,
+  userPositionAssignment,
 } from "./schema";
 
 async function seed() {
@@ -27,7 +27,6 @@ async function seed() {
       id: hrDeptId,
       name: "Human Resources",
       costCenterCode: "CC-HR",
-      headOfDepartmentId: null,
       createdAt: now,
       updatedAt: now,
     },
@@ -35,7 +34,6 @@ async function seed() {
       id: financeDeptId,
       name: "Finance",
       costCenterCode: "CC-FIN",
-      headOfDepartmentId: null,
       createdAt: now,
       updatedAt: now,
     },
@@ -43,7 +41,6 @@ async function seed() {
       id: itDeptId,
       name: "IT",
       costCenterCode: "CC-IT",
-      headOfDepartmentId: null,
       createdAt: now,
       updatedAt: now,
     },
@@ -51,7 +48,6 @@ async function seed() {
       id: adminDeptId,
       name: "Administration",
       costCenterCode: "CC-ADM",
-      headOfDepartmentId: null,
       createdAt: now,
       updatedAt: now,
     },
@@ -186,7 +182,7 @@ async function seed() {
       role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0009",
-      departmentId: adminDeptId,
+      departmentId: hrDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -201,7 +197,7 @@ async function seed() {
       role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0010",
-      departmentId: adminDeptId,
+      departmentId: itDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -216,7 +212,7 @@ async function seed() {
       role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0011",
-      departmentId: adminDeptId,
+      departmentId: financeDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -366,7 +362,7 @@ async function seed() {
       role: "MANAGER" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0021",
-      departmentId: adminDeptId,
+      departmentId: hrDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -381,7 +377,7 @@ async function seed() {
       role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0022",
-      departmentId: adminDeptId,
+      departmentId: financeDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -411,7 +407,7 @@ async function seed() {
       role: "MANAGER" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0024",
-      departmentId: adminDeptId,
+      departmentId: itDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -426,7 +422,7 @@ async function seed() {
       role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0025",
-      departmentId: adminDeptId,
+      departmentId: hrDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -456,7 +452,7 @@ async function seed() {
       role: "EMPLOYEE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0027",
-      departmentId: adminDeptId,
+      departmentId: financeDeptId,
       passwordHash: null,
       signatureUrl: null,
       failedLoginAttempts: 0,
@@ -474,14 +470,97 @@ async function seed() {
   const hrManagerSlotId = randomUUID();
   const hrStaffSlotId = randomUUID();
 
-  const slots = [
+  const jobDescriptions = [
+    {
+      id: randomUUID(),
+      title: "Chief Executive Officer",
+      description: "Leads company strategy and executive decision-making.",
+      responsibilities: "Strategic direction, executive approvals, governance",
+      departmentId: adminDeptId,
+      assignedRole: "CEO" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "Head of Human Resources",
+      description: "Owns HR operations, policy, and talent strategy.",
+      responsibilities: "HR governance, workforce planning, policy approvals",
+      departmentId: hrDeptId,
+      assignedRole: "HR" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "Head of Finance",
+      description: "Owns finance operations, controls, and approvals.",
+      responsibilities: "Budget controls, financial approvals, reporting",
+      departmentId: financeDeptId,
+      assignedRole: "FINANCE" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "Head of IT",
+      description: "Leads IT systems, security, and support operations.",
+      responsibilities: "Infrastructure, security, service operations",
+      departmentId: itDeptId,
+      assignedRole: "IT" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "Head of Administration",
+      description: "Leads administrative and facilities operations.",
+      responsibilities: "Admin governance, facilities, shared services",
+      departmentId: adminDeptId,
+      assignedRole: "ADMIN" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "HR Line Manager",
+      description: "Manages HR team execution and day-to-day operations.",
+      responsibilities: "Team management, execution, coaching",
+      departmentId: hrDeptId,
+      assignedRole: "MANAGER" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "HR Staff",
+      description: "Supports HR operations and employee lifecycle tasks.",
+      responsibilities: "HR support, records, process execution",
+      departmentId: hrDeptId,
+      assignedRole: "EMPLOYEE" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  const [
+    ceoJobDescription,
+    hrHodJobDescription,
+    financeHodJobDescription,
+    itHodJobDescription,
+    adminHodJobDescription,
+    hrManagerJobDescription,
+    hrStaffJobDescription,
+  ] = jobDescriptions;
+
+  const positions = [
     {
       id: ceoSlotId,
       code: "CEO",
       name: "Chief Executive Officer",
       departmentId: adminDeptId,
-      isDepartmentHead: false,
-      isWorkflowStageOwner: true,
+      jobDescriptionId: ceoJobDescription?.id ?? null,
+      reportsToPositionId: null,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -491,8 +570,8 @@ async function seed() {
       code: "HOD_HR",
       name: "Head of Human Resources",
       departmentId: hrDeptId,
-      isDepartmentHead: true,
-      isWorkflowStageOwner: true,
+      jobDescriptionId: hrHodJobDescription?.id ?? null,
+      reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -502,8 +581,8 @@ async function seed() {
       code: "HOD_FINANCE",
       name: "Head of Finance",
       departmentId: financeDeptId,
-      isDepartmentHead: true,
-      isWorkflowStageOwner: true,
+      jobDescriptionId: financeHodJobDescription?.id ?? null,
+      reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -513,8 +592,8 @@ async function seed() {
       code: "HOD_IT",
       name: "Head of IT",
       departmentId: itDeptId,
-      isDepartmentHead: true,
-      isWorkflowStageOwner: false,
+      jobDescriptionId: itHodJobDescription?.id ?? null,
+      reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -524,8 +603,8 @@ async function seed() {
       code: "HOD_ADMIN",
       name: "Head of Administration",
       departmentId: adminDeptId,
-      isDepartmentHead: true,
-      isWorkflowStageOwner: false,
+      jobDescriptionId: adminHodJobDescription?.id ?? null,
+      reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -535,8 +614,8 @@ async function seed() {
       code: "MANAGER_HR",
       name: "HR Line Manager",
       departmentId: hrDeptId,
-      isDepartmentHead: false,
-      isWorkflowStageOwner: false,
+      jobDescriptionId: hrManagerJobDescription?.id ?? null,
+      reportsToPositionId: hrHodSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -546,117 +625,102 @@ async function seed() {
       code: "STAFF_HR_1",
       name: "HR Staff",
       departmentId: hrDeptId,
-      isDepartmentHead: false,
-      isWorkflowStageOwner: false,
+      jobDescriptionId: hrStaffJobDescription?.id ?? null,
+      reportsToPositionId: hrManagerSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
     },
   ];
 
-  const slotAssignments = [
+  const positionAssignments = [
     {
-      slotId: ceoSlotId,
+      positionId: ceoSlotId,
       userId: "seed-ceo",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      slotId: hrHodSlotId,
+      positionId: hrHodSlotId,
       userId: "seed-hr",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      slotId: financeHodSlotId,
+      positionId: financeHodSlotId,
       userId: "seed-finance",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      slotId: itHodSlotId,
+      positionId: itHodSlotId,
       userId: "seed-it",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      slotId: adminHodSlotId,
+      positionId: adminHodSlotId,
       userId: "seed-admin-dept",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      slotId: hrManagerSlotId,
+      positionId: hrManagerSlotId,
       userId: "seed-manager",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
     {
-      slotId: hrStaffSlotId,
+      positionId: hrStaffSlotId,
       userId: "seed-employee",
-      startsAt: now,
-      endsAt: null,
-      isPrimary: true,
       createdAt: now,
       updatedAt: now,
     },
   ];
 
-  const slotReportingLines = [
-    {
-      childSlotId: hrHodSlotId,
-      parentSlotId: ceoSlotId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      childSlotId: financeHodSlotId,
-      parentSlotId: ceoSlotId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      childSlotId: itHodSlotId,
-      parentSlotId: ceoSlotId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      childSlotId: adminHodSlotId,
-      parentSlotId: ceoSlotId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      childSlotId: hrManagerSlotId,
-      parentSlotId: hrHodSlotId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      childSlotId: hrStaffSlotId,
-      parentSlotId: hrManagerSlotId,
-      createdAt: now,
-      updatedAt: now,
-    },
+  const assignedUserIds = new Set(positionAssignments.map((x) => x.userId));
+  const reportsToByDepartment: Record<string, string> = {
+    [hrDeptId]: hrManagerSlotId,
+    [financeDeptId]: financeHodSlotId,
+    [itDeptId]: itHodSlotId,
+    [adminDeptId]: adminHodSlotId,
+  };
+
+  const generatedPositions = users
+    .filter((seedUser) => !assignedUserIds.has(seedUser.id))
+    .map((seedUser) => {
+      const departmentKey = seedUser.departmentId ?? adminDeptId;
+      const reportsToPositionId =
+        reportsToByDepartment[departmentKey] ?? adminHodSlotId;
+
+      return {
+        id: randomUUID(),
+        code: `AUTO_${seedUser.sapNo.replace(/[^A-Z0-9]/g, "_")}`,
+        name: `${seedUser.name} Position`,
+        departmentId: seedUser.departmentId,
+        jobDescriptionId: null,
+        reportsToPositionId,
+        active: true,
+        createdAt: now,
+        updatedAt: now,
+        userId: seedUser.id,
+      };
+    });
+
+  const generatedPositionRows = generatedPositions.map(
+    ({ userId, ...row }) => row,
+  );
+  const generatedAssignmentRows = generatedPositions.map((row) => ({
+    positionId: row.id,
+    userId: row.userId,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const allPositions = [...positions, ...generatedPositionRows];
+  const allPositionAssignments = [
+    ...positionAssignments,
+    ...generatedAssignmentRows,
   ];
 
   const separationChecklistTemplates = [
@@ -812,18 +876,18 @@ async function seed() {
   }));
 
   await db.transaction(async (tx) => {
-    await tx.delete(slotAssignment);
-    await tx.delete(slotReportingLine);
-    await tx.delete(positionSlot);
+    await tx.delete(userPositionAssignment);
+    await tx.delete(jobPosition);
+    await tx.delete(jobDescription);
     await tx.delete(user);
     await tx.delete(department);
 
     await tx.insert(department).values(departments);
+    await tx.insert(jobDescription).values(jobDescriptions);
     await tx.insert(user).values(users);
     await tx.insert(account).values(accounts);
-    await tx.insert(positionSlot).values(slots);
-    await tx.insert(slotReportingLine).values(slotReportingLines);
-    await tx.insert(slotAssignment).values(slotAssignments);
+    await tx.insert(jobPosition).values(allPositions);
+    await tx.insert(userPositionAssignment).values(allPositionAssignments);
 
     // Reset and seed separation templates + lane memberships.
     await tx.delete(separationChecklistTemplate);
