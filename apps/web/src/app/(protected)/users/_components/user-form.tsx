@@ -3,11 +3,9 @@
 import { useForm } from "@tanstack/react-form";
 import type { UserResponse } from "@zenith-hr/api/modules/users/users.schema";
 import { Loader2 } from "lucide-react";
-import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
-import { RoleSelect } from "@/components/shared/role-select";
+import { PositionSearchCombobox } from "@/components/shared/position-search-combobox";
 import { StatusSelect } from "@/components/shared/status-select";
-import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,15 +13,6 @@ import {
   PasswordInputStrengthChecker,
 } from "@/components/ui/password-input";
 
-//TODO need these types from api
-type UserRole =
-  | "EMPLOYEE"
-  | "MANAGER"
-  | "HR"
-  | "FINANCE"
-  | "CEO"
-  | "IT"
-  | "ADMIN";
 type UserStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE";
 
 export interface UserFormProps {
@@ -39,10 +28,8 @@ export interface CreateUserFormData {
   email: string;
   password: string;
   sapNo: string;
-  role: UserRole;
   status: UserStatus;
-  departmentId: string | null;
-  reportsToSlotCode: string | null;
+  positionId: string;
 }
 
 export interface UpdateUserFormData {
@@ -50,10 +37,8 @@ export interface UpdateUserFormData {
   name?: string;
   email?: string;
   sapNo?: string;
-  role?: UserRole;
   status?: UserStatus;
-  departmentId?: string | null;
-  reportsToSlotCode?: string | null;
+  positionId?: string;
 }
 
 export function UserForm({
@@ -71,10 +56,8 @@ export function UserForm({
       email: initialData?.email ?? "",
       password: "",
       sapNo: initialData?.sapNo ?? "",
-      role: (initialData?.role as UserRole) ?? "EMPLOYEE",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
-      departmentId: initialData?.departmentId ?? null,
-      reportsToSlotCode: initialData?.managerSlotCode ?? null,
+      positionId: initialData?.positionId ?? null,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -90,17 +73,14 @@ export function UserForm({
         if (value.sapNo !== initialData.sapNo) {
           updateData.sapNo = value.sapNo;
         }
-        if (value.role !== initialData.role) {
-          updateData.role = value.role;
-        }
         if (value.status !== initialData.status) {
           updateData.status = value.status;
         }
-        if (value.departmentId !== initialData.departmentId) {
-          updateData.departmentId = value.departmentId;
-        }
-        if (value.reportsToSlotCode !== (initialData.managerSlotCode ?? null)) {
-          updateData.reportsToSlotCode = value.reportsToSlotCode;
+        if (
+          value.positionId !== (initialData.positionId ?? null) &&
+          value.positionId
+        ) {
+          updateData.positionId = value.positionId;
         }
 
         await onSubmit(updateData);
@@ -188,63 +168,29 @@ export function UserForm({
           )}
         </form.Field>
 
-        {/* Role and Status in a row */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Role Field */}
-          <form.Field name="role">
-            {(field) => (
-              <FormField field={field} label="Role" required>
-                <RoleSelect
-                  onChange={(val) =>
-                    field.handleChange(val as CreateUserFormData["role"])
-                  }
-                  value={field.state.value}
-                />
-              </FormField>
-            )}
-          </form.Field>
-
-          {/* Status Field */}
-          <form.Field name="status">
-            {(field) => (
-              <FormField field={field} label="Status" required>
-                <StatusSelect
-                  onChange={(val) =>
-                    field.handleChange(val as CreateUserFormData["status"])
-                  }
-                  value={field.state.value}
-                />
-              </FormField>
-            )}
-          </form.Field>
-        </div>
-
-        {/* Department Field */}
-        <form.Field name="departmentId">
+        {/* Status Field */}
+        <form.Field name="status">
           {(field) => (
-            <FormField field={field} label="Department">
-              <DepartmentSelect
-                nullable
-                onChange={(val) => field.handleChange(val)}
+            <FormField field={field} label="Status" required>
+              <StatusSelect
+                onChange={(val) =>
+                  field.handleChange(val as CreateUserFormData["status"])
+                }
                 value={field.state.value}
-                valueKey="id"
               />
             </FormField>
           )}
         </form.Field>
 
-        {/* Manager Field */}
-        <form.Field name="reportsToSlotCode">
+        {/* Position Field */}
+        <form.Field name="positionId">
           {(field) => (
-            <FormField field={field} label="Reports To (Manager)">
-              <UserSearchCombobox
-                excludeUserId={initialData?.id}
-                fallbackLabel={initialData?.managerName}
-                nullable
+            <FormField field={field} label="Job Position" required>
+              <PositionSearchCombobox
+                nullable={isEditMode}
                 onChange={(val) => field.handleChange(val ?? null)}
-                placeholder="Search for a manager..."
+                placeholder="Search and select position"
                 value={field.state.value}
-                valueKey="primarySlotCode"
               />
             </FormField>
           )}
