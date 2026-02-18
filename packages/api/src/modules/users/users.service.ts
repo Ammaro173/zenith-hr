@@ -5,11 +5,12 @@ import { account, session, user } from "@zenith-hr/db/schema/auth";
 import { businessTrip } from "@zenith-hr/db/schema/business-trips";
 import { department } from "@zenith-hr/db/schema/departments";
 import { importHistory } from "@zenith-hr/db/schema/import-history";
+import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { performanceReview } from "@zenith-hr/db/schema/performance";
 import {
-  positionSlot,
-  slotAssignment,
+  jobPosition,
+  userPositionAssignment,
 } from "@zenith-hr/db/schema/position-slots";
 import { separationRequest } from "@zenith-hr/db/schema/separations";
 import {
@@ -117,43 +118,46 @@ function computePrecheckFlags(precheck: OffboardingPrecheckResult) {
   precheck.canDelete = !hasDeleteBlockers;
 }
 
-async function resolveManagerUserIdBySlotCode(
+async function resolveUserProfileFromPosition(
   db: DbOrTx,
-  slotCode: string,
-): Promise<string> {
-  const normalizedCode = slotCode.trim();
-  if (!normalizedCode) {
-    throw AppError.badRequest("Manager slot code cannot be empty");
-  }
-
-  const [slot] = await db
-    .select({ id: positionSlot.id })
-    .from(positionSlot)
-    .where(eq(positionSlot.code, normalizedCode))
-    .limit(1);
-
-  if (!slot) {
-    throw AppError.badRequest("Manager slot code not found");
-  }
-
-  const [activeAssignment] = await db
-    .select({ userId: slotAssignment.userId })
-    .from(slotAssignment)
-    .where(
-      and(
-        eq(slotAssignment.slotId, slot.id),
-        sql`${slotAssignment.endsAt} IS NULL`,
-      ),
+  positionId: string,
+): Promise<{
+  positionId: string;
+  derivedDepartmentId: string | null;
+  derivedRole:
+    | "EMPLOYEE"
+    | "MANAGER"
+    | "HR"
+    | "FINANCE"
+    | "CEO"
+    | "IT"
+    | "ADMIN";
+}> {
+  const [position] = await db
+    .select({
+      id: jobPosition.id,
+      positionDepartmentId: jobPosition.departmentId,
+      jobDepartmentId: jobDescription.departmentId,
+      assignedRole: jobDescription.assignedRole,
+    })
+    .from(jobPosition)
+    .leftJoin(
+      jobDescription,
+      eq(jobDescription.id, jobPosition.jobDescriptionId),
     )
+    .where(eq(jobPosition.id, positionId))
     .limit(1);
 
-  if (!activeAssignment?.userId) {
-    throw AppError.badRequest(
-      "No active user assignment found for manager slot code",
-    );
+  if (!position) {
+    throw AppError.badRequest("Job position not found");
   }
 
-  return activeAssignment.userId;
+  return {
+    positionId: position.id,
+    derivedDepartmentId:
+      position.positionDepartmentId ?? position.jobDepartmentId ?? null,
+    derivedRole: position.assignedRole ?? "EMPLOYEE",
+  };
 }
 
 async function getManagerInfoByUserIds(
@@ -165,7 +169,10 @@ async function getManagerInfoByUserIds(
     {
       managerUserId: string | null;
       managerName: string | null;
-      managerSlotCode: string | null;
+      reportsToPositionId: string | null;
+      positionId: string | null;
+      positionCode: string | null;
+      positionName: string | null;
     }
   >
 > {
@@ -174,7 +181,10 @@ async function getManagerInfoByUserIds(
     {
       managerUserId: string | null;
       managerName: string | null;
-      managerSlotCode: string | null;
+      reportsToPositionId: string | null;
+      positionId: string | null;
+      positionCode: string | null;
+      positionName: string | null;
     }
   >();
 
@@ -192,39 +202,38 @@ async function getManagerInfoByUserIds(
   );
 
   const managerRows = await db.execute(sql`
-    WITH child_assignments AS (
-      SELECT sa.user_id, sa.slot_id
-      FROM slot_assignment sa
-      WHERE sa.ends_at IS NULL
-        AND sa.is_primary = TRUE
-        AND sa.user_id IN (${userIdList})
-    )
-    SELECT DISTINCT ON (ca.user_id)
-      ca.user_id AS user_id,
-      parent_sa.user_id AS manager_user_id,
-      manager_user.name AS manager_name,
-      parent_slot.code AS manager_slot_code
-    FROM child_assignments ca
-    LEFT JOIN slot_reporting_line srl ON srl.child_slot_id = ca.slot_id
-    LEFT JOIN position_slot parent_slot ON parent_slot.id = srl.parent_slot_id
-    LEFT JOIN slot_assignment parent_sa
-      ON parent_sa.slot_id = srl.parent_slot_id
-      AND parent_sa.ends_at IS NULL
-      AND parent_sa.is_primary = TRUE
-    LEFT JOIN "user" manager_user ON manager_user.id = parent_sa.user_id
-    ORDER BY ca.user_id, parent_sa.created_at DESC NULLS LAST
+    SELECT
+      upa.user_id AS user_id,
+      upa.position_id AS position_id,
+      jp.code AS position_code,
+      jp.name AS position_name,
+      jp.reports_to_position_id AS reports_to_position_id,
+      manager_assignment.user_id AS manager_user_id,
+      manager_user.name AS manager_name
+    FROM user_position_assignment upa
+    LEFT JOIN job_position jp ON jp.id = upa.position_id
+    LEFT JOIN user_position_assignment manager_assignment
+      ON manager_assignment.position_id = jp.reports_to_position_id
+    LEFT JOIN "user" manager_user ON manager_user.id = manager_assignment.user_id
+    WHERE upa.user_id IN (${userIdList})
   `);
 
   for (const row of managerRows.rows as Array<{
     user_id: string;
+    position_id: string | null;
+    position_code: string | null;
+    position_name: string | null;
+    reports_to_position_id: string | null;
     manager_user_id: string | null;
     manager_name: string | null;
-    manager_slot_code: string | null;
   }>) {
     managerMap.set(row.user_id, {
       managerUserId: row.manager_user_id,
       managerName: row.manager_name,
-      managerSlotCode: row.manager_slot_code,
+      reportsToPositionId: row.reports_to_position_id,
+      positionId: row.position_id,
+      positionCode: row.position_code,
+      positionName: row.position_name,
     });
   }
 
@@ -235,7 +244,10 @@ async function withSlotManagers<
   T extends {
     id: string;
     managerName?: string | null;
-    managerSlotCode?: string | null;
+    reportsToPositionId?: string | null;
+    positionId?: string | null;
+    positionCode?: string | null;
+    positionName?: string | null;
   },
 >(
   db: DbOrTx,
@@ -244,7 +256,10 @@ async function withSlotManagers<
   Array<
     T & {
       managerName: string | null;
-      managerSlotCode: string | null;
+      reportsToPositionId: string | null;
+      positionId: string | null;
+      positionCode: string | null;
+      positionName: string | null;
     }
   >
 > {
@@ -260,7 +275,10 @@ async function withSlotManagers<
         {
           managerUserId: string | null;
           managerName: string | null;
-          managerSlotCode: string | null;
+          reportsToPositionId: string | null;
+          positionId: string | null;
+          positionCode: string | null;
+          positionName: string | null;
         }
       >();
 
@@ -269,13 +287,19 @@ async function withSlotManagers<
       ? managerMap.get(row.id)
       : {
           managerName: row.managerName ?? null,
-          managerSlotCode: row.managerSlotCode ?? null,
+          reportsToPositionId: row.reportsToPositionId ?? null,
+          positionId: row.positionId ?? null,
+          positionCode: row.positionCode ?? null,
+          positionName: row.positionName ?? null,
         };
 
     return {
       ...row,
       managerName: manager?.managerName ?? null,
-      managerSlotCode: manager?.managerSlotCode ?? null,
+      reportsToPositionId: manager?.reportsToPositionId ?? null,
+      positionId: manager?.positionId ?? null,
+      positionCode: manager?.positionCode ?? null,
+      positionName: manager?.positionName ?? null,
     };
   });
 }
@@ -291,7 +315,10 @@ function toUserResponse(
     | "status"
     | "departmentId"
     | "departmentName"
-    | "managerSlotCode"
+    | "positionId"
+    | "positionCode"
+    | "positionName"
+    | "reportsToPositionId"
     | "managerName"
     | "createdAt"
     | "updatedAt"
@@ -306,7 +333,10 @@ function toUserResponse(
     status: row.status,
     departmentId: row.departmentId,
     departmentName: row.departmentName,
-    managerSlotCode: row.managerSlotCode,
+    positionId: row.positionId,
+    positionCode: row.positionCode,
+    positionName: row.positionName,
+    reportsToPositionId: row.reportsToPositionId,
     managerName: row.managerName,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -326,19 +356,18 @@ export const createUsersService = (db: DbOrTx) => ({
         email: user.email,
         sapNo: user.sapNo,
         departmentName: department.name,
-        primarySlotCode: positionSlot.code,
+        primaryPositionCode: jobPosition.code,
       })
       .from(user)
       .leftJoin(department, eq(user.departmentId, department.id))
       .leftJoin(
-        slotAssignment,
-        and(
-          eq(slotAssignment.userId, user.id),
-          sql`${slotAssignment.endsAt} IS NULL`,
-          eq(slotAssignment.isPrimary, true),
-        ),
+        userPositionAssignment,
+        eq(userPositionAssignment.userId, user.id),
       )
-      .leftJoin(positionSlot, eq(positionSlot.id, slotAssignment.slotId));
+      .leftJoin(
+        jobPosition,
+        eq(jobPosition.id, userPositionAssignment.positionId),
+      );
 
     // If query is empty, return all users (up to limit)
     if (!query.trim()) {
@@ -456,7 +485,10 @@ export const createUsersService = (db: DbOrTx) => ({
           status: user.status,
           departmentId: user.departmentId,
           departmentName: department.name,
-          managerSlotCode: sql<string | null>`null`,
+          positionId: sql<string | null>`null`,
+          positionCode: sql<string | null>`null`,
+          positionName: sql<string | null>`null`,
+          reportsToPositionId: sql<string | null>`null`,
           managerName: sql<string | null>`null`,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -487,37 +519,31 @@ export const createUsersService = (db: DbOrTx) => ({
    * Get all subordinate user IDs recursively (direct reports + their reports, etc.)
    */
   async getSubordinateIds(managerId: string): Promise<string[]> {
-    const [managerSlot] = await db
-      .select({ slotId: slotAssignment.slotId })
-      .from(slotAssignment)
-      .where(
-        and(
-          eq(slotAssignment.userId, managerId),
-          sql`${slotAssignment.endsAt} IS NULL`,
-        ),
-      )
+    const [managerPosition] = await db
+      .select({ positionId: userPositionAssignment.positionId })
+      .from(userPositionAssignment)
+      .where(eq(userPositionAssignment.userId, managerId))
       .limit(1);
 
-    if (!managerSlot?.slotId) {
+    if (!managerPosition?.positionId) {
       return [];
     }
 
     const result = await db.execute(sql`
-      WITH RECURSIVE subordinate_slots AS (
-        SELECT child_slot_id AS slot_id
-        FROM slot_reporting_line
-        WHERE parent_slot_id = ${managerSlot.slotId}
+      WITH RECURSIVE subordinate_positions AS (
+        SELECT id AS position_id
+        FROM job_position
+        WHERE reports_to_position_id = ${managerPosition.positionId}
 
         UNION ALL
 
-        SELECT srl.child_slot_id AS slot_id
-        FROM slot_reporting_line srl
-        INNER JOIN subordinate_slots ss ON srl.parent_slot_id = ss.slot_id
+        SELECT jp.id AS position_id
+        FROM job_position jp
+        INNER JOIN subordinate_positions sp ON jp.reports_to_position_id = sp.position_id
       )
-      SELECT sa.user_id AS id
-      FROM subordinate_slots ss
-      INNER JOIN slot_assignment sa ON sa.slot_id = ss.slot_id
-      WHERE sa.ends_at IS NULL
+      SELECT upa.user_id AS id
+      FROM subordinate_positions sp
+      INNER JOIN user_position_assignment upa ON upa.position_id = sp.position_id
     `);
 
     return (result.rows as Array<{ id: string }>).map((row) => row.id);
@@ -548,48 +574,36 @@ export const createUsersService = (db: DbOrTx) => ({
     const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
 
     const hierarchyResult = await db.execute(sql`
-      WITH RECURSIVE active_assignments AS (
-        SELECT sa.user_id, sa.slot_id
-        FROM slot_assignment sa
-        WHERE sa.ends_at IS NULL
-      ),
-      slot_ancestors AS (
+      WITH RECURSIVE nearest_occupied_manager AS (
         SELECT
-          aa.slot_id AS child_slot_id,
-          srl.parent_slot_id AS ancestor_slot_id,
-          1 AS depth
-        FROM active_assignments aa
-        LEFT JOIN slot_reporting_line srl ON srl.child_slot_id = aa.slot_id
+          upa.user_id AS child_user_id,
+          manager_upa.user_id AS manager_user_id,
+          1 AS depth,
+          jp.reports_to_position_id AS current_parent_position_id
+        FROM user_position_assignment upa
+        LEFT JOIN job_position jp ON jp.id = upa.position_id
+        LEFT JOIN user_position_assignment manager_upa ON manager_upa.position_id = jp.reports_to_position_id
 
         UNION ALL
 
         SELECT
-          sa.child_slot_id,
-          srl.parent_slot_id AS ancestor_slot_id,
-          sa.depth + 1 AS depth
-        FROM slot_ancestors sa
-        INNER JOIN slot_reporting_line srl ON srl.child_slot_id = sa.ancestor_slot_id
-        WHERE sa.ancestor_slot_id IS NOT NULL
+          nom.child_user_id,
+          next_manager_upa.user_id AS manager_user_id,
+          nom.depth + 1,
+          parent_jp.reports_to_position_id AS current_parent_position_id
+        FROM nearest_occupied_manager nom
+        LEFT JOIN job_position parent_jp ON parent_jp.id = nom.current_parent_position_id
+        LEFT JOIN user_position_assignment next_manager_upa ON next_manager_upa.position_id = parent_jp.reports_to_position_id
+        WHERE nom.manager_user_id IS NULL
+          AND nom.current_parent_position_id IS NOT NULL
       ),
-      nearest_occupied_manager AS (
-        SELECT DISTINCT ON (aa.user_id)
-          aa.user_id AS child_user_id,
-          parent_sa.user_id AS manager_user_id,
-          sa.depth
-        FROM active_assignments aa
-        INNER JOIN slot_ancestors sa ON sa.child_slot_id = aa.slot_id
-        INNER JOIN active_assignments parent_sa ON parent_sa.slot_id = sa.ancestor_slot_id
-        ORDER BY aa.user_id, sa.depth ASC
-      ),
-      department_heads AS (
-        SELECT DISTINCT ON (ps.department_id)
-          ps.department_id,
-          sa.user_id AS hod_user_id
-        FROM position_slot ps
-        INNER JOIN slot_assignment sa ON sa.slot_id = ps.id
-        WHERE ps.is_department_head = TRUE
-          AND sa.ends_at IS NULL
-        ORDER BY ps.department_id, sa.starts_at DESC
+      nearest_manager_pick AS (
+        SELECT DISTINCT ON (child_user_id)
+          child_user_id,
+          manager_user_id
+        FROM nearest_occupied_manager
+        WHERE manager_user_id IS NOT NULL
+        ORDER BY child_user_id, depth ASC
       )
       SELECT
         u.id,
@@ -599,19 +613,10 @@ export const createUsersService = (db: DbOrTx) => ({
         u.role,
         u.status,
         d.name AS department_name,
-        CASE
-          WHEN nom.manager_user_id IS NOT NULL THEN nom.manager_user_id
-          WHEN self_assignment.user_id IS NULL
-            AND dh.hod_user_id IS NOT NULL
-            AND dh.hod_user_id <> u.id
-            THEN dh.hod_user_id
-          ELSE NULL
-        END AS manager_user_id
+        nmp.manager_user_id AS manager_user_id
       FROM "user" u
       LEFT JOIN department d ON d.id = u.department_id
-      LEFT JOIN active_assignments self_assignment ON self_assignment.user_id = u.id
-      LEFT JOIN nearest_occupied_manager nom ON nom.child_user_id = u.id
-      LEFT JOIN department_heads dh ON dh.department_id = u.department_id
+      LEFT JOIN nearest_manager_pick nmp ON nmp.child_user_id = u.id
       WHERE u.status = 'ACTIVE'
     `);
 
@@ -683,7 +688,6 @@ export const createUsersService = (db: DbOrTx) => ({
       return node;
     };
 
-    // Fall back to legacy manager links when no slot hierarchy has been seeded yet
     if (allUsers.length === 0) {
       return [];
     }
@@ -736,15 +740,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async create(input: CreateUserInput): Promise<UserResponse> {
-    const {
-      name,
-      password,
-      sapNo,
-      role,
-      status,
-      departmentId,
-      reportsToSlotCode,
-    } = input;
+    const { name, password, sapNo, status, positionId } = input;
 
     // Normalize email to lowercase (Better Auth does case-sensitive lookups)
     const email = input.email.toLowerCase();
@@ -787,9 +783,7 @@ export const createUsersService = (db: DbOrTx) => ({
     const accountId = randomUUID();
     const now = new Date();
 
-    if (reportsToSlotCode) {
-      await resolveManagerUserIdBySlotCode(db, reportsToSlotCode);
-    }
+    const derivedProfile = await resolveUserProfileFromPosition(db, positionId);
 
     // Insert user record (passwordHash is null - Better Auth stores password in account table)
     await db.insert(user).values({
@@ -798,9 +792,9 @@ export const createUsersService = (db: DbOrTx) => ({
       email,
       emailVerified: false,
       sapNo,
-      role: role ?? "EMPLOYEE",
+      role: derivedProfile.derivedRole,
       status: status ?? "ACTIVE",
-      departmentId: departmentId ?? null,
+      departmentId: derivedProfile.derivedDepartmentId,
       passwordHash: null,
       failedLoginAttempts: 0,
       createdAt: now,
@@ -814,6 +808,13 @@ export const createUsersService = (db: DbOrTx) => ({
       providerId: "credential",
       userId,
       password: hashedPassword,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.insert(userPositionAssignment).values({
+      userId,
+      positionId,
       createdAt: now,
       updatedAt: now,
     });
@@ -836,7 +837,10 @@ export const createUsersService = (db: DbOrTx) => ({
         status: user.status,
         departmentId: user.departmentId,
         departmentName: department.name,
-        managerSlotCode: sql<string | null>`null`,
+        positionId: sql<string | null>`null`,
+        positionCode: sql<string | null>`null`,
+        positionName: sql<string | null>`null`,
+        reportsToPositionId: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -884,7 +888,10 @@ export const createUsersService = (db: DbOrTx) => ({
         status: user.status,
         departmentId: user.departmentId,
         departmentName: department.name,
-        managerSlotCode: sql<string | null>`null`,
+        positionId: sql<string | null>`null`,
+        positionCode: sql<string | null>`null`,
+        positionName: sql<string | null>`null`,
+        reportsToPositionId: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -915,16 +922,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async update(input: UpdateUserInput): Promise<UserResponse> {
-    const {
-      id,
-      name,
-      email,
-      sapNo,
-      role,
-      status,
-      departmentId,
-      reportsToSlotCode,
-    } = input;
+    const { id, name, email, sapNo, status, positionId } = input;
 
     // Verify user exists
     const [existingUserRecord] = await db
@@ -997,21 +995,42 @@ export const createUsersService = (db: DbOrTx) => ({
     if (sapNo !== undefined) {
       updateData.sapNo = sapNo;
     }
-    if (role !== undefined) {
-      updateData.role = role;
-    }
     if (status !== undefined) {
       updateData.status = status;
     }
-    if (departmentId !== undefined) {
-      updateData.departmentId = departmentId;
-    }
-    if (reportsToSlotCode) {
-      await resolveManagerUserIdBySlotCode(db, reportsToSlotCode);
+    if (positionId !== undefined) {
+      const derivedProfile = await resolveUserProfileFromPosition(
+        db,
+        positionId,
+      );
+      updateData.role = derivedProfile.derivedRole;
+      updateData.departmentId = derivedProfile.derivedDepartmentId;
     }
 
     // Update user record
     await db.update(user).set(updateData).where(eq(user.id, id));
+
+    if (positionId !== undefined) {
+      const [existingAssignment] = await db
+        .select({ id: userPositionAssignment.id })
+        .from(userPositionAssignment)
+        .where(eq(userPositionAssignment.userId, id))
+        .limit(1);
+
+      if (existingAssignment) {
+        await db
+          .update(userPositionAssignment)
+          .set({ positionId, updatedAt: new Date() })
+          .where(eq(userPositionAssignment.id, existingAssignment.id));
+      } else {
+        await db.insert(userPositionAssignment).values({
+          userId: id,
+          positionId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
 
     const manager = db
       .select({
@@ -1031,7 +1050,10 @@ export const createUsersService = (db: DbOrTx) => ({
         status: user.status,
         departmentId: user.departmentId,
         departmentName: department.name,
-        managerSlotCode: sql<string | null>`null`,
+        positionId: sql<string | null>`null`,
+        positionCode: sql<string | null>`null`,
+        positionName: sql<string | null>`null`,
+        reportsToPositionId: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -1172,7 +1194,7 @@ export const createUsersService = (db: DbOrTx) => ({
     }
 
     const [
-      activeSlots,
+      activeAssignments,
       manpowerRows,
       tripRows,
       separationRows,
@@ -1180,14 +1202,9 @@ export const createUsersService = (db: DbOrTx) => ({
       importHistoryRows,
     ] = await Promise.all([
       db
-        .select({ id: slotAssignment.id })
-        .from(slotAssignment)
-        .where(
-          and(
-            eq(slotAssignment.userId, userId),
-            sql`${slotAssignment.endsAt} IS NULL`,
-          ),
-        )
+        .select({ id: userPositionAssignment.id })
+        .from(userPositionAssignment)
+        .where(eq(userPositionAssignment.userId, userId))
         .limit(25),
       db
         .select({
@@ -1261,11 +1278,11 @@ export const createUsersService = (db: DbOrTx) => ({
         .limit(25),
     ]);
 
-    precheck.counts.slotAssignments = activeSlots.length;
-    precheck.details.slotAssignments = activeSlots.map((row) => ({
+    precheck.counts.slotAssignments = activeAssignments.length;
+    precheck.details.slotAssignments = activeAssignments.map((row) => ({
       id: row.id,
       status: null,
-      reason: "Active slot assignment must be ended or reassigned",
+      reason: "Active position assignment must be cleared or reassigned",
     }));
 
     precheck.counts.manpowerRequests = manpowerRows.length;
