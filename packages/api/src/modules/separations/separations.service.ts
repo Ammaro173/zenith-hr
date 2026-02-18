@@ -6,10 +6,9 @@ import {
   separationChecklistTemplate,
   separationDocument,
   separationRequest,
-  slotAssignment,
-  slotReportingLine,
   user,
   userClearanceLane,
+  userPositionAssignment,
 } from "@zenith-hr/db";
 import { and, eq, or, sql } from "drizzle-orm";
 import type { z } from "zod";
@@ -82,51 +81,42 @@ export const createSeparationsService = (
     return Array.from(merged);
   };
 
-  const getActivePrimarySlotId = async (
+  const getActivePositionId = async (
     txOrDb: DbOrTx,
     userId: string,
   ): Promise<string | null> => {
     const [assignment] = await txOrDb
-      .select({ slotId: slotAssignment.slotId })
-      .from(slotAssignment)
-      .where(
-        and(
-          eq(slotAssignment.userId, userId),
-          eq(slotAssignment.isPrimary, true),
-          sql`${slotAssignment.endsAt} IS NULL`,
-        ),
-      )
+      .select({ positionId: userPositionAssignment.positionId })
+      .from(userPositionAssignment)
+      .where(eq(userPositionAssignment.userId, userId))
       .limit(1);
 
-    return assignment?.slotId ?? null;
+    return assignment?.positionId ?? null;
   };
 
-  const getParentSlotId = async (
+  const getParentPositionId = async (
     txOrDb: DbOrTx,
-    childSlotId: string,
+    childPositionId: string,
   ): Promise<string | null> => {
-    const [parent] = await txOrDb
-      .select({ parentSlotId: slotReportingLine.parentSlotId })
-      .from(slotReportingLine)
-      .where(eq(slotReportingLine.childSlotId, childSlotId))
-      .limit(1);
+    const parent = await txOrDb.execute(sql`
+      SELECT reports_to_position_id AS parent_position_id
+      FROM job_position
+      WHERE id = ${childPositionId}
+      LIMIT 1
+    `);
 
-    return parent?.parentSlotId ?? null;
+    const row = parent.rows[0] as { parent_position_id?: string | null };
+    return row?.parent_position_id ?? null;
   };
 
-  const getActiveSlotOccupant = async (
+  const getActivePositionOccupant = async (
     txOrDb: DbOrTx,
-    slotId: string,
+    positionId: string,
   ): Promise<string | null> => {
     const [occupant] = await txOrDb
-      .select({ userId: slotAssignment.userId })
-      .from(slotAssignment)
-      .where(
-        and(
-          eq(slotAssignment.slotId, slotId),
-          sql`${slotAssignment.endsAt} IS NULL`,
-        ),
-      )
+      .select({ userId: userPositionAssignment.userId })
+      .from(userPositionAssignment)
+      .where(eq(userPositionAssignment.positionId, positionId))
       .limit(1);
 
     return occupant?.userId ?? null;
@@ -180,10 +170,10 @@ export const createSeparationsService = (
     if (request.employeeId === actorId) {
       return { request, actorRole };
     }
-    if (request.managerSlotId) {
-      const slotOccupant = await getActiveSlotOccupant(
+    if (request.managerPositionId) {
+      const slotOccupant = await getActivePositionOccupant(
         db,
-        request.managerSlotId,
+        request.managerPositionId,
       );
       if (slotOccupant === actorId) {
         return { request, actorRole };
@@ -201,12 +191,12 @@ export const createSeparationsService = (
         const actor = await getActor(db, employeeId);
         const requesterRole = actor?.role ?? "EMPLOYEE";
 
-        const employeeSlotId = await getActivePrimarySlotId(tx, employeeId);
-        const managerSlotId = employeeSlotId
-          ? await getParentSlotId(tx, employeeSlotId)
+        const employeePositionId = await getActivePositionId(tx, employeeId);
+        const managerPositionId = employeePositionId
+          ? await getParentPositionId(tx, employeePositionId)
           : null;
-        const managerId = managerSlotId
-          ? await getActiveSlotOccupant(tx, managerSlotId)
+        const managerId = managerPositionId
+          ? await getActivePositionOccupant(tx, managerPositionId)
           : null;
 
         let status: "PENDING_MANAGER" | "PENDING_HR";
@@ -216,7 +206,7 @@ export const createSeparationsService = (
           requesterRole === "ADMIN"
         ) {
           status = "PENDING_HR";
-        } else if (managerSlotId) {
+        } else if (managerPositionId) {
           status = "PENDING_MANAGER";
         } else {
           status = "PENDING_HR";
@@ -227,7 +217,7 @@ export const createSeparationsService = (
           .values({
             employeeId,
             managerId,
-            managerSlotId,
+            managerPositionId,
             type: input.type,
             reason: input.reason,
             lastWorkingDay: input.lastWorkingDay.toISOString().slice(0, 10),
@@ -327,8 +317,9 @@ export const createSeparationsService = (
         }
 
         // Only direct manager (or HR/Admin override).
-        const isDirectManagerBySlot = request.managerSlotId
-          ? (await getActiveSlotOccupant(tx, request.managerSlotId)) === actorId
+        const isDirectManagerBySlot = request.managerPositionId
+          ? (await getActivePositionOccupant(tx, request.managerPositionId)) ===
+            actorId
           : false;
         const isDirectManager = isDirectManagerBySlot;
         if (!isDirectManager && actorRole !== "HR" && actorRole !== "ADMIN") {
