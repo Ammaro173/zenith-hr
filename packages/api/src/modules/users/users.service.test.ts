@@ -17,6 +17,14 @@ const VALID_ROLES = [
 ] as const;
 const VALID_STATUSES = ["ACTIVE", "INACTIVE", "ON_LEAVE"] as const;
 
+type LegacyCreateUserInput = CreateUserInput & {
+  role: (typeof VALID_ROLES)[number];
+  departmentId: string | null;
+};
+
+const DERIVED_TEST_ROLE = "EMPLOYEE" as const;
+const DERIVED_TEST_DEPARTMENT_ID: string | null = null;
+
 // Arbitraries for generating valid user input data
 const validNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9 ]{0,99}$/);
 const validPasswordArb = fc.stringMatching(/^[a-zA-Z0-9!@#$%^&*]{8,32}$/);
@@ -30,11 +38,12 @@ const validEmailArb = fc
   .map(([local, domain, tld]) => `${local}@${domain}.${tld}`);
 
 // Arbitrary for generating valid CreateUserInput
-const createUserInputArb: fc.Arbitrary<CreateUserInput> = fc.record({
+const createUserInputArb: fc.Arbitrary<LegacyCreateUserInput> = fc.record({
   name: validNameArb,
   email: validEmailArb,
   password: validPasswordArb,
   sapNo: validSapNoArb,
+  positionId: fc.uuid(),
   role: fc.constantFrom(...VALID_ROLES),
   status: fc.constantFrom(...VALID_STATUSES),
   departmentId: fc.option(fc.uuid(), { nil: null }),
@@ -71,6 +80,13 @@ function createMockDbForCreate() {
     updatedAt: Date;
   }> = [];
 
+  const insertedAssignments: Array<{
+    userId: string;
+    positionId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+
   // Create a subquery mock that returns an object with the aliased fields
   const createSubqueryMock = () => ({
     id: "manager_id",
@@ -91,6 +107,18 @@ function createMockDbForCreate() {
             }),
           })),
           leftJoin: mock(() => ({
+            where: mock(() => ({
+              limit: mock(() => {
+                return Promise.resolve([
+                  {
+                    id: "00000000-0000-1000-8000-000000000000",
+                    positionDepartmentId: DERIVED_TEST_DEPARTMENT_ID,
+                    jobDepartmentId: DERIVED_TEST_DEPARTMENT_ID,
+                    assignedRole: DERIVED_TEST_ROLE,
+                  },
+                ]);
+              }),
+            })),
             leftJoin: mock(() => ({
               where: mock(() => ({
                 limit: mock(() => {
@@ -139,6 +167,19 @@ function createMockDbForCreate() {
               updatedAt: Date;
             },
           );
+        } else if (
+          "positionId" in data &&
+          "userId" in data &&
+          !("email" in data)
+        ) {
+          insertedAssignments.push(
+            data as {
+              userId: string;
+              positionId: string;
+              createdAt: Date;
+              updatedAt: Date;
+            },
+          );
         } else {
           // This is a user insert
           insertedUsers.push(
@@ -162,6 +203,7 @@ function createMockDbForCreate() {
     })),
     getInsertedUsers: () => insertedUsers,
     getInsertedAccounts: () => insertedAccounts,
+    getInsertedAssignments: () => insertedAssignments,
   };
 
   return mockDb;
@@ -258,10 +300,10 @@ describe("Feature: user-management, Property 1: User creation preserves input da
         expect(result.name).toBe(input.name);
         expect(result.email).toBe(input.email);
         expect(result.sapNo).toBe(input.sapNo);
-        expect(result.role).toBe(input.role);
+        expect(result.role).toBe(DERIVED_TEST_ROLE);
         expect(result.status).toBe(input.status);
-        expect(result.departmentId).toBe(input.departmentId ?? null);
-        expect(result.managerSlotCode).toBeNull();
+        expect(result.departmentId).toBe(DERIVED_TEST_DEPARTMENT_ID);
+        expect(result.positionId).toBeNull();
 
         // Verify the response has required fields
         expect(result.id).toBeDefined();
@@ -280,6 +322,7 @@ describe("Feature: user-management, Property 1: User creation preserves input da
       email: validEmailArb,
       password: validPasswordArb,
       sapNo: validSapNoArb,
+      positionId: fc.uuid(),
     });
 
     await fc.assert(
@@ -292,10 +335,10 @@ describe("Feature: user-management, Property 1: User creation preserves input da
         const result = await service.create(input as CreateUserInput);
 
         // Verify defaults are applied
-        expect(result.role).toBe("EMPLOYEE");
+        expect(result.role).toBe(DERIVED_TEST_ROLE);
         expect(result.status).toBe("ACTIVE");
-        expect(result.departmentId).toBeNull();
-        expect(result.managerSlotCode).toBeNull();
+        expect(result.departmentId).toBe(DERIVED_TEST_DEPARTMENT_ID);
+        expect(result.positionId).toBeNull();
       }),
       { numRuns: 20 },
     );
@@ -553,7 +596,10 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
       "status",
       "departmentId",
       "departmentName",
-      "managerSlotCode",
+      "positionId",
+      "positionCode",
+      "positionName",
+      "reportsToPositionId",
       "managerName",
       "createdAt",
       "updatedAt",
@@ -654,6 +700,18 @@ function createMockDbForUpdate(existingUser: {
             }),
           })),
           leftJoin: mock(() => ({
+            where: mock(() => ({
+              limit: mock(() => {
+                return Promise.resolve([
+                  {
+                    id: "00000000-0000-1000-8000-000000000000",
+                    positionDepartmentId: DERIVED_TEST_DEPARTMENT_ID,
+                    jobDepartmentId: DERIVED_TEST_DEPARTMENT_ID,
+                    assignedRole: DERIVED_TEST_ROLE,
+                  },
+                ]);
+              }),
+            })),
             leftJoin: mock(() => ({
               where: mock(() => ({
                 limit: mock(() => {
@@ -714,6 +772,9 @@ function createMockDbForUpdate(existingUser: {
           return Promise.resolve();
         }),
       })),
+    })),
+    insert: mock(() => ({
+      values: mock(() => Promise.resolve()),
     })),
     getCurrentUser: () => currentUser,
   };
@@ -1013,7 +1074,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.role).toBe(existingUser.role);
           expect(result.status).toBe(existingUser.status);
           expect(result.departmentId).toBe(existingUser.departmentId);
-          expect(result.managerSlotCode).toBeNull();
+          expect(result.positionId).toBeNull();
         },
       ),
       { numRuns: 20 },
@@ -1048,16 +1109,16 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           const result = await service.update({
             id: existingUser.id,
             role: newRole,
-          });
+          } as any);
 
-          // Property: Only role should change, all other fields preserved (Requirement 2.5)
-          expect(result.role).toBe(newRole);
+          // Property: Legacy role input is ignored in strict position-driven mode
+          expect(result.role).toBe(existingUser.role);
           expect(result.name).toBe(existingUser.name);
           expect(result.email).toBe(existingUser.email);
           expect(result.sapNo).toBe(existingUser.sapNo);
           expect(result.status).toBe(existingUser.status);
           expect(result.departmentId).toBe(existingUser.departmentId);
-          expect(result.managerSlotCode).toBeNull();
+          expect(result.positionId).toBeNull();
         },
       ),
       { numRuns: 20 },
@@ -1092,38 +1153,38 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           const result = await service.update({
             id: existingUser.id,
             departmentId: newDepartmentId,
-          });
+          } as any);
 
-          // Property: Only departmentId should change, all other fields preserved (Requirement 2.6)
-          expect(result.departmentId).toBe(newDepartmentId);
+          // Property: Legacy departmentId input is ignored in strict position-driven mode
+          expect(result.departmentId).toBe(existingUser.departmentId);
           expect(result.name).toBe(existingUser.name);
           expect(result.email).toBe(existingUser.email);
           expect(result.sapNo).toBe(existingUser.sapNo);
           expect(result.role).toBe(existingUser.role);
           expect(result.status).toBe(existingUser.status);
-          expect(result.managerSlotCode).toBeNull();
+          expect(result.positionId).toBeNull();
         },
       ),
       { numRuns: 20 },
     );
   });
 
-  it("should preserve all fields when clearing manager via reportsToSlotCode", async () => {
+  it("should preserve all fields when updating assigned position", async () => {
     await fc.assert(
       fc.asyncProperty(
         createUserInputArb,
         fc.uuid(),
-        async (originalInput, existingManagerId) => {
+        async (originalInput, newPositionId) => {
           const now = new Date();
           const existingUser = {
             id: "existing-user-id",
             name: originalInput.name,
             email: originalInput.email,
             sapNo: originalInput.sapNo,
-            role: originalInput.role ?? "EMPLOYEE",
+            role: DERIVED_TEST_ROLE,
             status: originalInput.status ?? "ACTIVE",
-            departmentId: originalInput.departmentId ?? null,
-            managerUserId: existingManagerId,
+            departmentId: DERIVED_TEST_DEPARTMENT_ID,
+            managerUserId: null,
             createdAt: now,
             updatedAt: now,
           };
@@ -1135,17 +1196,17 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
 
           const result = await service.update({
             id: existingUser.id,
-            reportsToSlotCode: null,
-          });
+            positionId: newPositionId,
+          } as any);
 
-          // Property: Only manager link should change, all other fields preserved
-          expect(result.managerSlotCode).toBeNull();
+          // Property: Position update keeps safe fields and applies derived role/department
+          expect(result.positionId).toBeNull();
           expect(result.name).toBe(existingUser.name);
           expect(result.email).toBe(existingUser.email);
           expect(result.sapNo).toBe(existingUser.sapNo);
-          expect(result.role).toBe(existingUser.role);
+          expect(result.role).toBe(DERIVED_TEST_ROLE);
           expect(result.status).toBe(existingUser.status);
-          expect(result.departmentId).toBe(existingUser.departmentId);
+          expect(result.departmentId).toBe(DERIVED_TEST_DEPARTMENT_ID);
         },
       ),
       { numRuns: 20 },
@@ -1182,16 +1243,16 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
             id: existingUser.id,
             name: newName,
             role: newRole,
-          });
+          } as any);
 
-          // Property: Only name and role should change, all other fields preserved
+          // Property: Legacy role input is ignored; supported fields are still updated
           expect(result.name).toBe(newName);
-          expect(result.role).toBe(newRole);
+          expect(result.role).toBe(existingUser.role);
           expect(result.email).toBe(existingUser.email);
           expect(result.sapNo).toBe(existingUser.sapNo);
           expect(result.status).toBe(existingUser.status);
           expect(result.departmentId).toBe(existingUser.departmentId);
-          expect(result.managerSlotCode).toBeNull();
+          expect(result.positionId).toBeNull();
         },
       ),
       { numRuns: 20 },
