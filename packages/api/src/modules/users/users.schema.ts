@@ -5,20 +5,23 @@ export const searchUsersSchema = z.object({
   limit: z.number().optional().default(100),
 });
 
-export type SearchUsersInput = z.infer<typeof searchUsersSchema>;
-
-// Schema for listing users with pagination, filtering, and sorting
 export const listUsersSchema = z.object({
-  page: z.number().min(1).default(1),
-  pageSize: z.number().min(1).max(100).default(20),
-  search: z.string().optional(),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(10),
+  search: z.string().optional().default(""),
+  departmentId: z.array(z.string().uuid()).nullable().optional().default(null),
+  status: z
+    .array(z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]))
+    .nullable()
+    .optional()
+    .default(null),
   role: z
     .array(
       z.enum(["EMPLOYEE", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
     )
-    .optional(),
-  status: z.array(z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"])).optional(),
-  departmentId: z.array(z.string().uuid()).optional(),
+    .nullable()
+    .optional()
+    .default(null),
   sortBy: z
     .enum(["name", "email", "role", "status", "sapNo", "createdAt"])
     .default("name"),
@@ -69,21 +72,8 @@ export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
   sapNo: z.string().min(1).max(50),
-  role: userRoleSchema.default("EMPLOYEE"),
   status: userStatusSchema.default("ACTIVE"),
-  departmentId: z
-    .string()
-    .uuid()
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
-  reportsToSlotCode: z
-    .string()
-    .trim()
-    .min(1)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
+  positionId: z.string().uuid(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -94,21 +84,8 @@ export const updateUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional(),
   sapNo: z.string().min(1).max(50).optional(),
-  role: userRoleSchema.optional(),
   status: userStatusSchema.optional(),
-  departmentId: z
-    .string()
-    .uuid()
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
-  reportsToSlotCode: z
-    .string()
-    .trim()
-    .min(1)
-    .nullable()
-    .optional()
-    .or(z.literal("").transform(() => null)),
+  positionId: z.string().uuid().optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
@@ -196,7 +173,10 @@ export interface UserResponse {
   status: string;
   departmentId: string | null;
   departmentName: string | null;
-  managerSlotCode: string | null;
+  positionId: string | null;
+  positionCode: string | null;
+  positionName: string | null;
+  reportsToPositionId: string | null;
   managerName: string | null;
   createdAt: Date;
   updatedAt: Date;
