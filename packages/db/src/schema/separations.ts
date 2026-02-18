@@ -11,7 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { positionSlot } from "./position-slots";
+import { jobPosition } from "./position-slots";
 
 export const separationTypeEnum = pgEnum("separation_type", [
   "RESIGNATION",
@@ -67,9 +67,12 @@ export const separationRequest = pgTable("separation_request", {
   managerId: text("manager_id").references(() => user.id, {
     onDelete: "set null",
   }),
-  managerSlotId: uuid("manager_slot_id").references(() => positionSlot.id, {
-    onDelete: "set null",
-  }),
+  managerPositionId: uuid("manager_position_id").references(
+    () => jobPosition.id,
+    {
+      onDelete: "set null",
+    },
+  ),
   hrOwnerId: text("hr_owner_id").references(() => user.id, {
     onDelete: "set null",
   }),
@@ -200,10 +203,10 @@ export const separationRequestRelations = relations(
       references: [user.id],
       relationName: "separation_manager",
     }),
-    managerSlot: one(positionSlot, {
-      fields: [separationRequest.managerSlotId],
-      references: [positionSlot.id],
-      relationName: "separation_manager_slot",
+    managerPosition: one(jobPosition, {
+      fields: [separationRequest.managerPositionId],
+      references: [jobPosition.id],
+      relationName: "separation_manager_position",
     }),
     hrOwner: one(user, {
       fields: [separationRequest.hrOwnerId],
