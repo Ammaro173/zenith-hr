@@ -55,6 +55,15 @@ export function JobDescriptionsDataGrid() {
       client.jobDescriptions.search({ search: debouncedSearch, limit: 50 }),
   });
 
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: () => client.users.getDepartments(),
+  });
+
+  const departmentNameById = new Map(
+    (departments ?? []).map((dept) => [dept.id, dept.name]),
+  );
+
   const columns: ColumnDef<JobDescriptionListItem>[] = [
     {
       accessorKey: "title",
@@ -71,6 +80,29 @@ export function JobDescriptionsDataGrid() {
           {row.original.description}
         </span>
       ),
+    },
+    {
+      accessorKey: "assignedRole",
+      header: "Assigned Role",
+      cell: ({ row }) => (
+        <span className="font-medium text-sm">{row.original.assignedRole}</span>
+      ),
+    },
+    {
+      accessorKey: "departmentId",
+      header: "Default Department",
+      cell: ({ row }) => {
+        const departmentId = row.original.departmentId;
+        if (!departmentId) {
+          return <span className="text-muted-foreground text-sm">None</span>;
+        }
+
+        return (
+          <span className="text-sm">
+            {departmentNameById.get(departmentId) ?? "Unknown"}
+          </span>
+        );
+      },
     },
     {
       id: "actions",
@@ -145,6 +177,10 @@ export function JobDescriptionsDataGrid() {
       }}
     >
       <div className="w-full space-y-4">
+        <p className="text-muted-foreground text-sm">
+          Each template defines the assigned role and default department used
+          when a linked position is assigned to a user.
+        </p>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Input
             aria-label="Search job descriptions"
