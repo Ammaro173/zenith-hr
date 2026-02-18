@@ -41,6 +41,7 @@ export const requireRoles = (roles: UserRole[]) =>
   protectedProcedure.use(
     o.middleware(({ context, next }) => {
       const role = context.session?.user.role as UserRole;
+
       if (!(role && roles.includes(role))) {
         throw new ORPCError("FORBIDDEN");
       }
