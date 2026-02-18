@@ -19,7 +19,10 @@ export interface UserListItem {
   status: UserStatus;
   departmentId: string | null;
   departmentName: string | null;
-  managerSlotCode: string | null;
+  positionId: string | null;
+  positionCode: string | null;
+  positionName: string | null;
+  reportsToPositionId: string | null;
   managerName: string | null;
   createdAt: string | Date;
 }
