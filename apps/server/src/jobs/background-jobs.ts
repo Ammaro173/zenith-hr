@@ -4,9 +4,9 @@ import {
   notificationOutbox,
   separationReminderState,
   separationRequest,
-  slotAssignment,
   user,
   userClearanceLane,
+  userPositionAssignment,
 } from "@zenith-hr/db/schema";
 import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm";
 
@@ -158,7 +158,7 @@ async function markReminderSent(params: {
       createdAt: new Date(),
     })
     .onConflictDoNothing()
-    .returning({ id: separationReminderState.id });
+    .returning();
 
   return Boolean(inserted?.id);
 }
@@ -173,7 +173,7 @@ async function separationReminderTick(): Promise<void> {
       .select({
         id: separationRequest.id,
         status: separationRequest.status,
-        managerSlotId: separationRequest.managerSlotId,
+        managerPositionId: separationRequest.managerPositionId,
         employeeId: separationRequest.employeeId,
         createdAt: separationRequest.createdAt,
       })
@@ -206,16 +206,11 @@ async function separationReminderTick(): Promise<void> {
       }
 
       const recipients: string[] = [];
-      if (r.status === "PENDING_MANAGER" && r.managerSlotId) {
+      if (r.status === "PENDING_MANAGER" && r.managerPositionId) {
         const slotManagers = await db
-          .select({ userId: slotAssignment.userId })
-          .from(slotAssignment)
-          .where(
-            and(
-              eq(slotAssignment.slotId, r.managerSlotId),
-              sql`${slotAssignment.endsAt} IS NULL`,
-            ),
-          )
+          .select({ userId: userPositionAssignment.userId })
+          .from(userPositionAssignment)
+          .where(eq(userPositionAssignment.positionId, r.managerPositionId))
           .limit(20);
         recipients.push(...slotManagers.map((m) => m.userId));
       }
