@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { UserRole } from "@/types/users";
 import { client } from "@/utils/orpc";
 import type { JobDescriptionFormData } from "./job-description-form";
 
@@ -14,6 +15,8 @@ export function useCreateJobDescription(options?: {
     title: string;
     description: string;
     responsibilities: string | null;
+    departmentId: string | null;
+    assignedRole: UserRole;
   }) => void;
 }) {
   const queryClient = useQueryClient();
@@ -24,6 +27,8 @@ export function useCreateJobDescription(options?: {
         title: data.title,
         description: data.description,
         responsibilities: data.responsibilities ?? undefined,
+        departmentId: data.departmentId,
+        assignedRole: data.assignedRole,
       }),
     onSuccess: (result) => {
       toast.success("Job description created successfully");
@@ -48,6 +53,8 @@ export function useUpdateJobDescription(options?: { onSuccess?: () => void }) {
         title: data.title,
         description: data.description,
         responsibilities: data.responsibilities ?? undefined,
+        departmentId: data.departmentId,
+        assignedRole: data.assignedRole,
       }),
     onSuccess: () => {
       toast.success("Job description updated successfully");
