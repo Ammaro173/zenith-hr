@@ -14,7 +14,7 @@ export const userImportRowSchema = z.object({
   role: z.enum(["EMPLOYEE", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
   status: z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]).default("ACTIVE"),
   departmentId: z.string().uuid().optional().nullable(),
-  reportsToSlotCode: z.string().trim().min(1).optional().nullable(),
+  positionId: z.string().uuid().optional().nullable(),
   password: z.string().min(8).optional(), // Optional - will be generated if not provided
 });
 
@@ -51,7 +51,6 @@ export type ValidateUsersInput = z.infer<typeof validateUsersInputSchema>;
 export const departmentImportRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
   costCenterCode: z.string().min(1, "Cost center code is required"),
-  headOfDepartmentId: z.string().uuid().optional().nullable(),
 });
 
 export type DepartmentImportRow = z.infer<typeof departmentImportRowSchema>;

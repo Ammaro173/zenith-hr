@@ -6,8 +6,10 @@ import {
   department,
   importHistory,
   importHistoryItem,
-  positionSlot,
+  jobDescription,
+  jobPosition,
   user,
+  userPositionAssignment,
 } from "@zenith-hr/db/schema";
 import { desc, eq, inArray } from "drizzle-orm";
 import {
@@ -132,10 +134,66 @@ export const createImportsService = (db = defaultDb) => ({
             updatedAt: new Date(),
           };
 
+          // If a positionId is provided, derive role and department from the position
+          if (row.positionId) {
+            const [posData] = await db
+              .select({
+                posDeptId: jobPosition.departmentId,
+                jdDeptId: jobDescription.departmentId,
+                assignedRole: jobDescription.assignedRole,
+              })
+              .from(jobPosition)
+              .leftJoin(
+                jobDescription,
+                eq(jobDescription.id, jobPosition.jobDescriptionId),
+              )
+              .where(eq(jobPosition.id, row.positionId))
+              .limit(1);
+            if (posData) {
+              updateData.role = posData.assignedRole ?? row.role;
+              updateData.departmentId =
+                posData.posDeptId ??
+                posData.jdDeptId ??
+                updateData.departmentId ??
+                null;
+            }
+          }
+
           await db
             .update(user)
             .set(updateData)
             .where(eq(user.id, existingUserId));
+
+          if (row.positionId !== undefined) {
+            if (row.positionId === null) {
+              await db
+                .delete(userPositionAssignment)
+                .where(eq(userPositionAssignment.userId, existingUserId));
+            } else {
+              const [existingAssignment] = await db
+                .select({ id: userPositionAssignment.id })
+                .from(userPositionAssignment)
+                .where(eq(userPositionAssignment.userId, existingUserId))
+                .limit(1);
+
+              if (existingAssignment) {
+                await db
+                  .update(userPositionAssignment)
+                  .set({
+                    positionId: row.positionId,
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(userPositionAssignment.id, existingAssignment.id));
+              } else {
+                await db.insert(userPositionAssignment).values({
+                  userId: existingUserId,
+                  positionId: row.positionId,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                });
+              }
+            }
+          }
 
           // If password is provided in upsert, update it in account table
           if (row.password) {
@@ -171,15 +229,39 @@ export const createImportsService = (db = defaultDb) => ({
         const userId = randomUUID();
         const now = new Date();
 
+        // Derive role and department from position if provided
+        let derivedRole = row.role;
+        let derivedDepartmentId = row.departmentId ?? null;
+        if (row.positionId) {
+          const [posData] = await db
+            .select({
+              posDeptId: jobPosition.departmentId,
+              jdDeptId: jobDescription.departmentId,
+              assignedRole: jobDescription.assignedRole,
+            })
+            .from(jobPosition)
+            .leftJoin(
+              jobDescription,
+              eq(jobDescription.id, jobPosition.jobDescriptionId),
+            )
+            .where(eq(jobPosition.id, row.positionId))
+            .limit(1);
+          if (posData) {
+            derivedRole = posData.assignedRole ?? row.role;
+            derivedDepartmentId =
+              posData.posDeptId ?? posData.jdDeptId ?? derivedDepartmentId;
+          }
+        }
+
         const userValues: UserInsert = {
           id: userId,
           name: row.name,
           email: row.email,
           emailVerified: true,
-          role: row.role,
+          role: derivedRole,
           status: row.status ?? "ACTIVE", // Default to ACTIVE if not provided
           sapNo: row.sapNo,
-          departmentId: row.departmentId ?? null,
+          departmentId: derivedDepartmentId,
           passwordHash: null, // Better Auth expects password in account table
           signatureUrl: null,
           failedLoginAttempts: 0,
@@ -199,6 +281,15 @@ export const createImportsService = (db = defaultDb) => ({
           createdAt: now,
           updatedAt: now,
         });
+
+        if (row.positionId) {
+          await db.insert(userPositionAssignment).values({
+            userId,
+            positionId: row.positionId,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
 
         // Store generated password for new users (only if we generated it)
         if (!row.password) {
@@ -241,7 +332,7 @@ export const createImportsService = (db = defaultDb) => ({
         upsertMode: input.upsertMode,
         createdAt: new Date(),
       })
-      .returning({ id: importHistory.id });
+      .returning();
 
     const historyId = historyRecord?.id ?? randomUUID();
 
@@ -321,7 +412,6 @@ export const createImportsService = (db = defaultDb) => ({
         try {
           const updateData: Partial<typeof department.$inferInsert> = {
             costCenterCode: row.costCenterCode,
-            headOfDepartmentId: row.headOfDepartmentId ?? null,
             updatedAt: new Date(),
           };
 
@@ -348,7 +438,6 @@ export const createImportsService = (db = defaultDb) => ({
         await db.insert(department).values({
           name: row.name,
           costCenterCode: row.costCenterCode,
-          headOfDepartmentId: row.headOfDepartmentId ?? null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -389,7 +478,7 @@ export const createImportsService = (db = defaultDb) => ({
         upsertMode: input.upsertMode,
         createdAt: new Date(),
       })
-      .returning({ id: importHistory.id });
+      .returning();
 
     const historyId = historyRecord?.id ?? randomUUID();
 
@@ -435,11 +524,11 @@ export const createImportsService = (db = defaultDb) => ({
           .filter((id): id is string => id != null && id !== ""),
       ),
     ];
-    const managerIds = [
+    const positionIds = [
       ...new Set(
         rows
-          .map((row) => row.reportsToSlotCode?.trim())
-          .filter((code): code is string => code != null && code !== ""),
+          .map((row) => row.positionId)
+          .filter((id): id is string => id != null && id !== ""),
       ),
     ];
     // Normalize emails to lowercase for comparison
@@ -457,13 +546,13 @@ export const createImportsService = (db = defaultDb) => ({
         : [];
     const validDepartmentIds = new Set(existingDepartments.map((d) => d.id));
 
-    // Fetch existing users (for manager validation and email existence check)
-    const existingManagerSlots =
-      managerIds.length > 0
+    // Fetch existing positions (for position validation)
+    const existingPositions =
+      positionIds.length > 0
         ? await db
-            .select({ code: positionSlot.code })
-            .from(positionSlot)
-            .where(inArray(positionSlot.code, managerIds))
+            .select({ id: jobPosition.id })
+            .from(jobPosition)
+            .where(inArray(jobPosition.id, positionIds))
         : [];
 
     // Also fetch users by email for willUpdate check
@@ -475,7 +564,7 @@ export const createImportsService = (db = defaultDb) => ({
             .where(inArray(user.email, emails))
         : [];
 
-    const validManagerCodes = new Set(existingManagerSlots.map((s) => s.code));
+    const validPositionIds = new Set(existingPositions.map((s) => s.id));
     const existingEmailSet = new Set(existingUsersByEmail.map((u) => u.email));
 
     // Validate each row
@@ -514,16 +603,15 @@ export const createImportsService = (db = defaultDb) => ({
         });
       }
 
-      // Validate reportsToSlotCode exists in database
-      const managerId = row.reportsToSlotCode;
+      const positionId = row.positionId;
       if (
-        managerId != null &&
-        managerId !== "" &&
-        !validManagerCodes.has(managerId)
+        positionId != null &&
+        positionId !== "" &&
+        !validPositionIds.has(positionId)
       ) {
         errors.push({
-          field: "reportsToSlotCode",
-          message: "Manager slot code does not exist",
+          field: "positionId",
+          message: "Position does not exist",
         });
       }
 
@@ -557,26 +645,9 @@ export const createImportsService = (db = defaultDb) => ({
     const results: ValidationResult[] = [];
 
     // Batch fetch all referenced entities for efficiency
-    const headOfDepartmentIds = [
-      ...new Set(
-        rows
-          .map((row) => row.headOfDepartmentId)
-          .filter((id): id is string => id != null && id !== ""),
-      ),
-    ];
     const departmentNames = rows
       .map((row) => row.name)
       .filter((name): name is string => name != null && name !== "");
-
-    // Fetch existing users (for headOfDepartmentId validation)
-    const existingUsers =
-      headOfDepartmentIds.length > 0
-        ? await db
-            .select({ id: user.id })
-            .from(user)
-            .where(inArray(user.id, headOfDepartmentIds))
-        : [];
-    const validUserIds = new Set(existingUsers.map((u) => u.id));
 
     // Fetch existing departments by name for willUpdate check
     const existingDepartments =
@@ -610,20 +681,6 @@ export const createImportsService = (db = defaultDb) => ({
             message: issue.message,
           });
         }
-      }
-
-      // Database constraint validations
-      // Validate headOfDepartmentId exists in database (must be a valid user)
-      const headOfDepartmentId = row.headOfDepartmentId;
-      if (
-        headOfDepartmentId != null &&
-        headOfDepartmentId !== "" &&
-        !validUserIds.has(headOfDepartmentId)
-      ) {
-        errors.push({
-          field: "headOfDepartmentId",
-          message: "Head of department does not exist",
-        });
       }
 
       // Determine if this row will update an existing record
