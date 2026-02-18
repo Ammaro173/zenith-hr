@@ -64,6 +64,8 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         title: input.title,
         description: input.description,
         responsibilities: input.responsibilities || null,
+        departmentId: input.departmentId ?? null,
+        assignedRole: input.assignedRole,
       })
       .returning();
 
@@ -86,6 +88,8 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         title: input.title,
         description: input.description,
         responsibilities: input.responsibilities || null,
+        departmentId: input.departmentId ?? null,
+        assignedRole: input.assignedRole,
         updatedAt: new Date(),
       })
       .where(eq(jobDescription.id, input.id))
@@ -105,7 +109,7 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
     const [deleted] = await db
       .delete(jobDescription)
       .where(eq(jobDescription.id, input.id))
-      .returning({ id: jobDescription.id });
+      .returning();
 
     if (!deleted) {
       throw new Error("Job description not found");

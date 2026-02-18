@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { userRoleSchema } from "../users/users.schema";
 
 /**
  * Search job descriptions by title
@@ -19,6 +20,8 @@ export const createJobDescriptionSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().min(1, "Description is required"),
   responsibilities: z.string().optional(),
+  departmentId: z.string().uuid().nullable().optional(),
+  assignedRole: userRoleSchema.default("EMPLOYEE"),
 });
 
 export type CreateJobDescriptionInput = z.infer<
@@ -44,6 +47,8 @@ export const updateJobDescriptionSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().min(1, "Description is required"),
   responsibilities: z.string().optional(),
+  departmentId: z.string().uuid().nullable().optional(),
+  assignedRole: userRoleSchema,
 });
 
 export type UpdateJobDescriptionInput = z.infer<
@@ -69,6 +74,15 @@ export interface JobDescriptionResponse {
   title: string;
   description: string;
   responsibilities: string | null;
+  departmentId: string | null;
+  assignedRole:
+    | "EMPLOYEE"
+    | "MANAGER"
+    | "HR"
+    | "FINANCE"
+    | "CEO"
+    | "IT"
+    | "ADMIN";
   createdAt: Date;
   updatedAt: Date;
 }
