@@ -34,10 +34,8 @@ export function CreateUserDialog({
         email: data.email,
         password: data.password,
         sapNo: data.sapNo,
-        role: data.role,
         status: data.status,
-        departmentId: data.departmentId,
-        reportsToSlotCode: data.reportsToSlotCode,
+        positionId: data.positionId,
       }),
     onSuccess: () => {
       toast.success("User created successfully");
