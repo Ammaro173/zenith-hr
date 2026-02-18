@@ -49,23 +49,26 @@ describe("SeparationsService", () => {
       })),
       transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
         let txSelectCall = 0;
-        // tx.select for slot-based manager lookup
+        // tx.select: call 1 → getActivePositionId, call 2 → getActivePositionOccupant
         (tx as { select?: unknown }).select = mock(() => ({
           from: mock(() => ({
             where: mock(() => ({
               limit: mock(() => {
                 txSelectCall++;
                 if (txSelectCall === 1) {
-                  return Promise.resolve([{ slotId: "slot-emp" }]);
+                  // getActivePositionId → positionId of employee
+                  return Promise.resolve([{ positionId: "pos-emp" }]);
                 }
-                if (txSelectCall === 2) {
-                  return Promise.resolve([{ parentSlotId: "slot-mgr" }]);
-                }
+                // getActivePositionOccupant → userId of manager
                 return Promise.resolve([{ userId: "mgr-1" }]);
               }),
             })),
           })),
         }));
+        // tx.execute for getParentPositionId (uses raw SQL)
+        (tx as { execute?: unknown }).execute = mock(() =>
+          Promise.resolve({ rows: [{ parent_position_id: "pos-mgr" }] }),
+        );
         // tx.insert used for separationRequest insert + auditLog insert + outbox insert
         (tx as { insert?: unknown }).insert = mock(() => ({
           values: mock(() => ({
