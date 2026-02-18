@@ -32,7 +32,6 @@ export function CreateDepartmentDialog({
       client.departments.create({
         name: data.name,
         costCenterCode: data.costCenterCode,
-        headOfDepartmentId: data.headOfDepartmentId,
       }),
     onSuccess: () => {
       toast.success("Department created successfully");

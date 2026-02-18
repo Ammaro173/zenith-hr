@@ -3,7 +3,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
-import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type {
@@ -43,7 +42,6 @@ export function DepartmentForm({
     defaultValues: {
       name: initialData?.name ?? "",
       costCenterCode: initialData?.costCenterCode ?? "",
-      headOfDepartmentId: initialData?.headOfDepartmentId ?? null,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -55,10 +53,6 @@ export function DepartmentForm({
         if (value.costCenterCode !== initialData.costCenterCode) {
           updateData.costCenterCode = value.costCenterCode;
         }
-        if (value.headOfDepartmentId !== initialData.headOfDepartmentId) {
-          updateData.headOfDepartmentId = value.headOfDepartmentId;
-        }
-
         await onSubmit(updateData);
       } else {
         // For create mode, send all fields
@@ -101,20 +95,6 @@ export function DepartmentForm({
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="Enter cost center code"
-                value={field.state.value}
-              />
-            </FormField>
-          )}
-        </form.Field>
-
-        {/* Head of Department Field */}
-        <form.Field name="headOfDepartmentId">
-          {(field) => (
-            <FormField field={field} label="Head of Department">
-              <UserSearchCombobox
-                nullable
-                onChange={(val) => field.handleChange(val ?? null)}
-                placeholder="Search for head of department..."
                 value={field.state.value}
               />
             </FormField>
