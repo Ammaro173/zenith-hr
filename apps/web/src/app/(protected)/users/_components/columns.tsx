@@ -71,6 +71,37 @@ export const columns = [
     enableResizing: true,
     enablePinning: true,
   }),
+  columnHelper.display({
+    id: "currentJob",
+    header: ({ column }) => (
+      <DataGridColumnHeader column={column} title="Current Job" />
+    ),
+    cell: ({ row }) => {
+      const { positionName, positionCode } = row.original;
+
+      if (positionName == null && positionCode == null) {
+        return <span className="text-muted-foreground">Unassigned</span>;
+      }
+
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium">
+            {positionName ?? "Unnamed position"}
+          </span>
+          {positionCode ? (
+            <span className="text-muted-foreground text-xs">
+              {positionCode}
+            </span>
+          ) : null}
+        </div>
+      );
+    },
+    size: 220,
+    enableSorting: false,
+    enableHiding: true,
+    enableResizing: true,
+    enablePinning: true,
+  }),
   columnHelper.accessor("role", {
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Role" />
