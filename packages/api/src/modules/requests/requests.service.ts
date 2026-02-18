@@ -1,9 +1,9 @@
 import type { DbOrTx } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { slotAssignment } from "@zenith-hr/db/schema/position-slots";
+import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { getActorRole } from "../../shared/utils";
@@ -62,15 +62,10 @@ export const createRequestsService = (
         db,
       );
 
-      const [requesterSlot] = await db
-        .select({ slotId: slotAssignment.slotId })
-        .from(slotAssignment)
-        .where(
-          and(
-            eq(slotAssignment.userId, requesterId),
-            isNull(slotAssignment.endsAt),
-          ),
-        )
+      const [requesterPosition] = await db
+        .select({ positionId: userPositionAssignment.positionId })
+        .from(userPositionAssignment)
+        .where(eq(userPositionAssignment.userId, requesterId))
         .limit(1);
 
       // Use provided approverId or auto-determine from hierarchy
@@ -81,26 +76,21 @@ export const createRequestsService = (
           initialStatus,
         ));
 
-      let initialApproverSlotId: string | null = null;
+      let initialApproverPositionId: string | null = null;
       if (initialApproverId) {
-        const [approverSlot] = await db
-          .select({ slotId: slotAssignment.slotId })
-          .from(slotAssignment)
-          .where(
-            and(
-              eq(slotAssignment.userId, initialApproverId),
-              isNull(slotAssignment.endsAt),
-            ),
-          )
+        const [approverPosition] = await db
+          .select({ positionId: userPositionAssignment.positionId })
+          .from(userPositionAssignment)
+          .where(eq(userPositionAssignment.userId, initialApproverId))
           .limit(1);
-        initialApproverSlotId = approverSlot?.slotId ?? null;
+        initialApproverPositionId = approverPosition?.positionId ?? null;
       }
 
       const [newRequest] = await db
         .insert(manpowerRequest)
         .values({
           requesterId,
-          requesterSlotId: requesterSlot?.slotId ?? null,
+          requesterPositionId: requesterPosition?.positionId ?? null,
           requestCode,
           requestType: input.requestType,
           replacementForUserId: input.replacementForUserId || null,
@@ -112,7 +102,7 @@ export const createRequestsService = (
           salaryRangeMin: input.salaryRangeMin.toString(),
           salaryRangeMax: input.salaryRangeMax.toString(),
           currentApproverId: initialApproverId,
-          currentApproverSlotId: initialApproverSlotId,
+          currentApproverPositionId: initialApproverPositionId,
           currentApproverRole:
             workflowService.getApproverForStatus(initialStatus),
           positionDetails: input.positionDetails,
@@ -141,7 +131,7 @@ export const createRequestsService = (
           salaryRangeMin: manpowerRequest.salaryRangeMin,
           salaryRangeMax: manpowerRequest.salaryRangeMax,
           currentApproverId: manpowerRequest.currentApproverId,
-          currentApproverSlotId: manpowerRequest.currentApproverSlotId,
+          currentApproverPositionId: manpowerRequest.currentApproverPositionId,
           currentApproverRole: manpowerRequest.currentApproverRole,
           positionDetails: manpowerRequest.positionDetails,
           budgetDetails: manpowerRequest.budgetDetails,
