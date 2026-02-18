@@ -3,12 +3,9 @@ import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import {
-  positionSlot,
-  slotAssignment,
-} from "@zenith-hr/db/schema/position-slots";
+import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
 import type {
   ApprovalAction,
@@ -20,10 +17,6 @@ type TransitionResult = RequestStatus;
 type TransitionFn = (actorRole: UserRole) => TransitionResult;
 type TransitionTarget = TransitionResult | TransitionFn;
 type InitiatorRouteKey = "HR" | "FINANCE" | "CEO" | "OTHER";
-
-const HR_STAGE_SLOT_CODE = "HOD_HR";
-const FINANCE_STAGE_SLOT_CODE = "HOD_FINANCE";
-const CEO_STAGE_SLOT_CODE = "CEO";
 
 const WORKFLOW_TRANSITIONS: Partial<
   Record<RequestStatus, Partial<Record<ApprovalAction, TransitionTarget>>>
@@ -85,15 +78,6 @@ export const createWorkflowService = (db: DbOrTx) => {
     return mapping[status] ?? null;
   };
 
-  const getStageSlotCodeForStatus = (status: RequestStatus): string | null => {
-    const mapping: Partial<Record<RequestStatus, string>> = {
-      PENDING_HR: HR_STAGE_SLOT_CODE,
-      PENDING_FINANCE: FINANCE_STAGE_SLOT_CODE,
-      PENDING_CEO: CEO_STAGE_SLOT_CODE,
-    };
-    return mapping[status] ?? null;
-  };
-
   const getApprovalSequenceForInitiator = (
     routeKey: InitiatorRouteKey,
   ): RequestStatus[] => {
@@ -114,15 +98,14 @@ export const createWorkflowService = (db: DbOrTx) => {
     }
   };
 
-  const hasActiveSlotAssignment = async (
+  const hasActivePositionAssignment = async (
     requesterId: string,
     txOrDb: DbOrTx,
   ): Promise<boolean> => {
     const result = await txOrDb.execute(sql`
       SELECT 1
-      FROM slot_assignment sa
-      WHERE sa.user_id = ${requesterId}
-        AND sa.ends_at IS NULL
+      FROM user_position_assignment upa
+      WHERE upa.user_id = ${requesterId}
       LIMIT 1
     `);
     return result.rows.length > 0;
@@ -132,44 +115,19 @@ export const createWorkflowService = (db: DbOrTx) => {
     requesterId: string,
     txOrDb: DbOrTx,
   ): Promise<InitiatorRouteKey> => {
-    const result = await txOrDb.execute(sql`
-      SELECT ps.code AS slot_code, d.name AS department_name
-      FROM slot_assignment sa
-      INNER JOIN position_slot ps ON ps.id = sa.slot_id
-      LEFT JOIN department d ON d.id = ps.department_id
-      WHERE sa.user_id = ${requesterId}
-        AND sa.ends_at IS NULL
-      LIMIT 1
-    `);
+    const [requester] = await txOrDb
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.id, requesterId))
+      .limit(1);
 
-    const slotRow = result.rows[0] as
-      | { slot_code?: string | null; department_name?: string | null }
-      | undefined;
-
-    const normalizedSlotCode = slotRow?.slot_code?.toUpperCase() ?? "";
-    const normalizedDepartmentName =
-      slotRow?.department_name?.toUpperCase() ?? "";
-
-    if (
-      normalizedSlotCode.includes("CEO") ||
-      normalizedDepartmentName.includes("CHIEF EXECUTIVE")
-    ) {
+    if (requester?.role === "CEO") {
       return "CEO";
     }
-
-    if (
-      normalizedSlotCode.includes("FINANCE") ||
-      normalizedDepartmentName.includes("FINANCE")
-    ) {
+    if (requester?.role === "FINANCE") {
       return "FINANCE";
     }
-
-    if (
-      normalizedSlotCode.includes("HR") ||
-      normalizedSlotCode.includes("HUMAN_RESOURCES") ||
-      normalizedDepartmentName.includes("HUMAN RESOURCES") ||
-      normalizedDepartmentName === "HR"
-    ) {
+    if (requester?.role === "HR") {
       return "HR";
     }
 
@@ -182,12 +140,16 @@ export const createWorkflowService = (db: DbOrTx) => {
     actorId: string,
     action: ApprovalAction,
     stepName: string,
-    options?: { comment?: string; ipAddress?: string; actorSlotId?: string },
+    options?: {
+      comment?: string;
+      ipAddress?: string;
+      actorPositionId?: string;
+    },
   ): Promise<void> => {
     await tx.insert(approvalLog).values({
       requestId,
       actorId,
-      actorSlotId: options?.actorSlotId || null,
+      actorPositionId: options?.actorPositionId || null,
       action,
       stepName,
       comment: options?.comment || null,
@@ -235,8 +197,11 @@ export const createWorkflowService = (db: DbOrTx) => {
       txOrDb: DbOrTx = db,
       _actorRole?: UserRole,
     ): Promise<RequestStatus> {
-      const hasActiveSlot = await hasActiveSlotAssignment(requesterId, txOrDb);
-      if (!hasActiveSlot) {
+      const hasActivePosition = await hasActivePositionAssignment(
+        requesterId,
+        txOrDb,
+      );
+      if (!hasActivePosition) {
         return "PENDING_HR";
       }
 
@@ -247,33 +212,33 @@ export const createWorkflowService = (db: DbOrTx) => {
 
     async getNextApprover(requesterId: string): Promise<string | null> {
       const result = await db.execute(sql`
-        WITH RECURSIVE requester_slot AS (
-          SELECT sa.slot_id AS slot_id
-          FROM slot_assignment sa
-          WHERE sa.user_id = ${requesterId}
-            AND sa.ends_at IS NULL
+        WITH RECURSIVE requester_position AS (
+          SELECT upa.position_id AS position_id
+          FROM user_position_assignment upa
+          WHERE upa.user_id = ${requesterId}
           LIMIT 1
         ),
-        ancestor_slots AS (
-          SELECT srl.parent_slot_id AS slot_id, 1 AS depth
-          FROM slot_reporting_line srl
-          INNER JOIN requester_slot rs ON rs.slot_id = srl.child_slot_id
+        ancestor_positions AS (
+          SELECT jp.reports_to_position_id AS position_id, 1 AS depth
+          FROM job_position jp
+          INNER JOIN requester_position rp ON rp.position_id = jp.id
 
           UNION ALL
 
-          SELECT srl.parent_slot_id AS slot_id, ancestor_slots.depth + 1 AS depth
-          FROM slot_reporting_line srl
-          INNER JOIN ancestor_slots ON ancestor_slots.slot_id = srl.child_slot_id
+          SELECT jp.reports_to_position_id AS position_id, ap.depth + 1 AS depth
+          FROM job_position jp
+          INNER JOIN ancestor_positions ap ON ap.position_id = jp.id
+          WHERE ap.position_id IS NOT NULL
         )
-        SELECT u.id, u.role, ancestor_slots.depth
-        FROM ancestor_slots
-        INNER JOIN slot_assignment sa ON sa.slot_id = ancestor_slots.slot_id
-        INNER JOIN "user" u ON u.id = sa.user_id
-        WHERE sa.ends_at IS NULL
+        SELECT u.id, u.role, ap.depth
+        FROM ancestor_positions ap
+        INNER JOIN user_position_assignment upa ON upa.position_id = ap.position_id
+        INNER JOIN "user" u ON u.id = upa.user_id
+        WHERE ap.position_id IS NOT NULL
           AND u.status = 'ACTIVE'
           AND u.role IN ('MANAGER', 'HR', 'FINANCE', 'CEO')
         ORDER BY
-          ancestor_slots.depth ASC,
+          ap.depth ASC,
           CASE u.role
             WHEN 'MANAGER' THEN 1
             WHEN 'HR' THEN 2
@@ -308,27 +273,6 @@ export const createWorkflowService = (db: DbOrTx) => {
       txOrDb?: DbOrTx,
     ): Promise<string | null> {
       const queryDb = txOrDb || db;
-      const stageSlotCode = getStageSlotCodeForStatus(status);
-
-      if (stageSlotCode) {
-        const slotResult = await queryDb.execute(sql`
-          SELECT sa.user_id AS user_id
-          FROM position_slot ps
-          INNER JOIN slot_assignment sa ON sa.slot_id = ps.id
-          INNER JOIN "user" u ON u.id = sa.user_id
-          WHERE ps.code = ${stageSlotCode}
-            AND sa.ends_at IS NULL
-            AND u.status = 'ACTIVE'
-          LIMIT 1
-        `);
-        const slotOccupant = slotResult.rows[0] as
-          | { user_id?: string | null }
-          | undefined;
-
-        if (slotOccupant?.user_id) {
-          return slotOccupant.user_id;
-        }
-      }
 
       const targetRole = getApproverForStatus(status);
       if (!targetRole) {
@@ -465,11 +409,11 @@ export const createWorkflowService = (db: DbOrTx) => {
             currentStatus,
           )
         ) {
-          const hasActiveSlot = await hasActiveSlotAssignment(
+          const hasActivePosition = await hasActivePositionAssignment(
             request.requesterId,
             tx,
           );
-          if (hasActiveSlot) {
+          if (hasActivePosition) {
             const routeKey = await getInitiatorRouteKey(
               request.requesterId,
               tx,
@@ -499,26 +443,20 @@ export const createWorkflowService = (db: DbOrTx) => {
           tx,
         );
 
-        let nextApproverSlotId: string | null = null;
-        const nextApproverSlotCode = getStageSlotCodeForStatus(newStatus);
-        if (nextApproverSlotCode) {
-          const [stageSlot] = await tx
-            .select({ id: positionSlot.id })
-            .from(positionSlot)
-            .where(eq(positionSlot.code, nextApproverSlotCode))
+        let nextApproverPositionId: string | null = null;
+        if (nextApproverId) {
+          const [nextAssignee] = await tx
+            .select({ positionId: userPositionAssignment.positionId })
+            .from(userPositionAssignment)
+            .where(eq(userPositionAssignment.userId, nextApproverId))
             .limit(1);
-          nextApproverSlotId = stageSlot?.id ?? null;
+          nextApproverPositionId = nextAssignee?.positionId ?? null;
         }
 
-        const [actorSlot] = await tx
-          .select({ slotId: slotAssignment.slotId })
-          .from(slotAssignment)
-          .where(
-            and(
-              eq(slotAssignment.userId, actorId),
-              isNull(slotAssignment.endsAt),
-            ),
-          )
+        const [actorPosition] = await tx
+          .select({ positionId: userPositionAssignment.positionId })
+          .from(userPositionAssignment)
+          .where(eq(userPositionAssignment.userId, actorId))
           .limit(1);
 
         await tx
@@ -526,7 +464,7 @@ export const createWorkflowService = (db: DbOrTx) => {
           .set({
             status: newStatus,
             currentApproverId: nextApproverId,
-            currentApproverSlotId: nextApproverSlotId,
+            currentApproverPositionId: nextApproverPositionId,
             currentApproverRole: getApproverForStatus(newStatus),
             revisionVersion:
               newStatus === "DRAFT" && currentStatus !== "DRAFT"
@@ -541,7 +479,7 @@ export const createWorkflowService = (db: DbOrTx) => {
         await createApprovalLog(tx, requestId, actorId, action, stepName, {
           comment,
           ipAddress,
-          actorSlotId: actorSlot?.slotId,
+          actorPositionId: actorPosition?.positionId,
         });
 
         await createAuditLog(tx, requestId, actorId, action, {
