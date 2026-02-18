@@ -168,52 +168,44 @@ export function DeleteUserDialog({
             <span className="font-semibold text-foreground">{userName}</span>?
             This action cannot be undone and will remove all associated data
             including sessions and accounts.
-            {precheckQuery.isLoading ? (
-              <>
-                <br />
-                <br />
-                Checking offboarding blockers...
-              </>
-            ) : null}
-            {blockerSummary.length > 0 ? (
-              <>
-                <br />
-                <br />
-                <span className="font-medium text-destructive">
-                  Delete is blocked until these are resolved:
-                </span>
-                <ul className="mt-2 list-disc pl-5 text-destructive">
-                  {blockerSummary.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-            {showForceDelete ? (
-              <>
-                <br />
-                <br />
-                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                  <p className="text-destructive text-sm">
-                    Force delete bypasses operational blockers and can remove
-                    historical links.
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Checkbox
-                      checked={forceAcknowledge}
-                      id="force-delete-ack"
-                      onCheckedChange={(checked) =>
-                        setForceAcknowledge(Boolean(checked))
-                      }
-                    />
-                    <label className="text-sm" htmlFor="force-delete-ack">
-                      I understand this is destructive and irreversible
-                    </label>
-                  </div>
-                </div>
-              </>
-            ) : null}
           </AlertDialogDescription>
+          {precheckQuery.isLoading ? (
+            <div className="pt-2 text-muted-foreground text-sm">
+              Checking offboarding blockers...
+            </div>
+          ) : null}
+          {blockerSummary.length > 0 ? (
+            <div className="pt-2 text-sm">
+              <span className="font-medium text-destructive">
+                Delete is blocked until these are resolved:
+              </span>
+              <ul className="mt-2 list-disc pl-5 text-destructive">
+                {blockerSummary.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {showForceDelete ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              <span className="text-destructive text-sm">
+                Force delete bypasses operational blockers and can remove
+                historical links.
+              </span>
+              <div className="mt-2 flex items-center gap-2">
+                <Checkbox
+                  checked={forceAcknowledge}
+                  id="force-delete-ack"
+                  onCheckedChange={(checked) =>
+                    setForceAcknowledge(Boolean(checked))
+                  }
+                />
+                <label className="text-sm" htmlFor="force-delete-ack">
+                  I understand this is destructive and irreversible
+                </label>
+              </div>
+            </div>
+          ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel
