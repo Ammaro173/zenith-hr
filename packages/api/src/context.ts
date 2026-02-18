@@ -19,6 +19,7 @@ import { createDepartmentsService } from "./modules/departments";
 import { createImportsService } from "./modules/imports";
 import { createJobDescriptionsService } from "./modules/job-descriptions";
 import { createPerformanceService } from "./modules/performance";
+import { createPositionsService } from "./modules/positions";
 import { createRequestsService } from "./modules/requests";
 import { createSeparationsService } from "./modules/separations";
 import { createUsersService } from "./modules/users";
@@ -60,6 +61,7 @@ export async function createContext({ context }: CreateContextOptions) {
     candidates: createCandidatesService(db, storage),
     businessTrips: createBusinessTripsService(db, workflow),
     performance: createPerformanceService(db),
+    positions: createPositionsService(db),
     separations: createSeparationsService(db, storage),
     imports: createImportsService(db),
     jobDescriptions: createJobDescriptionsService(db),
