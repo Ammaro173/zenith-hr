@@ -3,7 +3,7 @@ import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { businessTrip } from "./business-trips";
 import { manpowerRequest } from "./manpower-requests";
-import { positionSlot } from "./position-slots";
+import { jobPosition } from "./position-slots";
 
 export const approvalActionEnum = pgEnum("approval_action", [
   "SUBMIT",
@@ -21,7 +21,7 @@ export const approvalLog = pgTable("approval_log", {
   actorId: text("actor_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  actorSlotId: uuid("actor_slot_id").references(() => positionSlot.id, {
+  actorPositionId: uuid("actor_position_id").references(() => jobPosition.id, {
     onDelete: "set null",
   }),
   action: approvalActionEnum("action").notNull(),
@@ -44,8 +44,8 @@ export const approvalLogRelations = relations(approvalLog, ({ one }) => ({
     fields: [approvalLog.actorId],
     references: [user.id],
   }),
-  actorSlot: one(positionSlot, {
-    fields: [approvalLog.actorSlotId],
-    references: [positionSlot.id],
+  actorPosition: one(jobPosition, {
+    fields: [approvalLog.actorPositionId],
+    references: [jobPosition.id],
   }),
 }));
