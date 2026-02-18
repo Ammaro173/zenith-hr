@@ -31,7 +31,7 @@ export interface UserImportRow {
   role: "EMPLOYEE" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
   status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
   departmentId?: string | null;
-  reportsToSlotCode?: string | null;
+  positionId?: string | null;
   password?: string;
 }
 
@@ -41,7 +41,6 @@ export interface UserImportRow {
 export interface DepartmentImportRow {
   name: string;
   costCenterCode: string;
-  headOfDepartmentId?: string | null;
 }
 
 /**

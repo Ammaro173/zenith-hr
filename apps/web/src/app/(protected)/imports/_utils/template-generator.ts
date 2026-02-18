@@ -15,18 +15,14 @@ const USER_TEMPLATE_HEADERS = [
   "role",
   "status",
   "departmentId",
-  "reportsToSlotCode",
+  "positionId",
   "password",
 ] as const;
 
 /**
  * Department import template headers
  */
-const DEPARTMENT_TEMPLATE_HEADERS = [
-  "name",
-  "costCenterCode",
-  "headOfDepartmentId",
-] as const;
+const DEPARTMENT_TEMPLATE_HEADERS = ["name", "costCenterCode"] as const;
 
 /**
  * Example row for user import template demonstrating valid formats.
@@ -46,7 +42,7 @@ const USER_EXAMPLE_ROW = [
 /**
  * Example row for department import template demonstrating valid formats.
  */
-const DEPARTMENT_EXAMPLE_ROW = ["Engineering", "CC-001", ""];
+const DEPARTMENT_EXAMPLE_ROW = ["Engineering", "CC-001"];
 
 /**
  * Comment row explaining user fields (optional vs required)
@@ -58,7 +54,7 @@ const USER_COMMENT_ROW = [
   "(Required: EMPLOYEE|MANAGER|HR|FINANCE|CEO|IT|ADMIN)",
   "(Optional: ACTIVE|INACTIVE|ON_LEAVE - defaults to ACTIVE)",
   "(Optional: Department UUID)",
-  "(Optional: Manager slot code, e.g. HOD_SALES)",
+  "(Optional: Job position UUID)",
   "(Optional: Min 8 chars - auto-generated if empty)",
 ];
 
@@ -68,7 +64,6 @@ const USER_COMMENT_ROW = [
 const DEPARTMENT_COMMENT_ROW = [
   "(Required: Department name)",
   "(Required: Cost center code)",
-  "(Optional: Head of department UUID)",
 ];
 
 /**

@@ -20,18 +20,14 @@ export const USER_FIELDS = [
   "role",
   "status",
   "departmentId",
-  "reportsToSlotCode",
+  "positionId",
   "password",
 ] as const;
 
 /**
  * Expected fields for department imports
  */
-export const DEPARTMENT_FIELDS = [
-  "name",
-  "costCenterCode",
-  "headOfDepartmentId",
-] as const;
+export const DEPARTMENT_FIELDS = ["name", "costCenterCode"] as const;
 
 /**
  * Common variations for field names.
@@ -93,19 +89,13 @@ const FIELD_VARIATIONS: Record<string, string> = {
   deptid: "departmentId",
   dept_id: "departmentId",
 
-  // User fields - reportsToSlotCode
-  reportstoslotcode: "reportsToSlotCode",
-  reports_to_slot_code: "reportsToSlotCode",
-  managerslot: "reportsToSlotCode",
-  manager_slot: "reportsToSlotCode",
-  managerslotcode: "reportsToSlotCode",
-  manager_slot_code: "reportsToSlotCode",
-  supervisorslot: "reportsToSlotCode",
-  supervisor_slot: "reportsToSlotCode",
-  reportsto: "reportsToSlotCode",
-  reports_to: "reportsToSlotCode",
-  manager: "reportsToSlotCode",
-  supervisor: "reportsToSlotCode",
+  // User fields - positionId
+  positionid: "positionId",
+  position_id: "positionId",
+  jobpositionid: "positionId",
+  job_position_id: "positionId",
+  assignedpositionid: "positionId",
+  assigned_position_id: "positionId",
 
   // User fields - password
   password: "password",
@@ -124,19 +114,6 @@ const FIELD_VARIATIONS: Record<string, string> = {
   cc: "costCenterCode",
   cccode: "costCenterCode",
   cc_code: "costCenterCode",
-
-  // Department fields - headOfDepartmentId
-  headofdepartmentid: "headOfDepartmentId",
-  head_of_department_id: "headOfDepartmentId",
-  headofdepartment: "headOfDepartmentId",
-  head_of_department: "headOfDepartmentId",
-  departmenthead: "headOfDepartmentId",
-  department_head: "headOfDepartmentId",
-  depthead: "headOfDepartmentId",
-  dept_head: "headOfDepartmentId",
-  headid: "headOfDepartmentId",
-  head_id: "headOfDepartmentId",
-  head: "headOfDepartmentId",
 };
 
 /**
@@ -234,8 +211,8 @@ export function detectUserColumns(headers: string[]): ColumnMapping {
  * @returns Mapping object where keys are CSV headers and values are expected field names
  *
  * @example
- * detectDepartmentColumns(['Name', 'cost_center_code', 'Head of Department'])
- * // Returns: { 'Name': 'name', 'cost_center_code': 'costCenterCode', 'Head of Department': 'headOfDepartmentId' }
+ * detectDepartmentColumns(['Name', 'cost_center_code'])
+ * // Returns: { 'Name': 'name', 'cost_center_code': 'costCenterCode' }
  */
 export function detectDepartmentColumns(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};

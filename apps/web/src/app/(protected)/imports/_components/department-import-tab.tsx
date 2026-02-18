@@ -112,9 +112,6 @@ export function DepartmentImportTab() {
           case "costCenterCode":
             departmentRow[fieldKey] = value;
             break;
-          case "headOfDepartmentId":
-            departmentRow[fieldKey] = value || null;
-            break;
           default:
             // Unknown field, skip
             break;
@@ -125,7 +122,6 @@ export function DepartmentImportTab() {
       return {
         name: departmentRow.name ?? "",
         costCenterCode: departmentRow.costCenterCode ?? "",
-        headOfDepartmentId: departmentRow.headOfDepartmentId,
       } as DepartmentImportRow;
     });
   }, [csvParser.parsedData, columnMapping]);
