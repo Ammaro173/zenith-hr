@@ -31,7 +31,6 @@ export function CreateDepartmentDialog({
     mutationFn: (data: CreateDepartmentFormData) =>
       client.departments.create({
         name: data.name,
-        costCenterCode: data.costCenterCode,
       }),
     onSuccess: () => {
       toast.success("Department created successfully");

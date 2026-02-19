@@ -72,10 +72,4 @@ export const DEPARTMENT_FIELD_DEFINITIONS: FieldDefinition[] = [
     required: true,
     description: "Name of the department",
   },
-  {
-    key: "costCenterCode",
-    label: "Cost Center Code",
-    required: true,
-    description: "Cost center code for the department",
-  },
 ];

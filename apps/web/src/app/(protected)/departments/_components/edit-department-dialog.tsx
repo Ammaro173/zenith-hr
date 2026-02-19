@@ -43,7 +43,6 @@ export function EditDepartmentDialog({
       client.departments.update({
         id: data.id,
         name: data.name,
-        costCenterCode: data.costCenterCode,
       }),
     onSuccess: () => {
       toast.success("Department updated successfully");

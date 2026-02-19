@@ -2,33 +2,6 @@ import { describe, expect, it, mock } from "bun:test";
 import { createDepartmentsService } from "./departments.service";
 
 describe("DepartmentsService", () => {
-  describe("create", () => {
-    it("should throw error for duplicate cost center code", async () => {
-      const mockDb = {
-        select: mock(() => ({
-          from: mock(() => ({
-            where: mock(() => ({
-              limit: mock(
-                () => Promise.resolve([{ id: "existing-dept" }]), // Existing department
-              ),
-            })),
-          })),
-        })),
-      } as any;
-
-      const service = createDepartmentsService(mockDb);
-
-      await expect(
-        service.create({
-          name: "New Department",
-          costCenterCode: "CC-EXISTING",
-        }),
-      ).rejects.toThrow(
-        "A department with this cost center code already exists",
-      );
-    });
-  });
-
   describe("update", () => {
     it("should throw error for non-existent department", async () => {
       const mockDb = {

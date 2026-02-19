@@ -1,6 +1,6 @@
 import type { DbOrTx } from "@zenith-hr/db";
 import { department } from "@zenith-hr/db/schema/departments";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
 import type {
   CreateDepartmentInput,
@@ -22,14 +22,9 @@ export const createDepartmentsService = (db: DbOrTx) => ({
     // biome-ignore lint/suspicious/noExplicitAny: drizzle condition types are complex
     const conditions: any[] = [];
 
-    // Search filter (name or cost center code)
+    // Search filter (name)
     if (search) {
-      conditions.push(
-        or(
-          ilike(department.name, `%${search}%`),
-          ilike(department.costCenterCode, `%${search}%`),
-        ),
-      );
+      conditions.push(ilike(department.name, `%${search}%`));
     }
 
     const offset = (page - 1) * pageSize;
@@ -46,7 +41,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
         .select({
           id: department.id,
           name: department.name,
-          costCenterCode: department.costCenterCode,
           createdAt: department.createdAt,
           updatedAt: department.updatedAt,
         })
@@ -77,7 +71,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       .select({
         id: department.id,
         name: department.name,
-        costCenterCode: department.costCenterCode,
         createdAt: department.createdAt,
         updatedAt: department.updatedAt,
       })
@@ -90,26 +83,9 @@ export const createDepartmentsService = (db: DbOrTx) => ({
 
   /**
    * Create a new department
-   * - Checks for duplicate cost center code
-   * - Validates head of department exists if provided
    */
   async create(input: CreateDepartmentInput): Promise<DepartmentResponse> {
-    const { name, costCenterCode } = input;
-
-    // Check for duplicate cost center code
-    const existingByCode = await db
-      .select({ id: department.id })
-      .from(department)
-      .where(eq(department.costCenterCode, costCenterCode))
-      .limit(1);
-
-    if (existingByCode.length > 0) {
-      throw new AppError(
-        "CONFLICT",
-        "A department with this cost center code already exists",
-        409,
-      );
-    }
+    const { name } = input;
 
     const now = new Date();
 
@@ -118,7 +94,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       .insert(department)
       .values({
         name,
-        costCenterCode,
         createdAt: now,
         updatedAt: now,
       })
@@ -144,18 +119,13 @@ export const createDepartmentsService = (db: DbOrTx) => ({
   /**
    * Update an existing department
    * - Validates department exists
-   * - Checks for duplicate cost center code if changed
-   * - Validates head of department exists if provided
    */
   async update(input: UpdateDepartmentInput): Promise<DepartmentResponse> {
-    const { id, name, costCenterCode } = input;
+    const { id, name } = input;
 
     // Verify department exists
     const [existing] = await db
-      .select({
-        id: department.id,
-        costCenterCode: department.costCenterCode,
-      })
+      .select({ id: department.id })
       .from(department)
       .where(eq(department.id, id))
       .limit(1);
@@ -164,30 +134,9 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       throw new AppError("NOT_FOUND", "Department not found", 404);
     }
 
-    // Check for duplicate cost center code if changed
-    if (
-      costCenterCode !== undefined &&
-      costCenterCode !== existing.costCenterCode
-    ) {
-      const existingByCode = await db
-        .select({ id: department.id })
-        .from(department)
-        .where(eq(department.costCenterCode, costCenterCode))
-        .limit(1);
-
-      if (existingByCode.length > 0) {
-        throw new AppError(
-          "CONFLICT",
-          "A department with this cost center code already exists",
-          409,
-        );
-      }
-    }
-
     // Build update object with only provided fields
     const updateData: Partial<{
       name: string;
-      costCenterCode: string;
       updatedAt: Date;
     }> = {
       updatedAt: new Date(),
@@ -195,9 +144,6 @@ export const createDepartmentsService = (db: DbOrTx) => ({
 
     if (name !== undefined) {
       updateData.name = name;
-    }
-    if (costCenterCode !== undefined) {
-      updateData.costCenterCode = costCenterCode;
     }
 
     // Update department

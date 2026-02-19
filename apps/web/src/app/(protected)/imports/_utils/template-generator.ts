@@ -22,7 +22,7 @@ const USER_TEMPLATE_HEADERS = [
 /**
  * Department import template headers
  */
-const DEPARTMENT_TEMPLATE_HEADERS = ["name", "costCenterCode"] as const;
+const DEPARTMENT_TEMPLATE_HEADERS = ["name"] as const;
 
 /**
  * Example row for user import template demonstrating valid formats.
@@ -42,7 +42,7 @@ const USER_EXAMPLE_ROW = [
 /**
  * Example row for department import template demonstrating valid formats.
  */
-const DEPARTMENT_EXAMPLE_ROW = ["Engineering", "CC-001"];
+const DEPARTMENT_EXAMPLE_ROW = ["Engineering"];
 
 /**
  * Comment row explaining user fields (optional vs required)
@@ -61,10 +61,7 @@ const USER_COMMENT_ROW = [
 /**
  * Comment row explaining department fields (optional vs required)
  */
-const DEPARTMENT_COMMENT_ROW = [
-  "(Required: Department name)",
-  "(Required: Cost center code)",
-];
+const DEPARTMENT_COMMENT_ROW = ["(Required: Department name)"];
 
 /**
  * Escapes a CSV value by wrapping in quotes if it contains special characters.

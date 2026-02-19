@@ -35,7 +35,6 @@ export interface UserImportRow {
  */
 export interface DepartmentImportRow {
   name: string;
-  costCenterCode: string;
 }
 
 /**

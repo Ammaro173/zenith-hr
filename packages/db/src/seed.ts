@@ -26,28 +26,24 @@ async function seed() {
     {
       id: hrDeptId,
       name: "Human Resources",
-      costCenterCode: "CC-HR",
       createdAt: now,
       updatedAt: now,
     },
     {
       id: financeDeptId,
       name: "Finance",
-      costCenterCode: "CC-FIN",
       createdAt: now,
       updatedAt: now,
     },
     {
       id: itDeptId,
       name: "IT",
-      costCenterCode: "CC-IT",
       createdAt: now,
       updatedAt: now,
     },
     {
       id: adminDeptId,
       name: "Administration",
-      costCenterCode: "CC-ADM",
       createdAt: now,
       updatedAt: now,
     },

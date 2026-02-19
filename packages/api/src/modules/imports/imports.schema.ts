@@ -50,7 +50,6 @@ export type ValidateUsersInput = z.infer<typeof validateUsersInputSchema>;
  */
 export const departmentImportRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  costCenterCode: z.string().min(1, "Cost center code is required"),
 });
 
 export type DepartmentImportRow = z.infer<typeof departmentImportRowSchema>;

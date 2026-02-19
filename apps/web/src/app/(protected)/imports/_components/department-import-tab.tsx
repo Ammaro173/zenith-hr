@@ -109,7 +109,6 @@ export function DepartmentImportTab() {
         // Map the value to the appropriate field
         switch (fieldKey) {
           case "name":
-          case "costCenterCode":
             departmentRow[fieldKey] = value;
             break;
           default:
@@ -121,7 +120,6 @@ export function DepartmentImportTab() {
       // Ensure required fields have at least empty strings to satisfy the type
       return {
         name: departmentRow.name ?? "",
-        costCenterCode: departmentRow.costCenterCode ?? "",
       } as DepartmentImportRow;
     });
   }, [csvParser.parsedData, columnMapping]);

@@ -27,7 +27,7 @@ export const USER_FIELDS = [
 /**
  * Expected fields for department imports
  */
-export const DEPARTMENT_FIELDS = ["name", "costCenterCode"] as const;
+export const DEPARTMENT_FIELDS = ["name"] as const;
 
 /**
  * Common variations for field names.
@@ -104,16 +104,7 @@ const FIELD_VARIATIONS: Record<string, string> = {
   userpassword: "password",
   user_password: "password",
 
-  // Department fields - costCenterCode
-  costcentercode: "costCenterCode",
-  cost_center_code: "costCenterCode",
-  costcenter: "costCenterCode",
-  cost_center: "costCenterCode",
-  centercode: "costCenterCode",
-  center_code: "costCenterCode",
-  cc: "costCenterCode",
-  cccode: "costCenterCode",
-  cc_code: "costCenterCode",
+  // Department fields - name only
 };
 
 /**
@@ -211,8 +202,8 @@ export function detectUserColumns(headers: string[]): ColumnMapping {
  * @returns Mapping object where keys are CSV headers and values are expected field names
  *
  * @example
- * detectDepartmentColumns(['Name', 'cost_center_code'])
- * // Returns: { 'Name': 'name', 'cost_center_code': 'costCenterCode' }
+ * detectDepartmentColumns(['Name'])
+ * // Returns: { 'Name': 'name' }
  */
 export function detectDepartmentColumns(headers: string[]): ColumnMapping {
   const mapping: ColumnMapping = {};
@@ -257,7 +248,7 @@ export function getUnmappedUserRequiredFields(
 export function getUnmappedDepartmentRequiredFields(
   mapping: ColumnMapping,
 ): string[] {
-  const requiredFields = ["name", "costCenterCode"];
+  const requiredFields = ["name"];
   const mappedFields = new Set(Object.values(mapping));
   return requiredFields.filter((field) => !mappedFields.has(field));
 }

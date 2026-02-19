@@ -9,9 +9,9 @@ import type { DepartmentListItem } from "@/types/departments";
 import { orpc } from "@/utils/orpc";
 import { columns } from "../_components/columns";
 
-export type SortByField = "name" | "costCenterCode" | "createdAt";
+export type SortByField = "name" | "createdAt";
 
-const validSortFields: SortByField[] = ["name", "costCenterCode", "createdAt"];
+const validSortFields: SortByField[] = ["name", "createdAt"];
 
 export function useDepartmentsTable() {
   // URL-synced search state

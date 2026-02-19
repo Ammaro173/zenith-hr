@@ -411,7 +411,6 @@ export const createImportsService = (db = defaultDb) => ({
         // Update existing department (upsert mode enabled)
         try {
           const updateData: Partial<typeof department.$inferInsert> = {
-            costCenterCode: row.costCenterCode,
             updatedAt: new Date(),
           };
 
@@ -437,7 +436,6 @@ export const createImportsService = (db = defaultDb) => ({
       try {
         await db.insert(department).values({
           name: row.name,
-          costCenterCode: row.costCenterCode,
           createdAt: new Date(),
           updatedAt: new Date(),
         });

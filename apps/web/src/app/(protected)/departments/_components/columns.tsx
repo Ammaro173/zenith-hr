@@ -23,21 +23,6 @@ export const columns = [
     enableResizing: true,
     enablePinning: true,
   }),
-  columnHelper.accessor("costCenterCode", {
-    header: ({ column }) => (
-      <DataGridColumnHeader column={column} title="Cost Center Code" />
-    ),
-    cell: ({ getValue }) => (
-      <span className="font-mono text-muted-foreground text-xs">
-        {getValue()}
-      </span>
-    ),
-    size: 150,
-    enableSorting: true,
-    enableHiding: true,
-    enableResizing: true,
-    enablePinning: true,
-  }),
   columnHelper.accessor("createdAt", {
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Created" />

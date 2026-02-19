@@ -41,7 +41,6 @@ export function DepartmentForm({
   const form = useForm({
     defaultValues: {
       name: initialData?.name ?? "",
-      costCenterCode: initialData?.costCenterCode ?? "",
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -49,9 +48,6 @@ export function DepartmentForm({
         const updateData: UpdateDepartmentFormData = { id: initialData.id };
         if (value.name !== initialData.name) {
           updateData.name = value.name;
-        }
-        if (value.costCenterCode !== initialData.costCenterCode) {
-          updateData.costCenterCode = value.costCenterCode;
         }
         await onSubmit(updateData);
       } else {
@@ -80,21 +76,6 @@ export function DepartmentForm({
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 placeholder="Enter department name"
-                value={field.state.value}
-              />
-            </FormField>
-          )}
-        </form.Field>
-
-        {/* Cost Center Code Field */}
-        <form.Field name="costCenterCode">
-          {(field) => (
-            <FormField field={field} label="Cost Center Code" required>
-              <Input
-                id={field.name}
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Enter cost center code"
                 value={field.state.value}
               />
             </FormField>
