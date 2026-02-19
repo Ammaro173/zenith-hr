@@ -167,6 +167,7 @@ function DataGrid<TData extends object>({
     tableLayout: {
       ...defaultProps.tableLayout,
       ...(props.tableLayout || {}),
+      // columnsResizable: false,
     },
     tableClassNames: {
       ...defaultProps.tableClassNames,

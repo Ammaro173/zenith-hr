@@ -152,7 +152,7 @@ export function DataPreviewTable<TData extends { rowIndex: number }>({
           headerBorder: true,
           headerSticky: true,
           width: "fixed",
-          columnsResizable: true,
+          columnsResizable: false,
           columnsPinnable: true,
           columnsVisibility: false,
         }}

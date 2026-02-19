@@ -171,7 +171,7 @@ export function JobDescriptionsDataGrid() {
         headerBorder: true,
         headerSticky: true,
         width: "fixed",
-        columnsResizable: true,
+        columnsResizable: false,
         columnsPinnable: false,
         columnsVisibility: false,
       }}

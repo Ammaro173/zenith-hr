@@ -43,7 +43,7 @@ export function BusinessTripsDataGrid() {
         headerBorder: true,
         headerSticky: true,
         width: "fixed",
-        columnsResizable: true,
+        columnsResizable: false,
         columnsPinnable: false,
         columnsVisibility: true,
       }}
