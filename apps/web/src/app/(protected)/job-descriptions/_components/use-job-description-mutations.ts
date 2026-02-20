@@ -28,6 +28,7 @@ export function useCreateJobDescription(options?: {
         description: data.description,
         responsibilities: data.responsibilities ?? undefined,
         departmentId: data.departmentId,
+        reportsToPositionId: data.reportsToPositionId,
         assignedRole: data.assignedRole,
       }),
     onSuccess: (result) => {
@@ -54,6 +55,7 @@ export function useUpdateJobDescription(options?: { onSuccess?: () => void }) {
         description: data.description,
         responsibilities: data.responsibilities ?? undefined,
         departmentId: data.departmentId,
+        reportsToPositionId: data.reportsToPositionId,
         assignedRole: data.assignedRole,
       }),
     onSuccess: () => {
