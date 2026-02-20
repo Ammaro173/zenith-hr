@@ -91,8 +91,8 @@ export function RequestDetailClientPage({
     );
 
   const positionDetails = request.positionDetails as {
-    title: string;
-    department: string;
+    title?: string;
+    department?: string;
     location?: string;
     startDate?: string;
     reportingTo?: string;
@@ -100,6 +100,7 @@ export function RequestDetailClientPage({
   const budgetDetails = request.budgetDetails as {
     currency: string;
   };
+  const jd = request.jobDescription;
 
   const getApproverNameForStep = (stepName: string): string | undefined => {
     return history
@@ -135,10 +136,15 @@ export function RequestDetailClientPage({
             </Badge>
           </div>
           <h1 className="font-bold text-3xl tracking-tight">
-            {positionDetails.title}
+            {jd?.title || positionDetails.title || "Untitled Position"}
           </h1>
           <div className="flex items-center gap-4 text-muted-foreground text-sm">
-            <span>{positionDetails.department} Department</span>
+            <span>
+              {jd?.departmentName ||
+                positionDetails.department ||
+                "No Department"}{" "}
+              Department
+            </span>
             <span>•</span>
             <span>
               Submitted {format(new Date(request.createdAt), "MMM d, yyyy")}
@@ -176,12 +182,21 @@ export function RequestDetailClientPage({
             <CardContent className="grid grid-cols-1 gap-y-6 pt-6 md:grid-cols-2">
               <DetailItem
                 label="DEPARTMENT"
-                value={positionDetails.department}
+                value={
+                  jd?.departmentName ??
+                  positionDetails.department ??
+                  "Not specified"
+                }
               />
               <DetailItem
                 label="EMPLOYMENT TYPE"
                 value={request.contractDuration.replace("_", " ")}
               />
+              <DetailItem
+                label="ASSIGNED ROLE"
+                value={jd?.assignedRole?.replace("_", " ") || "Not specified"}
+              />
+              <DetailItem label="GRADE" value={jd?.grade || "Not specified"} />
               <DetailItem
                 icon={<MapPin className="size-3" />}
                 label="LOCATION"
@@ -201,13 +216,35 @@ export function RequestDetailClientPage({
                 value={
                   request.requestType === "REPLACEMENT"
                     ? request.replacementForUser?.name || "Existing Employee"
-                    : "New Position (Growth)"
+                    : "None"
                 }
               />
               <DetailItem
                 label="REPORTING TO"
                 value={positionDetails.reportingTo || "Not specified"}
               />
+
+              {jd?.description && (
+                <div className="space-y-2 md:col-span-2">
+                  <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                    JOB DESCRIPTION
+                  </span>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {jd.description}
+                  </p>
+                </div>
+              )}
+
+              {jd?.responsibilities && (
+                <div className="space-y-2 md:col-span-2">
+                  <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                    RESPONSIBILITIES
+                  </span>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {jd.responsibilities}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2 md:col-span-2">
                 <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
