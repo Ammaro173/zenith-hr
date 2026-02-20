@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import {
   type ColumnDef,
   getCoreRowModel,
@@ -25,9 +24,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getRoleFromSessionUser } from "@/config/navigation";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { authClient } from "@/lib/auth-client";
-import { client } from "@/utils/orpc";
+import { useJobDescriptionsTable } from "../_hooks/use-job-descriptions-table";
 import { DeleteJobDescriptionDialog } from "./delete-job-description-dialog";
 import type { JobDescriptionListItem } from "./job-description-form";
 
@@ -42,27 +40,14 @@ export function JobDescriptionsDataGrid() {
   const [deleteItem, setDeleteItem] = useState<JobDescriptionListItem | null>(
     null,
   );
-  const [globalFilter, setGlobalFilter] = useState("");
-  const debouncedSearch = useDebouncedValue(globalFilter, 300);
 
   const {
-    data: jobDescriptions,
+    jobDescriptions,
+    globalFilter,
+    setGlobalFilter,
     isLoading,
     isFetching,
-  } = useQuery({
-    queryKey: ["jobDescriptions", "search", debouncedSearch],
-    queryFn: () =>
-      client.jobDescriptions.search({ search: debouncedSearch, limit: 50 }),
-  });
-
-  const { data: departments } = useQuery({
-    queryKey: ["departments"],
-    queryFn: () => client.users.getDepartments(),
-  });
-
-  const departmentNameById = new Map(
-    (departments ?? []).map((dept) => [dept.id, dept.name]),
-  );
+  } = useJobDescriptionsTable();
 
   const columns: ColumnDef<JobDescriptionListItem>[] = [
     {
@@ -89,19 +74,27 @@ export function JobDescriptionsDataGrid() {
       ),
     },
     {
-      accessorKey: "departmentId",
-      header: "Default Department",
+      accessorKey: "departmentName",
+      header: "Department",
       cell: ({ row }) => {
-        const departmentId = row.original.departmentId;
-        if (!departmentId) {
+        const departmentName = row.original.departmentName;
+        if (!departmentName) {
           return <span className="text-muted-foreground text-sm">None</span>;
         }
 
-        return (
-          <span className="text-sm">
-            {departmentNameById.get(departmentId) ?? "Unknown"}
-          </span>
-        );
+        return <span className="text-sm">{departmentName}</span>;
+      },
+    },
+    {
+      accessorKey: "reportsToPositionName",
+      header: "Reports To",
+      cell: ({ row }) => {
+        const positionName = row.original.reportsToPositionName;
+        if (!positionName) {
+          return <span className="text-muted-foreground text-sm">None</span>;
+        }
+
+        return <span className="text-sm">{positionName}</span>;
       },
     },
     {
@@ -143,7 +136,7 @@ export function JobDescriptionsDataGrid() {
   ];
 
   const table = useReactTable({
-    data: jobDescriptions ?? [],
+    data: jobDescriptions,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -152,16 +145,14 @@ export function JobDescriptionsDataGrid() {
     },
   });
 
-  // Only show skeleton on very first load when we have no data at all
-  // This prevents the skeleton from showing when searching (which would lose input focus)
-  if (isLoading && !jobDescriptions) {
+  if (isLoading) {
     return <JobDescriptionsTableSkeleton />;
   }
 
   return (
     <DataGrid
       isLoading={isFetching}
-      recordCount={jobDescriptions?.length ?? 0}
+      recordCount={jobDescriptions.length}
       table={table}
       tableLayout={{
         cellBorder: true,
