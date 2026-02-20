@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 
 import {
   Select,
@@ -21,6 +20,7 @@ interface DepartmentSelectProps {
   nullable?: boolean;
   disabled?: boolean;
   valueKey?: "id" | "name";
+  loadingLabel?: string | null;
 }
 
 export function DepartmentSelect({
@@ -30,22 +30,13 @@ export function DepartmentSelect({
   nullable = false,
   disabled = false,
   valueKey = "name",
+  loadingLabel,
 }: DepartmentSelectProps) {
-  const { data: departments, isLoading } = useQuery({
+  const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: () => client.users.getDepartments(),
+    staleTime: 5 * 60 * 1000,
   });
-
-  if (isLoading) {
-    return (
-      <Select disabled>
-        <SelectTrigger>
-          <Loader2 className="mr-2 size-4 animate-spin" />
-          <span className="text-muted-foreground">Loading...</span>
-        </SelectTrigger>
-      </Select>
-    );
-  }
 
   const selectValue = nullable ? (value ?? "__none__") : value || undefined;
 
@@ -66,6 +57,14 @@ export function DepartmentSelect({
             <span className="text-muted-foreground">None</span>
           </SelectItem>
         </If>
+        {/* Invisible fallback item so Radix can display the label before options load */}
+        {loadingLabel &&
+          value &&
+          !departments?.find((d) => d[valueKey] === value) && (
+            <SelectItem className="hidden" value={value}>
+              {loadingLabel}
+            </SelectItem>
+          )}
         <For
           each={departments}
           render={(dept) => (
