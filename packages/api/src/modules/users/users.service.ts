@@ -573,7 +573,7 @@ export const createUsersService = (db: DbOrTx) => ({
     currentUser: CurrentUser,
     scope: "team" | "organization",
   ): Promise<HierarchyNode[]> {
-    const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
+    // const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
 
     // Recursive CTE: start from positions occupied by active users, walk UP to find all ancestor
     // positions at any depth — this naturally captures vacant positions in the chain.
@@ -709,7 +709,7 @@ export const createUsersService = (db: DbOrTx) => ({
     }
 
     // Organization scope: build full tree from all root positions
-    if (scope === "organization" || isFullAccessRole) {
+    if (scope === "organization") {
       const rootIds = childrenMap.get(null) ?? [];
       return rootIds
         .map(buildNode)
