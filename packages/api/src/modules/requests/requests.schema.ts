@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 const positionDetailsSchema = z.object({
-  title: z.string().min(1),
-  department: z.string().min(1),
+  title: z.string().optional(),
+  department: z.string().optional(),
   description: z.string().optional(),
   location: z.string().min(1),
   startDate: z.string().optional(),
@@ -54,7 +54,7 @@ const baseRequestSchema = z.object({
     "TEMPORARY",
   ]),
   headcount: z.number().int().positive(),
-  jobDescriptionId: z.string().uuid().optional(),
+  jobDescriptionId: z.string().uuid(),
   justificationText: z.string().min(1),
   salaryRangeMin: z.number().positive(),
   salaryRangeMax: z.number().positive(),
@@ -84,13 +84,11 @@ export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
   contractDuration: "FULL_TIME",
   employmentType: "FULL_TIME",
   headcount: 1,
+  jobDescriptionId: "",
   justificationText: "",
   salaryRangeMin: 1000,
   salaryRangeMax: 2000,
   positionDetails: {
-    title: "",
-    department: "",
-    description: "",
     location: "Doha, Qatar",
   },
   budgetDetails: {
