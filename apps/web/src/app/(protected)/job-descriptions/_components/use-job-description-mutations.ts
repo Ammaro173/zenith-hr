@@ -30,6 +30,9 @@ export function useCreateJobDescription(options?: {
         departmentId: data.departmentId,
         reportsToPositionId: data.reportsToPositionId,
         assignedRole: data.assignedRole,
+        grade: data.grade,
+        minSalary: data.minSalary,
+        maxSalary: data.maxSalary,
       }),
     onSuccess: (result) => {
       toast.success("Job description created successfully");
@@ -57,6 +60,9 @@ export function useUpdateJobDescription(options?: { onSuccess?: () => void }) {
         departmentId: data.departmentId,
         reportsToPositionId: data.reportsToPositionId,
         assignedRole: data.assignedRole,
+        grade: data.grade,
+        minSalary: data.minSalary,
+        maxSalary: data.maxSalary,
       }),
     onSuccess: () => {
       toast.success("Job description updated successfully");
