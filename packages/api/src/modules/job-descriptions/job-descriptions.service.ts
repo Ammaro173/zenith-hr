@@ -34,6 +34,10 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         reportsToPositionId: jobDescription.reportsToPositionId,
         reportsToPositionName: jobPosition.name,
         assignedRole: jobDescription.assignedRole,
+        grade: jobDescription.grade,
+        minSalary: jobDescription.minSalary,
+        maxSalary: jobDescription.maxSalary,
+        active: jobDescription.active,
         createdAt: jobDescription.createdAt,
         updatedAt: jobDescription.updatedAt,
       })
@@ -75,6 +79,10 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         reportsToPositionId: jobDescription.reportsToPositionId,
         reportsToPositionName: jobPosition.name,
         assignedRole: jobDescription.assignedRole,
+        grade: jobDescription.grade,
+        minSalary: jobDescription.minSalary,
+        maxSalary: jobDescription.maxSalary,
+        active: jobDescription.active,
         createdAt: jobDescription.createdAt,
         updatedAt: jobDescription.updatedAt,
       })
@@ -105,6 +113,9 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         departmentId: input.departmentId ?? null,
         reportsToPositionId: input.reportsToPositionId ?? null,
         assignedRole: input.assignedRole,
+        grade: input.grade ?? null,
+        minSalary: input.minSalary ?? null,
+        maxSalary: input.maxSalary ?? null,
       })
       .returning();
 
@@ -134,6 +145,9 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         departmentId: input.departmentId ?? null,
         reportsToPositionId: input.reportsToPositionId ?? null,
         assignedRole: input.assignedRole,
+        grade: input.grade ?? null,
+        minSalary: input.minSalary ?? null,
+        maxSalary: input.maxSalary ?? null,
         updatedAt: new Date(),
       })
       .where(eq(jobDescription.id, input.id))
