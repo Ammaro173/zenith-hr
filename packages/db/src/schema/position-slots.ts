@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  foreignKey,
   index,
   pgTable,
   text,
@@ -41,6 +42,10 @@ export const jobPosition = pgTable(
     reportsToIdx: index("job_position_reports_to_idx").on(
       table.reportsToPositionId,
     ),
+    reportsToFk: foreignKey({
+      columns: [table.reportsToPositionId],
+      foreignColumns: [table.id],
+    }).onDelete("set null"),
   }),
 );
 
