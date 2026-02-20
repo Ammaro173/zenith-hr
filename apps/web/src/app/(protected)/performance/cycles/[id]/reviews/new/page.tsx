@@ -1,12 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { REVIEW_TYPES } from "@zenith-hr/api/modules/performance/performance.schema";
 import { Loader2 } from "lucide-react";
 import type { Route } from "next";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { client, orpc } from "@/utils/orpc";
+import { client } from "@/utils/orpc";
 
 type ReviewType = "PROBATION" | "ANNUAL_PERFORMANCE" | "OBJECTIVE_SETTING";
 
@@ -36,13 +37,6 @@ export default function NewReviewPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [reviewType, setReviewType] =
     useState<ReviewType>("ANNUAL_PERFORMANCE");
-
-  // Fetch users for employee selection
-  const { data: usersData, isLoading: loadingUsers } = useQuery(
-    orpc.users.list.queryOptions({ input: { page: 1, pageSize: 100 } }),
-  );
-
-  const users = usersData?.data ?? [];
 
   const createReviewMutation = useMutation({
     mutationFn: (data: {
@@ -88,24 +82,11 @@ export default function NewReviewPage() {
             <Label>
               Employee <span className="text-destructive">*</span>
             </Label>
-            <Select
-              disabled={loadingUsers}
-              onValueChange={setSelectedEmployeeId}
-              value={selectedEmployeeId}
-            >
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={loadingUsers ? "Loading..." : "Select employee"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <UserSearchCombobox
+              onChange={(val) => setSelectedEmployeeId(val ?? "")}
+              placeholder="Search for an employee..."
+              value={selectedEmployeeId || null}
+            />
           </div>
 
           {/* Review Type */}
