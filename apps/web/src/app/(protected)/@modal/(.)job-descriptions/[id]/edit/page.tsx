@@ -73,7 +73,7 @@ export default function EditJobDescriptionModal() {
 
   return (
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="flex max-h-[85vh] max-w-lg flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Edit Job Description</DialogTitle>
           <DialogDescription>

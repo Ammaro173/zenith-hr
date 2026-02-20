@@ -9,7 +9,6 @@ import { useCreateJobDescription } from "@/app/(protected)/job-descriptions/_com
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -31,13 +30,9 @@ export default function CreateJobDescriptionModal() {
 
   return (
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="flex max-h-[85vh] max-w-lg flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create Job Description</DialogTitle>
-          <DialogDescription>
-            Create a template that defines default role and department for
-            linked positions.
-          </DialogDescription>
         </DialogHeader>
         <JobDescriptionForm
           isPending={createMutation.isPending}
