@@ -19,6 +19,8 @@ import { relations } from "drizzle-orm";
 import { approvalLog } from "./approval-logs";
 import { user } from "./auth";
 import { contract } from "./contracts";
+import { department } from "./departments";
+import { jobDescription } from "./job-descriptions";
 import { manpowerRequest } from "./manpower-requests";
 import { jobPosition } from "./position-slots";
 import { requestVersion } from "./request-versions";
@@ -51,6 +53,21 @@ export {
   userPositionAssignmentRelations,
 } from "./position-slots";
 export { requestVersionRelations } from "./request-versions";
+
+export const jobDescriptionRelations = relations(
+  jobDescription,
+  ({ one, many }) => ({
+    department: one(department, {
+      fields: [jobDescription.departmentId],
+      references: [department.id],
+    }),
+    reportsToPosition: one(jobPosition, {
+      fields: [jobDescription.reportsToPositionId],
+      references: [jobPosition.id],
+    }),
+    positions: many(jobPosition),
+  }),
+);
 
 export const manpowerRequestRelations = relations(
   manpowerRequest,
