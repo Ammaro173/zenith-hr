@@ -23,6 +23,9 @@ export const createJobDescriptionSchema = z.object({
   departmentId: z.string().uuid().nullable().optional(),
   reportsToPositionId: z.string().uuid().nullable().optional(),
   assignedRole: userRoleSchema.default("EMPLOYEE"),
+  grade: z.string().max(50).nullable().optional(),
+  minSalary: z.number().int().min(0).nullable().optional(),
+  maxSalary: z.number().int().min(0).nullable().optional(),
 });
 
 export type CreateJobDescriptionInput = z.infer<
@@ -51,6 +54,9 @@ export const updateJobDescriptionSchema = z.object({
   departmentId: z.string().uuid().nullable().optional(),
   reportsToPositionId: z.string().uuid().nullable().optional(),
   assignedRole: userRoleSchema,
+  grade: z.string().max(50).nullable().optional(),
+  minSalary: z.number().int().min(0).nullable().optional(),
+  maxSalary: z.number().int().min(0).nullable().optional(),
 });
 
 export type UpdateJobDescriptionInput = z.infer<
@@ -88,6 +94,10 @@ export interface JobDescriptionResponse {
     | "CEO"
     | "IT"
     | "ADMIN";
+  grade: string | null;
+  minSalary: number | null;
+  maxSalary: number | null;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
