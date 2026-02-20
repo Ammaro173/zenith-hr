@@ -1,5 +1,7 @@
 import type { DbOrTx } from "@zenith-hr/db";
+import { department } from "@zenith-hr/db/schema/departments";
 import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
+import { jobPosition } from "@zenith-hr/db/schema/position-slots";
 import { desc, eq, ilike, or } from "drizzle-orm";
 import type {
   CreateJobDescriptionInput,
@@ -21,7 +23,26 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
   ): Promise<JobDescriptionResponse[]> {
     const { search, limit } = params;
 
-    let query = db.select().from(jobDescription);
+    let query = db
+      .select({
+        id: jobDescription.id,
+        title: jobDescription.title,
+        description: jobDescription.description,
+        responsibilities: jobDescription.responsibilities,
+        departmentId: jobDescription.departmentId,
+        departmentName: department.name,
+        reportsToPositionId: jobDescription.reportsToPositionId,
+        reportsToPositionName: jobPosition.name,
+        assignedRole: jobDescription.assignedRole,
+        createdAt: jobDescription.createdAt,
+        updatedAt: jobDescription.updatedAt,
+      })
+      .from(jobDescription)
+      .leftJoin(department, eq(jobDescription.departmentId, department.id))
+      .leftJoin(
+        jobPosition,
+        eq(jobDescription.reportsToPositionId, jobPosition.id),
+      );
 
     if (search && search.trim().length > 0) {
       query = query.where(
@@ -44,8 +65,25 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
    */
   async getById(id: string): Promise<JobDescriptionResponse | null> {
     const [result] = await db
-      .select()
+      .select({
+        id: jobDescription.id,
+        title: jobDescription.title,
+        description: jobDescription.description,
+        responsibilities: jobDescription.responsibilities,
+        departmentId: jobDescription.departmentId,
+        departmentName: department.name,
+        reportsToPositionId: jobDescription.reportsToPositionId,
+        reportsToPositionName: jobPosition.name,
+        assignedRole: jobDescription.assignedRole,
+        createdAt: jobDescription.createdAt,
+        updatedAt: jobDescription.updatedAt,
+      })
       .from(jobDescription)
+      .leftJoin(department, eq(jobDescription.departmentId, department.id))
+      .leftJoin(
+        jobPosition,
+        eq(jobDescription.reportsToPositionId, jobPosition.id),
+      )
       .where(eq(jobDescription.id, id))
       .limit(1);
 
@@ -65,6 +103,7 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         description: input.description,
         responsibilities: input.responsibilities || null,
         departmentId: input.departmentId ?? null,
+        reportsToPositionId: input.reportsToPositionId ?? null,
         assignedRole: input.assignedRole,
       })
       .returning();
@@ -73,7 +112,11 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
       throw new Error("Failed to create job description");
     }
 
-    return newJobDescription;
+    return {
+      ...newJobDescription,
+      departmentName: null,
+      reportsToPositionName: null,
+    };
   },
 
   /**
@@ -89,6 +132,7 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
         description: input.description,
         responsibilities: input.responsibilities || null,
         departmentId: input.departmentId ?? null,
+        reportsToPositionId: input.reportsToPositionId ?? null,
         assignedRole: input.assignedRole,
         updatedAt: new Date(),
       })
@@ -99,7 +143,11 @@ export const createJobDescriptionsService = (db: DbOrTx) => ({
       throw new Error("Job description not found");
     }
 
-    return updated;
+    return {
+      ...updated,
+      departmentName: null,
+      reportsToPositionName: null,
+    };
   },
 
   /**
