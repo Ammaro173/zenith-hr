@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Users } from "lucide-react";
+import { Briefcase, ChevronDown, ChevronRight, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -95,6 +95,49 @@ export function UserCard({
     );
   }
 
+  // Vacancy placeholder card — dashed ghost style, no personal data
+  if (user.isVacancy) {
+    return (
+      <Card
+        className={cn(
+          "relative w-48 cursor-default border-2 border-muted-foreground/30 border-dashed bg-muted/10 p-3 transition-all",
+          hasChildren && "cursor-pointer hover:border-muted-foreground/50",
+          className,
+        )}
+        onClick={hasChildren ? onToggle : undefined}
+      >
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-muted-foreground/30 border-dashed bg-muted">
+            <Briefcase className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="w-full space-y-1">
+            <p className="truncate font-semibold text-muted-foreground text-sm">
+              {user.name}
+            </p>
+            <Badge
+              appearance="light"
+              className="text-[10px]"
+              variant="secondary"
+            >
+              Vacant
+            </Badge>
+          </div>
+          {hasChildren && (
+            <div className="flex items-center gap-1 text-muted-foreground text-xs">
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+              <Users className="h-3 w-3" />
+              <span>{user.children.length} reports</span>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
   // Chart variant - full card
   return (
     <Card
@@ -106,7 +149,7 @@ export function UserCard({
       onClick={hasChildren ? onToggle : undefined}
     >
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 font-semibold text-lg text-primary">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-primary/20 to-primary/5 font-semibold text-lg text-primary">
           {initials}
         </div>
 

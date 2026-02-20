@@ -36,7 +36,11 @@ export interface HierarchyNode {
   role: UserRole;
   status: UserStatus;
   departmentName: string | null;
+  /** The name of the job position this node occupies (or the vacant position name). */
+  positionName?: string | null;
   children: HierarchyNode[];
+  /** True when this node represents an unoccupied position slot (no real user). */
+  isVacancy?: boolean;
 }
 
 // Role display configuration

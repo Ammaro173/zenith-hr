@@ -8,7 +8,6 @@ interface OrgChartViewProps {
   nodes: HierarchyNode[];
   isExpanded: (nodeId: string) => boolean;
   onToggle: (nodeId: string) => void;
-  isRoot?: boolean;
 }
 
 function OrgChartNode({
@@ -80,19 +79,13 @@ export function OrgChartView({
   nodes,
   isExpanded,
   onToggle,
-  isRoot = true,
 }: OrgChartViewProps) {
   if (nodes.length === 0) {
     return null;
   }
 
   return (
-    <div
-      className={cn(
-        "flex flex-nowrap items-start justify-center gap-8",
-        isRoot && "min-w-max",
-      )}
-    >
+    <div className="flex flex-nowrap items-start justify-center gap-8">
       {nodes.map((node) => (
         <OrgChartNode
           isExpanded={isExpanded}
