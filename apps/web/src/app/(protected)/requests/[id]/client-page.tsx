@@ -7,7 +7,6 @@ import {
   Calendar,
   CheckCircle2,
   History,
-  Info,
   Loader2,
   MapPin,
   User,
@@ -419,7 +418,7 @@ export function RequestDetailClientPage({
             </CardContent>
           </Card>
 
-          <Card className="border-dashed bg-muted/30">
+          {/* <Card className="border-dashed bg-muted/30">
             <CardContent className="flex gap-3 pt-6">
               <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <div className="space-y-1">
@@ -432,7 +431,7 @@ export function RequestDetailClientPage({
                 </p>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>
