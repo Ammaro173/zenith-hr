@@ -19,7 +19,7 @@ export default async function EditJobDescriptionPage({
   const { id } = await params;
 
   return (
-    <div className="mx-auto flex max-w-(--breakpoint-md) flex-col gap-8 p-8">
+    <div className="mx-auto flex max-w-(--breakpoint-lg) flex-col gap-8 p-8">
       <div>
         <h1 className="font-bold text-3xl text-black tracking-tight dark:text-white">
           Edit Job Description
