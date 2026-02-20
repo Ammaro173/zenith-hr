@@ -21,6 +21,7 @@ export const createJobDescriptionSchema = z.object({
   description: z.string().min(1, "Description is required"),
   responsibilities: z.string().optional(),
   departmentId: z.string().uuid().nullable().optional(),
+  reportsToPositionId: z.string().uuid().nullable().optional(),
   assignedRole: userRoleSchema.default("EMPLOYEE"),
 });
 
@@ -48,6 +49,7 @@ export const updateJobDescriptionSchema = z.object({
   description: z.string().min(1, "Description is required"),
   responsibilities: z.string().optional(),
   departmentId: z.string().uuid().nullable().optional(),
+  reportsToPositionId: z.string().uuid().nullable().optional(),
   assignedRole: userRoleSchema,
 });
 
@@ -75,6 +77,9 @@ export interface JobDescriptionResponse {
   description: string;
   responsibilities: string | null;
   departmentId: string | null;
+  departmentName: string | null;
+  reportsToPositionId: string | null;
+  reportsToPositionName: string | null;
   assignedRole:
     | "EMPLOYEE"
     | "MANAGER"
