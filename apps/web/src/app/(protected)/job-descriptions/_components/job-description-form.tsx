@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { Loader2 } from "lucide-react";
 import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
+import { PositionSearchCombobox } from "@/components/shared/position-search-combobox";
 import { RoleSelect } from "@/components/shared/role-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ export interface JobDescriptionFormData {
   description: string;
   responsibilities: string | null;
   departmentId: string | null;
+  reportsToPositionId: string | null;
   assignedRole: UserRole;
 }
 
@@ -28,6 +30,9 @@ export interface JobDescriptionListItem {
   description: string;
   responsibilities: string | null;
   departmentId: string | null;
+  departmentName: string | null;
+  reportsToPositionId: string | null;
+  reportsToPositionName: string | null;
   assignedRole: UserRole;
   createdAt: Date;
   updatedAt: Date;
@@ -60,6 +65,7 @@ export function JobDescriptionForm({
       description: initialData?.description ?? "",
       responsibilities: initialData?.responsibilities ?? "",
       departmentId: initialData?.departmentId ?? null,
+      reportsToPositionId: initialData?.reportsToPositionId ?? null,
       assignedRole: initialData?.assignedRole ?? "EMPLOYEE",
     },
     onSubmit: async ({ value }) => {
@@ -68,6 +74,7 @@ export function JobDescriptionForm({
         description: value.description,
         responsibilities: value.responsibilities || null,
         departmentId: value.departmentId,
+        reportsToPositionId: value.reportsToPositionId,
         assignedRole: value.assignedRole,
       });
     },
@@ -150,11 +157,25 @@ export function JobDescriptionForm({
           {(field) => (
             <FormField field={field} label="Default Department (Optional)">
               <DepartmentSelect
+                loadingLabel={initialData?.departmentName ?? undefined}
                 nullable
                 onChange={(val) => field.handleChange(val)}
                 placeholder="Select default department..."
                 value={field.state.value}
                 valueKey="id"
+              />
+            </FormField>
+          )}
+        </form.Field>
+
+        <form.Field name="reportsToPositionId">
+          {(field) => (
+            <FormField field={field} label="Reports To Position (Optional)">
+              <PositionSearchCombobox
+                nullable
+                onChange={(val) => field.handleChange(val ?? null)}
+                placeholder="Search position..."
+                value={field.state.value}
               />
             </FormField>
           )}
