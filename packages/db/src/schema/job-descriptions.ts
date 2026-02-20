@@ -13,6 +13,7 @@ export const jobDescription = pgTable("job_description", {
   departmentId: uuid("department_id").references(() => department.id, {
     onDelete: "set null",
   }),
+  reportsToPositionId: uuid("reports_to_position_id"),
   assignedRole: userRoleEnum("assigned_role").notNull().default("EMPLOYEE"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
