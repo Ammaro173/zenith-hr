@@ -564,151 +564,183 @@ export const createUsersService = (db: DbOrTx) => ({
 
   /**
    * Get organizational hierarchy for org chart
-   * Returns users in a nested tree structure
+   * Returns positions in a nested tree structure (position-centric, infinite-depth vacancies).
+   * Walks UP from every active-user-occupied position to discover all ancestor positions at any
+   * depth, then builds a recursive HierarchyNode tree where each position is either a user node
+   * or a vacancy placeholder — no depth limits, no special-casing.
    */
   async getHierarchy(
     currentUser: CurrentUser,
     scope: "team" | "organization",
   ): Promise<HierarchyNode[]> {
-    // Determine which users to include based on role and scope
     const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
 
+    // Recursive CTE: start from positions occupied by active users, walk UP to find all ancestor
+    // positions at any depth — this naturally captures vacant positions in the chain.
     const hierarchyResult = await db.execute(sql`
-      WITH direct_manager AS (
-        SELECT DISTINCT ON (upa.user_id)
-          upa.user_id AS child_user_id,
-          manager_upa.user_id AS manager_user_id
-        FROM user_position_assignment upa
-        LEFT JOIN job_position jp ON jp.id = upa.position_id
-        LEFT JOIN user_position_assignment manager_upa ON manager_upa.position_id = jp.reports_to_position_id
-        ORDER BY upa.user_id, manager_upa.created_at ASC NULLS LAST
+      WITH RECURSIVE all_relevant_positions AS (
+        -- Base: every position currently occupied by an active user
+        SELECT jp.id AS position_id, jp.reports_to_position_id
+        FROM job_position jp
+        WHERE EXISTS (
+          SELECT 1 FROM user_position_assignment upa
+          JOIN "user" u ON u.id = upa.user_id AND u.status = 'ACTIVE'
+          WHERE upa.position_id = jp.id
+        )
+        UNION
+        -- Recursive: walk up to parent positions (captures vacant ancestors at any depth)
+        SELECT jp.id, jp.reports_to_position_id
+        FROM job_position jp
+        INNER JOIN all_relevant_positions arp ON jp.id = arp.reports_to_position_id
       )
       SELECT
-        u.id,
-        u.name,
-        u.email,
-        u.sap_no,
-        u.role,
-        u.status,
-        d.name AS department_name,
-        dm.manager_user_id AS manager_user_id
-      FROM "user" u
-      LEFT JOIN department d ON d.id = u.department_id
-      LEFT JOIN direct_manager dm ON dm.child_user_id = u.id
-      WHERE u.status = 'ACTIVE'
+        arp.position_id,
+        arp.reports_to_position_id,
+        jp.name            AS position_name,
+        d.name             AS position_dept,
+        upa.user_id,
+        u.name             AS user_name,
+        u.email            AS user_email,
+        u.sap_no           AS user_sap_no,
+        u.role             AS user_role,
+        u.status           AS user_status,
+        ud.name            AS user_dept
+      FROM all_relevant_positions arp
+      JOIN  job_position jp  ON jp.id = arp.position_id
+      LEFT JOIN department d ON d.id = jp.department_id
+      LEFT JOIN user_position_assignment upa ON upa.position_id = arp.position_id
+      LEFT JOIN "user" u  ON u.id = upa.user_id AND u.status = 'ACTIVE'
+      LEFT JOIN department ud ON ud.id = u.department_id
     `);
 
-    const allUsers = (
-      hierarchyResult.rows as Array<{
-        id: string;
-        name: string;
-        email: string;
-        sap_no: string;
-        role: string;
-        status: string;
-        department_name: string | null;
-        manager_user_id: string | null;
-      }>
-    ).map((row) => ({
-      id: row.id,
-      name: row.name,
-      email: row.email,
-      sapNo: row.sap_no,
-      role: row.role,
-      status: row.status,
-      departmentName: row.department_name,
-      managerUserId: row.manager_user_id,
-    }));
-
-    // Build a map for quick lookup
-    const userMap = new Map<string, (typeof allUsers)[0]>();
-    for (const u of allUsers) {
-      userMap.set(u.id, u);
+    interface HierarchyRow {
+      position_id: string;
+      reports_to_position_id: string | null;
+      position_name: string;
+      position_dept: string | null;
+      user_id: string | null;
+      user_name: string | null;
+      user_email: string | null;
+      user_sap_no: string | null;
+      user_role: string | null;
+      user_status: string | null;
+      user_dept: string | null;
     }
 
-    // Build hierarchical structure
-    const buildNode = (u: (typeof allUsers)[0]): HierarchyNode => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      sapNo: u.sapNo,
-      role: u.role,
-      status: u.status,
-      departmentName: u.departmentName,
-      children: [],
-    });
+    const rows = hierarchyResult.rows as unknown as HierarchyRow[];
 
-    // Find all children for each user
-    const childrenMap = new Map<string | null, (typeof allUsers)[0][]>();
-    for (const u of allUsers) {
-      const managerId = u.managerUserId;
-      const existing = childrenMap.get(managerId);
-      if (existing) {
-        existing.push(u);
-      } else {
-        childrenMap.set(managerId, [u]);
+    if (rows.length === 0) {
+      return [];
+    }
+
+    // positionMap: one row per position — prefer occupied (user_id != null) over vacant duplicate
+    const positionMap = new Map<string, HierarchyRow>();
+    for (const row of rows) {
+      const existing = positionMap.get(row.position_id);
+      if (!existing || (row.user_id && !existing.user_id)) {
+        positionMap.set(row.position_id, row);
       }
     }
 
-    // Recursively build tree from a root user
-    const buildTree = (userId: string): HierarchyNode | null => {
-      const userData = userMap.get(userId);
-      if (!userData) {
+    // userPositionMap: userId → positionId (for team-scope lookups)
+    const userPositionMap = new Map<string, string>();
+    for (const row of rows) {
+      if (row.user_id) {
+        userPositionMap.set(row.user_id, row.position_id);
+      }
+    }
+
+    // childrenMap: parentPositionId → child positionIds
+    // A position is a root (null key) when its parent is outside the relevant set or null.
+    const childrenMap = new Map<string | null, string[]>();
+    for (const row of positionMap.values()) {
+      const parentKey =
+        row.reports_to_position_id !== null &&
+        positionMap.has(row.reports_to_position_id)
+          ? row.reports_to_position_id
+          : null;
+      const list = childrenMap.get(parentKey) ?? [];
+      list.push(row.position_id);
+      childrenMap.set(parentKey, list);
+    }
+
+    // Recursively build a HierarchyNode for the given position at any depth.
+    // Returns a user node when occupied, or a vacancy placeholder when empty.
+    function buildNode(posId: string): HierarchyNode | null {
+      const row = positionMap.get(posId);
+      if (!row) {
         return null;
       }
 
-      const node = buildNode(userData);
-      const children = childrenMap.get(userId) ?? [];
-      node.children = children
-        .map((child) => buildTree(child.id))
+      const childIds = childrenMap.get(posId) ?? [];
+      const children: HierarchyNode[] = childIds
+        .map(buildNode)
         .filter((n): n is HierarchyNode => n !== null)
         .sort((a, b) => a.name.localeCompare(b.name));
-      return node;
-    };
 
-    if (allUsers.length === 0) {
+      if (!row.user_id) {
+        // Vacant position — ghost node
+        return {
+          id: `vacancy-${row.position_id}`,
+          name: row.position_name,
+          email: "",
+          sapNo: "",
+          role: "EMPLOYEE" as const,
+          status: "ACTIVE" as const,
+          departmentName: row.position_dept ?? null,
+          positionName: row.position_name,
+          isVacancy: true,
+          children,
+        };
+      }
+
+      return {
+        id: row.user_id,
+        name: row.user_name ?? "",
+        email: row.user_email ?? "",
+        sapNo: row.user_sap_no ?? "",
+        role: (row.user_role as HierarchyNode["role"]) ?? "EMPLOYEE",
+        status: (row.user_status as HierarchyNode["status"]) ?? "ACTIVE",
+        departmentName: row.user_dept ?? null,
+        positionName: row.position_name,
+        isVacancy: false,
+        children,
+      };
+    }
+
+    // Organization scope: build full tree from all root positions
+    if (scope === "organization" || isFullAccessRole) {
+      const rootIds = childrenMap.get(null) ?? [];
+      return rootIds
+        .map(buildNode)
+        .filter((n): n is HierarchyNode => n !== null)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // Team scope: build subtree rooted at the current user's position.
+    const currentUserPosId = userPositionMap.get(currentUser.id);
+    if (!currentUserPosId) {
       return [];
     }
 
-    // For organization scope (full access roles only)
-    if (scope === "organization" && isFullAccessRole) {
-      // Find all root users (no manager)
-      const roots = childrenMap.get(null) ?? [];
-      return roots
-        .map((u) => buildTree(u.id))
-        .filter((n): n is HierarchyNode => n !== null)
-        .sort((a, b) => a.name.localeCompare(b.name));
+    const directReportPosIds = childrenMap.get(currentUserPosId) ?? [];
+    if (directReportPosIds.length > 0) {
+      // Current user manages others — show their own subtree
+      const selfNode = buildNode(currentUserPosId);
+      return selfNode ? [selfNode] : [];
     }
 
-    // Team scope (and organization scope for non-full-access roles):
-    // - If user has direct reports, show their own subtree
-    // - Otherwise, show manager with direct reports only (peers view)
-    const currentUserData = userMap.get(currentUser.id);
-    if (!currentUserData) {
-      return [];
+    // Leaf node: show peers under the same manager position
+    const currentPosRow = positionMap.get(currentUserPosId);
+    const managerPosId = currentPosRow?.reports_to_position_id ?? null;
+
+    if (!(managerPosId && positionMap.has(managerPosId))) {
+      const selfNode = buildNode(currentUserPosId);
+      return selfNode ? [selfNode] : [];
     }
 
-    const directReports = childrenMap.get(currentUser.id) ?? [];
-    if (directReports.length > 0) {
-      const selfTree = buildTree(currentUser.id);
-      return selfTree ? [selfTree] : [];
-    }
-
-    if (!currentUserData.managerUserId) {
-      return [buildNode(currentUserData)];
-    }
-
-    const managerData = userMap.get(currentUserData.managerUserId);
-    if (!managerData) {
-      return [buildNode(currentUserData)];
-    }
-
-    const managerNode = buildNode(managerData);
-    managerNode.children = (childrenMap.get(managerData.id) ?? [])
-      .map((peer) => buildNode(peer))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    return [managerNode];
+    const managerNode = buildNode(managerPosId);
+    return managerNode ? [managerNode] : [];
   },
 
   /**

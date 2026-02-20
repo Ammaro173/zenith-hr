@@ -3520,24 +3520,30 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
 });
 
 // ============================================
-// getHierarchy Vacancy Behavior Tests
-// ============================================
+// getHierarchy Vacancy Behavior Tests (position-centric model)
+// ============================================================
+// Each row returned by the recursive CTE represents ONE position.
+// Rows with user_id = null are vacant positions.
+// The tree-builder wires positions using reports_to_position_id.
 
-type HierarchyRow = {
-  id: string;
-  name: string;
-  email: string;
-  sap_no: string;
-  role: string;
-  status: string;
-  department_name: string | null;
-  manager_user_id: string | null;
-};
+interface HierarchyRow {
+  position_id: string;
+  reports_to_position_id: string | null;
+  position_name: string;
+  position_dept: string | null;
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  user_sap_no: string | null;
+  user_role: string | null;
+  user_status: string | null;
+  user_dept: string | null;
+}
 
 /**
  * Creates a minimal mock DB for testing getHierarchy tree-building.
  * Mocks db.execute to return the specified pre-built hierarchy rows,
- * simulating what the simplified direct-manager SQL CTE produces.
+ * simulating what the recursive position-centric CTE produces.
  */
 function createMockDbForHierarchy(rows: HierarchyRow[]) {
   return {
@@ -3546,37 +3552,41 @@ function createMockDbForHierarchy(rows: HierarchyRow[]) {
 }
 
 /**
- * Feature: org-hierarchy, Vacancy: deleted manager shows as no manager
+ * Feature: org-hierarchy — position-centric, infinite-depth vacancy handling.
  *
- * After a manager is deleted their position slot becomes vacant.
- * The simplified direct-manager CTE returns NULL for manager_user_id
- * instead of rolling up to the nearest occupied ancestor.
- * The tree-builder must place such users as root nodes (no parent).
+ * SQL walks UP from occupied positions to find all ancestor positions at any depth.
+ * TypeScript builds a tree where each position is either an occupied user node
+ * or a vacancy placeholder — no depth limits, no special-casing.
  */
 describe("getHierarchy - vacancy behavior after manager deletion", () => {
-  it("should show a user as root when their direct manager slot is vacant", async () => {
-    // alice has no manager (slot vacant after deletion)
-    // bob reports to alice
+  it("should nest a user under their occupied parent position", async () => {
+    // Alice occupies pos-alice (root); Bob occupies pos-bob which reports to pos-alice.
     const mockDb = createMockDbForHierarchy([
       {
-        id: "alice",
-        name: "Alice",
-        email: "alice@example.com",
-        sap_no: "SAP0001",
-        role: "MANAGER",
-        status: "ACTIVE",
-        department_name: "Engineering",
-        manager_user_id: null,
+        position_id: "pos-alice",
+        reports_to_position_id: null,
+        position_name: "Engineering Lead",
+        position_dept: "Engineering",
+        user_id: "alice",
+        user_name: "Alice",
+        user_email: "alice@example.com",
+        user_sap_no: "SAP0001",
+        user_role: "MANAGER",
+        user_status: "ACTIVE",
+        user_dept: "Engineering",
       },
       {
-        id: "bob",
-        name: "Bob",
-        email: "bob@example.com",
-        sap_no: "SAP0002",
-        role: "EMPLOYEE",
-        status: "ACTIVE",
-        department_name: "Engineering",
-        manager_user_id: "alice",
+        position_id: "pos-bob",
+        reports_to_position_id: "pos-alice",
+        position_name: "Software Engineer",
+        position_dept: "Engineering",
+        user_id: "bob",
+        user_name: "Bob",
+        user_email: "bob@example.com",
+        user_sap_no: "SAP0002",
+        user_role: "EMPLOYEE",
+        user_status: "ACTIVE",
+        user_dept: "Engineering",
       },
     ]);
 
@@ -3589,36 +3599,54 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
       "organization",
     );
 
-    // alice should be a root node with bob as child
-    const alice = result.find((n) => n.id === "alice");
-    expect(alice).toBeDefined();
+    // Alice should be a root node with Bob as child
+    expect(result).toHaveLength(1);
+    const alice = result[0];
+    expect(alice?.id).toBe("alice");
     expect(alice?.children.some((c) => c.id === "bob")).toBe(true);
   });
 
-  it("should NOT roll up orphaned users to a grandparent when direct manager slot is vacant", async () => {
-    // grandparent is the org root (no manager)
-    // child's direct manager was deleted → slot is vacant → manager_user_id is null
-    // child must be a root, NOT appear under grandparent
+  it("should show a vacant position as a ghost node between two occupied positions", async () => {
+    // CEO (occupied) → Head of HR (vacant pos-hr) → Layla (occupied)
     const mockDb = createMockDbForHierarchy([
       {
-        id: "grandparent",
-        name: "Grandparent",
-        email: "gp@example.com",
-        sap_no: "SAP0020",
-        role: "CEO",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: null,
+        position_id: "pos-ceo",
+        reports_to_position_id: null,
+        position_name: "Chief Executive Officer",
+        position_dept: "Administration",
+        user_id: "ceo",
+        user_name: "CEO User",
+        user_email: "ceo@example.com",
+        user_sap_no: "SAP0010",
+        user_role: "CEO",
+        user_status: "ACTIVE",
+        user_dept: "Administration",
       },
       {
-        id: "child",
-        name: "Child",
-        email: "child@example.com",
-        sap_no: "SAP0021",
-        role: "EMPLOYEE",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: null, // direct manager deleted → vacancy
+        position_id: "pos-hr",
+        reports_to_position_id: "pos-ceo",
+        position_name: "Head of Human Resources",
+        position_dept: "Human Resources",
+        user_id: null,
+        user_name: null,
+        user_email: null,
+        user_sap_no: null,
+        user_role: null,
+        user_status: null,
+        user_dept: null,
+      },
+      {
+        position_id: "pos-layla",
+        reports_to_position_id: "pos-hr",
+        position_name: "HR Specialist",
+        position_dept: "Human Resources",
+        user_id: "layla",
+        user_name: "Layla",
+        user_email: "layla@example.com",
+        user_sap_no: "SAP0011",
+        user_role: "MANAGER",
+        user_status: "ACTIVE",
+        user_dept: "Human Resources",
       },
     ]);
 
@@ -3627,41 +3655,54 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
     );
 
     const result = await service.getHierarchy(
-      { id: "grandparent", role: "ADMIN" },
+      { id: "ceo", role: "ADMIN" },
       "organization",
     );
 
-    // grandparent should NOT have child as a descendant
-    const grandparent = result.find((n) => n.id === "grandparent");
-    expect(grandparent?.children.some((c) => c.id === "child")).toBe(false);
+    // Only CEO at root
+    expect(result).toHaveLength(1);
+    const ceo = result[0];
+    expect(ceo?.id).toBe("ceo");
 
-    // child should appear as a standalone root (vacancy, not rolled up)
-    const child = result.find((n) => n.id === "child");
-    expect(child).toBeDefined();
-    expect(child?.children).toHaveLength(0);
+    // CEO's child is the vacancy node (not Layla directly)
+    expect(ceo?.children).toHaveLength(1);
+    const vacancy = ceo?.children[0];
+    expect(vacancy?.id).toBe("vacancy-pos-hr");
+    expect(vacancy?.isVacancy).toBe(true);
+    expect(vacancy?.name).toBe("Head of Human Resources");
+
+    // Layla is nested under the vacancy
+    expect(vacancy?.children).toHaveLength(1);
+    expect(vacancy?.children[0]?.id).toBe("layla");
   });
 
-  it("should return multiple roots when several users have no manager", async () => {
+  it("should return multiple roots when several positions have no parent", async () => {
     const mockDb = createMockDbForHierarchy([
       {
-        id: "user-a",
-        name: "User A",
-        email: "a@example.com",
-        sap_no: "SAP0030",
-        role: "EMPLOYEE",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: null,
+        position_id: "pos-a",
+        reports_to_position_id: null,
+        position_name: "Role A",
+        position_dept: null,
+        user_id: "user-a",
+        user_name: "User A",
+        user_email: "a@example.com",
+        user_sap_no: "SAP0030",
+        user_role: "EMPLOYEE",
+        user_status: "ACTIVE",
+        user_dept: null,
       },
       {
-        id: "user-b",
-        name: "User B",
-        email: "b@example.com",
-        sap_no: "SAP0031",
-        role: "EMPLOYEE",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: null,
+        position_id: "pos-b",
+        reports_to_position_id: null,
+        position_name: "Role B",
+        position_dept: null,
+        user_id: "user-b",
+        user_name: "User B",
+        user_email: "b@example.com",
+        user_sap_no: "SAP0031",
+        user_role: "EMPLOYEE",
+        user_status: "ACTIVE",
+        user_dept: null,
       },
     ]);
 
@@ -3680,38 +3721,46 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
     expect(ids).toContain("user-b");
   });
 
-  it("should still correctly nest users whose manager is present", async () => {
-    // Sanity check: normal hierarchy still works after SQL simplification
+  it("should correctly nest a 3-level fully occupied hierarchy", async () => {
     const mockDb = createMockDbForHierarchy([
       {
-        id: "ceo",
-        name: "CEO",
-        email: "ceo@example.com",
-        sap_no: "SAP0040",
-        role: "CEO",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: null,
+        position_id: "pos-ceo",
+        reports_to_position_id: null,
+        position_name: "CEO",
+        position_dept: null,
+        user_id: "ceo",
+        user_name: "CEO",
+        user_email: "ceo@example.com",
+        user_sap_no: "SAP0040",
+        user_role: "CEO",
+        user_status: "ACTIVE",
+        user_dept: null,
       },
       {
-        id: "mgr",
-        name: "Manager",
-        email: "mgr@example.com",
-        sap_no: "SAP0041",
-        role: "MANAGER",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: "ceo",
+        position_id: "pos-mgr",
+        reports_to_position_id: "pos-ceo",
+        position_name: "Manager",
+        position_dept: null,
+        user_id: "mgr",
+        user_name: "Manager",
+        user_email: "mgr@example.com",
+        user_sap_no: "SAP0041",
+        user_role: "MANAGER",
+        user_status: "ACTIVE",
+        user_dept: null,
       },
       {
-        id: "emp",
-        name: "Employee",
-        email: "emp@example.com",
-        sap_no: "SAP0042",
-        role: "EMPLOYEE",
-        status: "ACTIVE",
-        department_name: null,
-        manager_user_id: "mgr",
+        position_id: "pos-emp",
+        reports_to_position_id: "pos-mgr",
+        position_name: "Employee",
+        position_dept: null,
+        user_id: "emp",
+        user_name: "Employee",
+        user_email: "emp@example.com",
+        user_sap_no: "SAP0042",
+        user_role: "EMPLOYEE",
+        user_status: "ACTIVE",
+        user_dept: null,
       },
     ]);
 
@@ -3732,5 +3781,79 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
     expect(mgr?.id).toBe("mgr");
     expect(mgr?.children).toHaveLength(1);
     expect(mgr?.children[0]?.id).toBe("emp");
+  });
+
+  it("should handle a deep vacancy chain — CEO and HoHR both vacant, Layla visible at depth 3", async () => {
+    // pos-ceo (VACANT, root) → pos-hr (VACANT) → pos-layla (occupied by Layla)
+    // Expected: vacancy-pos-ceo at root → vacancy-pos-hr → Layla
+    const mockDb = createMockDbForHierarchy([
+      {
+        position_id: "pos-ceo",
+        reports_to_position_id: null,
+        position_name: "Chief Executive Officer",
+        position_dept: "Administration",
+        user_id: null,
+        user_name: null,
+        user_email: null,
+        user_sap_no: null,
+        user_role: null,
+        user_status: null,
+        user_dept: null,
+      },
+      {
+        position_id: "pos-hr",
+        reports_to_position_id: "pos-ceo",
+        position_name: "Head of Human Resources",
+        position_dept: "Human Resources",
+        user_id: null,
+        user_name: null,
+        user_email: null,
+        user_sap_no: null,
+        user_role: null,
+        user_status: null,
+        user_dept: null,
+      },
+      {
+        position_id: "pos-layla",
+        reports_to_position_id: "pos-hr",
+        position_name: "HR Specialist",
+        position_dept: "Human Resources",
+        user_id: "layla",
+        user_name: "Layla",
+        user_email: "layla@example.com",
+        user_sap_no: "SAP0051",
+        user_role: "MANAGER",
+        user_status: "ACTIVE",
+        user_dept: "Human Resources",
+      },
+    ]);
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.getHierarchy(
+      { id: "layla", role: "ADMIN" },
+      "organization",
+    );
+
+    // Vacant CEO position at root
+    expect(result).toHaveLength(1);
+    const ceovacancy = result[0];
+    expect(ceovacancy?.id).toBe("vacancy-pos-ceo");
+    expect(ceovacancy?.isVacancy).toBe(true);
+    expect(ceovacancy?.name).toBe("Chief Executive Officer");
+
+    // Vacant HoHR under CEO vacancy
+    expect(ceovacancy?.children).toHaveLength(1);
+    const hrvacancy = ceovacancy?.children[0];
+    expect(hrvacancy?.id).toBe("vacancy-pos-hr");
+    expect(hrvacancy?.isVacancy).toBe(true);
+    expect(hrvacancy?.name).toBe("Head of Human Resources");
+
+    // Layla under HoHR vacancy
+    expect(hrvacancy?.children).toHaveLength(1);
+    expect(hrvacancy?.children[0]?.id).toBe("layla");
+    expect(hrvacancy?.children[0]?.isVacancy).toBeFalsy();
   });
 });
