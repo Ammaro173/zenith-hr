@@ -574,36 +574,14 @@ export const createUsersService = (db: DbOrTx) => ({
     const isFullAccessRole = FULL_ACCESS_ROLES.includes(currentUser.role);
 
     const hierarchyResult = await db.execute(sql`
-      WITH RECURSIVE nearest_occupied_manager AS (
-        SELECT
+      WITH direct_manager AS (
+        SELECT DISTINCT ON (upa.user_id)
           upa.user_id AS child_user_id,
-          manager_upa.user_id AS manager_user_id,
-          1 AS depth,
-          jp.reports_to_position_id AS current_parent_position_id
+          manager_upa.user_id AS manager_user_id
         FROM user_position_assignment upa
         LEFT JOIN job_position jp ON jp.id = upa.position_id
         LEFT JOIN user_position_assignment manager_upa ON manager_upa.position_id = jp.reports_to_position_id
-
-        UNION ALL
-
-        SELECT
-          nom.child_user_id,
-          next_manager_upa.user_id AS manager_user_id,
-          nom.depth + 1,
-          parent_jp.reports_to_position_id AS current_parent_position_id
-        FROM nearest_occupied_manager nom
-        LEFT JOIN job_position parent_jp ON parent_jp.id = nom.current_parent_position_id
-        LEFT JOIN user_position_assignment next_manager_upa ON next_manager_upa.position_id = parent_jp.reports_to_position_id
-        WHERE nom.manager_user_id IS NULL
-          AND nom.current_parent_position_id IS NOT NULL
-      ),
-      nearest_manager_pick AS (
-        SELECT DISTINCT ON (child_user_id)
-          child_user_id,
-          manager_user_id
-        FROM nearest_occupied_manager
-        WHERE manager_user_id IS NOT NULL
-        ORDER BY child_user_id, depth ASC
+        ORDER BY upa.user_id, manager_upa.created_at ASC NULLS LAST
       )
       SELECT
         u.id,
@@ -613,10 +591,10 @@ export const createUsersService = (db: DbOrTx) => ({
         u.role,
         u.status,
         d.name AS department_name,
-        nmp.manager_user_id AS manager_user_id
+        dm.manager_user_id AS manager_user_id
       FROM "user" u
       LEFT JOIN department d ON d.id = u.department_id
-      LEFT JOIN nearest_manager_pick nmp ON nmp.child_user_id = u.id
+      LEFT JOIN direct_manager dm ON dm.child_user_id = u.id
       WHERE u.status = 'ACTIVE'
     `);
 

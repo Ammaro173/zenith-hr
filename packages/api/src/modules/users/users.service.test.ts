@@ -3518,3 +3518,219 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
     );
   });
 });
+
+// ============================================
+// getHierarchy Vacancy Behavior Tests
+// ============================================
+
+type HierarchyRow = {
+  id: string;
+  name: string;
+  email: string;
+  sap_no: string;
+  role: string;
+  status: string;
+  department_name: string | null;
+  manager_user_id: string | null;
+};
+
+/**
+ * Creates a minimal mock DB for testing getHierarchy tree-building.
+ * Mocks db.execute to return the specified pre-built hierarchy rows,
+ * simulating what the simplified direct-manager SQL CTE produces.
+ */
+function createMockDbForHierarchy(rows: HierarchyRow[]) {
+  return {
+    execute: mock(() => Promise.resolve({ rows })),
+  };
+}
+
+/**
+ * Feature: org-hierarchy, Vacancy: deleted manager shows as no manager
+ *
+ * After a manager is deleted their position slot becomes vacant.
+ * The simplified direct-manager CTE returns NULL for manager_user_id
+ * instead of rolling up to the nearest occupied ancestor.
+ * The tree-builder must place such users as root nodes (no parent).
+ */
+describe("getHierarchy - vacancy behavior after manager deletion", () => {
+  it("should show a user as root when their direct manager slot is vacant", async () => {
+    // alice has no manager (slot vacant after deletion)
+    // bob reports to alice
+    const mockDb = createMockDbForHierarchy([
+      {
+        id: "alice",
+        name: "Alice",
+        email: "alice@example.com",
+        sap_no: "SAP0001",
+        role: "MANAGER",
+        status: "ACTIVE",
+        department_name: "Engineering",
+        manager_user_id: null,
+      },
+      {
+        id: "bob",
+        name: "Bob",
+        email: "bob@example.com",
+        sap_no: "SAP0002",
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+        department_name: "Engineering",
+        manager_user_id: "alice",
+      },
+    ]);
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.getHierarchy(
+      { id: "alice", role: "ADMIN" },
+      "organization",
+    );
+
+    // alice should be a root node with bob as child
+    const alice = result.find((n) => n.id === "alice");
+    expect(alice).toBeDefined();
+    expect(alice?.children.some((c) => c.id === "bob")).toBe(true);
+  });
+
+  it("should NOT roll up orphaned users to a grandparent when direct manager slot is vacant", async () => {
+    // grandparent is the org root (no manager)
+    // child's direct manager was deleted → slot is vacant → manager_user_id is null
+    // child must be a root, NOT appear under grandparent
+    const mockDb = createMockDbForHierarchy([
+      {
+        id: "grandparent",
+        name: "Grandparent",
+        email: "gp@example.com",
+        sap_no: "SAP0020",
+        role: "CEO",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: null,
+      },
+      {
+        id: "child",
+        name: "Child",
+        email: "child@example.com",
+        sap_no: "SAP0021",
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: null, // direct manager deleted → vacancy
+      },
+    ]);
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.getHierarchy(
+      { id: "grandparent", role: "ADMIN" },
+      "organization",
+    );
+
+    // grandparent should NOT have child as a descendant
+    const grandparent = result.find((n) => n.id === "grandparent");
+    expect(grandparent?.children.some((c) => c.id === "child")).toBe(false);
+
+    // child should appear as a standalone root (vacancy, not rolled up)
+    const child = result.find((n) => n.id === "child");
+    expect(child).toBeDefined();
+    expect(child?.children).toHaveLength(0);
+  });
+
+  it("should return multiple roots when several users have no manager", async () => {
+    const mockDb = createMockDbForHierarchy([
+      {
+        id: "user-a",
+        name: "User A",
+        email: "a@example.com",
+        sap_no: "SAP0030",
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: null,
+      },
+      {
+        id: "user-b",
+        name: "User B",
+        email: "b@example.com",
+        sap_no: "SAP0031",
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: null,
+      },
+    ]);
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.getHierarchy(
+      { id: "user-a", role: "ADMIN" },
+      "organization",
+    );
+
+    expect(result).toHaveLength(2);
+    const ids = result.map((n) => n.id);
+    expect(ids).toContain("user-a");
+    expect(ids).toContain("user-b");
+  });
+
+  it("should still correctly nest users whose manager is present", async () => {
+    // Sanity check: normal hierarchy still works after SQL simplification
+    const mockDb = createMockDbForHierarchy([
+      {
+        id: "ceo",
+        name: "CEO",
+        email: "ceo@example.com",
+        sap_no: "SAP0040",
+        role: "CEO",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: null,
+      },
+      {
+        id: "mgr",
+        name: "Manager",
+        email: "mgr@example.com",
+        sap_no: "SAP0041",
+        role: "MANAGER",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: "ceo",
+      },
+      {
+        id: "emp",
+        name: "Employee",
+        email: "emp@example.com",
+        sap_no: "SAP0042",
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+        department_name: null,
+        manager_user_id: "mgr",
+      },
+    ]);
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.getHierarchy(
+      { id: "ceo", role: "ADMIN" },
+      "organization",
+    );
+
+    expect(result).toHaveLength(1);
+    const ceo = result[0];
+    expect(ceo?.id).toBe("ceo");
+    expect(ceo?.children).toHaveLength(1);
+    const mgr = ceo?.children[0];
+    expect(mgr?.id).toBe("mgr");
+    expect(mgr?.children).toHaveLength(1);
+    expect(mgr?.children[0]?.id).toBe("emp");
+  });
+});
