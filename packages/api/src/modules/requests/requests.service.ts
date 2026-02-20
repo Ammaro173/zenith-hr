@@ -1,5 +1,7 @@
 import type { DbOrTx } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
+import { department } from "@zenith-hr/db/schema/departments";
+import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
@@ -86,6 +88,29 @@ export const createRequestsService = (
         initialApproverPositionId = approverPosition?.positionId ?? null;
       }
 
+      // Enrich positionDetails from job description
+      const enrichedPositionDetails = { ...input.positionDetails };
+      if (input.jobDescriptionId) {
+        const [jd] = await db
+          .select({
+            title: jobDescription.title,
+            departmentId: jobDescription.departmentId,
+            departmentName: department.name,
+            description: jobDescription.description,
+          })
+          .from(jobDescription)
+          .leftJoin(department, eq(jobDescription.departmentId, department.id))
+          .where(eq(jobDescription.id, input.jobDescriptionId))
+          .limit(1);
+        if (jd) {
+          enrichedPositionDetails.title = jd.title;
+          enrichedPositionDetails.department = jd.departmentName ?? undefined;
+          if (!enrichedPositionDetails.description) {
+            enrichedPositionDetails.description = jd.description;
+          }
+        }
+      }
+
       const [newRequest] = await db
         .insert(manpowerRequest)
         .values({
@@ -105,7 +130,7 @@ export const createRequestsService = (
           currentApproverPositionId: initialApproverPositionId,
           currentApproverRole:
             workflowService.getApproverForStatus(initialStatus),
-          positionDetails: input.positionDetails,
+          positionDetails: enrichedPositionDetails,
           budgetDetails: input.budgetDetails,
           status: initialStatus,
         })
@@ -135,6 +160,7 @@ export const createRequestsService = (
           currentApproverRole: manpowerRequest.currentApproverRole,
           positionDetails: manpowerRequest.positionDetails,
           budgetDetails: manpowerRequest.budgetDetails,
+          jobDescriptionId: manpowerRequest.jobDescriptionId,
           revisionVersion: manpowerRequest.revisionVersion,
           version: manpowerRequest.version,
           createdAt: manpowerRequest.createdAt,
@@ -177,10 +203,43 @@ export const createRequestsService = (
         currentApprover = u || null;
       }
 
+      // Fetch linked job description details
+      let jobDescriptionDetails: {
+        id: string;
+        title: string;
+        description: string;
+        responsibilities: string | null;
+        departmentName: string | null;
+        grade: string | null;
+        minSalary: number | null;
+        maxSalary: number | null;
+        assignedRole: string;
+      } | null = null;
+      if (request.jobDescriptionId) {
+        const [jd] = await db
+          .select({
+            id: jobDescription.id,
+            title: jobDescription.title,
+            description: jobDescription.description,
+            responsibilities: jobDescription.responsibilities,
+            departmentName: department.name,
+            grade: jobDescription.grade,
+            minSalary: jobDescription.minSalary,
+            maxSalary: jobDescription.maxSalary,
+            assignedRole: jobDescription.assignedRole,
+          })
+          .from(jobDescription)
+          .leftJoin(department, eq(jobDescription.departmentId, department.id))
+          .where(eq(jobDescription.id, request.jobDescriptionId))
+          .limit(1);
+        jobDescriptionDetails = jd || null;
+      }
+
       return {
         ...request,
         replacementForUser,
         currentApprover,
+        jobDescription: jobDescriptionDetails,
       };
     },
 
