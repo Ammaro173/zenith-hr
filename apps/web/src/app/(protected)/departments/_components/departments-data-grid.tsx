@@ -1,10 +1,9 @@
 "use client";
 
-import { Plus, Settings2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
-import { DataGridColumnVisibility } from "@/components/ui/data-grid-column-visibility";
 import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import { Input } from "@/components/ui/input";
@@ -73,15 +72,6 @@ export function DepartmentsDataGrid() {
                 Create Department
               </Button>
             )}
-            <DataGridColumnVisibility
-              table={table}
-              trigger={
-                <Button size="sm" variant="outline">
-                  <Settings2 className="mr-2 h-4 w-4" />
-                  View
-                </Button>
-              }
-            />
           </div>
         </div>
 

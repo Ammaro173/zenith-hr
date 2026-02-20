@@ -1,9 +1,8 @@
 "use client";
 
-import { FunnelX, Settings2 } from "lucide-react";
+import { FunnelX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
-import { DataGridColumnVisibility } from "@/components/ui/data-grid-column-visibility";
 import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import { Filters } from "@/components/ui/filters";
@@ -61,17 +60,7 @@ export function RequestsDataGrid() {
             type="text"
             value={globalFilter}
           />
-          <div className="flex items-center gap-2">
-            <DataGridColumnVisibility
-              table={table}
-              trigger={
-                <Button size="sm" variant="outline">
-                  <Settings2 className="mr-2 h-4 w-4" />
-                  View
-                </Button>
-              }
-            />
-          </div>
+          <div className="flex items-center gap-2"></div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
