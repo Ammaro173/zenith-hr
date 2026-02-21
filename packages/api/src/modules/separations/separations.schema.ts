@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const baseSeparationSchema = z.object({
   type: z.enum(["RESIGNATION", "TERMINATION", "RETIREMENT", "END_OF_CONTRACT"]),
-  reason: z.string().min(10),
+  reason: z.string().min(5),
   lastWorkingDay: z.date(),
   noticePeriodWaived: z.boolean(),
 });
@@ -30,7 +30,7 @@ export const updateSeparationSchema = z.object({
       "CANCELLED",
     ])
     .optional(),
-  reason: z.string().min(10).optional(),
+  reason: z.string().min(5).optional(),
   lastWorkingDay: z.date().optional(),
   noticePeriodWaived: z.boolean().optional(),
 });
