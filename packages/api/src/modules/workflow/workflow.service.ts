@@ -358,10 +358,17 @@ export const createWorkflowService = (db: DbOrTx) => {
         const requiresActiveApprover =
           currentStatus !== "DRAFT" && action !== "REQUEST_CHANGE";
         if (requiresActiveApprover) {
+          const isAssignedUser = request.currentApproverId === actorId;
+          const isAssignedRole =
+            request.currentApproverRole === actorRole &&
+            ["HR", "FINANCE", "CEO"].includes(actorRole);
+          const isAdmin = actorRole === "ADMIN";
+
           if (
             request.currentApproverId &&
-            request.currentApproverId !== actorId &&
-            actorRole !== "ADMIN"
+            !isAssignedUser &&
+            !isAssignedRole &&
+            !isAdmin
           ) {
             throw new AppError(
               "FORBIDDEN",

@@ -121,8 +121,8 @@ describe("WorkflowService", () => {
       expect(service.getApproverForStatus("DRAFT")).toBeNull();
     });
 
-    it("returns null for APPROVED_OPEN status", () => {
-      expect(service.getApproverForStatus("APPROVED_OPEN")).toBeNull();
+    it("returns HR for APPROVED_OPEN status", () => {
+      expect(service.getApproverForStatus("APPROVED_OPEN")).toBe("HR");
     });
 
     it("returns null for REJECTED status", () => {
@@ -533,16 +533,21 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("HIRING_IN_PROGRESS");
     });
 
-    it("throws BadRequest for APPROVE from APPROVED_OPEN", async () => {
+    it("APPROVE by HR → HIRING_IN_PROGRESS from APPROVED_OPEN", async () => {
       const mockDb = createMockDb({
         request: { status: "APPROVED_OPEN" },
         actor: { id: "hr-1", role: "HR" },
       });
       const service = createWorkflowService(mockDb);
 
-      await expect(
-        service.transitionRequest("request-123", "hr-1", "APPROVE"),
-      ).rejects.toThrow();
+      const result = await service.transitionRequest(
+        "request-123",
+        "hr-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("APPROVED_OPEN");
+      expect(result.newStatus).toBe("HIRING_IN_PROGRESS");
     });
   });
 
