@@ -689,6 +689,98 @@ async function seed() {
     [adminDeptId]: adminHodSlotId,
   };
 
+  // Shared job descriptions for auto-generated positions (one per role+department)
+  const sharedJobDescriptions = [
+    {
+      id: randomUUID(),
+      title: "Finance Staff",
+      description: "Supports financial operations and reporting.",
+      responsibilities: "Financial processing, reconciliation, reporting",
+      departmentId: financeDeptId,
+      reportsToPositionId: financeHodSlotId,
+      assignedRole: "EMPLOYEE" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "Finance Manager",
+      description: "Manages finance team and financial operations.",
+      responsibilities: "Financial oversight, team management, budget control",
+      departmentId: financeDeptId,
+      reportsToPositionId: financeHodSlotId,
+      assignedRole: "MANAGER" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "IT Staff",
+      description: "Supports IT systems and infrastructure.",
+      responsibilities:
+        "Technical support, system maintenance, troubleshooting",
+      departmentId: itDeptId,
+      reportsToPositionId: itHodSlotId,
+      assignedRole: "EMPLOYEE" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "IT Specialist",
+      description: "Leads IT systems, security, and support operations.",
+      responsibilities: "Infrastructure, security, service operations",
+      departmentId: itDeptId,
+      reportsToPositionId: itHodSlotId,
+      assignedRole: "IT" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "IT Manager",
+      description: "Manages IT team and technology operations.",
+      responsibilities: "IT operations, team management, project delivery",
+      departmentId: itDeptId,
+      reportsToPositionId: itHodSlotId,
+      assignedRole: "MANAGER" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "Admin Staff",
+      description: "Supports administrative operations.",
+      responsibilities: "Administrative support, coordination, documentation",
+      departmentId: adminDeptId,
+      reportsToPositionId: adminHodSlotId,
+      assignedRole: "ADMIN" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: randomUUID(),
+      title: "HR Manager",
+      description: "Manages HR team execution and day-to-day operations.",
+      responsibilities: "Team management, execution, coaching",
+      departmentId: hrDeptId,
+      reportsToPositionId: hrManagerSlotId,
+      assignedRole: "MANAGER" as const,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  // Build a lookup: "role:departmentId" → shared job description id
+  const sharedJdLookup = new Map<string, string>();
+  for (const jd of sharedJobDescriptions) {
+    sharedJdLookup.set(`${jd.assignedRole}:${jd.departmentId}`, jd.id);
+  }
+  // The predefined HR Staff JD can also be reused for auto-generated HR employees
+  if (hrStaffJobDescription) {
+    sharedJdLookup.set(`EMPLOYEE:${hrDeptId}`, hrStaffJobDescription.id);
+  }
+
   const generatedPositions = users
     .filter((seedUser) => !assignedUserIds.has(seedUser.id))
     .map((seedUser) => {
@@ -696,12 +788,15 @@ async function seed() {
       const reportsToPositionId =
         reportsToByDepartment[departmentKey] ?? adminHodSlotId;
 
+      const jobDescriptionId =
+        sharedJdLookup.get(`${seedUser.role}:${departmentKey}`) ?? null;
+
       return {
         id: randomUUID(),
         code: `AUTO_${seedUser.sapNo.replace(/[^A-Z0-9]/g, "_")}`,
         name: `${seedUser.name} Position`,
         departmentId: seedUser.departmentId,
-        jobDescriptionId: null,
+        jobDescriptionId,
         reportsToPositionId,
         active: true,
         createdAt: now,
@@ -886,7 +981,9 @@ async function seed() {
     await tx.delete(department);
 
     await tx.insert(department).values(departments);
-    await tx.insert(jobDescription).values(jobDescriptions);
+    await tx
+      .insert(jobDescription)
+      .values([...jobDescriptions, ...sharedJobDescriptions]);
     await tx.insert(user).values(users);
     await tx.insert(account).values(accounts);
     await tx.insert(jobPosition).values(allPositions);
