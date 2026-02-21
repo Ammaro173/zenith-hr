@@ -5,7 +5,7 @@ import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { getActorRole } from "../../shared/utils";
@@ -246,11 +246,18 @@ export const createRequestsService = (
     /**
      * Get requests for a specific user with filtering, search and pagination
      */
-    async getByRequester(requesterId: string, params: GetMyRequestsInput) {
+    async getByRequester(
+      requesterId: string,
+      role: string,
+      params: GetMyRequestsInput,
+    ) {
       const { page, pageSize, search, status, requestType, sortBy, sortOrder } =
         params;
 
-      const conditions = [eq(manpowerRequest.requesterId, requesterId)];
+      const conditions: SQL[] = [];
+      if (role === "EMPLOYEE" || role === "MANAGER") {
+        conditions.push(eq(manpowerRequest.requesterId, requesterId));
+      }
 
       // Status filter
       if (status?.length) {
@@ -286,14 +293,14 @@ export const createRequestsService = (
         db
           .select()
           .from(manpowerRequest)
-          .where(and(...conditions))
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
           .orderBy(orderBy)
           .limit(pageSize)
           .offset(offset),
         db
           .select({ count: count() })
           .from(manpowerRequest)
-          .where(and(...conditions)),
+          .where(conditions.length > 0 ? and(...conditions) : undefined),
       ]);
 
       const total = totalResult[0]?.count ?? 0;
