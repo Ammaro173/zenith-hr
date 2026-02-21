@@ -116,6 +116,7 @@ export const getMyRequestsSchema = z.object({
         "HIRING_IN_PROGRESS",
         "REJECTED",
         "ARCHIVED",
+        "COMPLETED",
       ]),
     )
     .optional(),

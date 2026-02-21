@@ -162,6 +162,8 @@ export const createRequestsService = (
           requestType: manpowerRequest.requestType,
           replacementForUserId: manpowerRequest.replacementForUserId,
           contractDuration: manpowerRequest.contractDuration,
+          employmentType: manpowerRequest.employmentType,
+          headcount: manpowerRequest.headcount,
           justificationText: manpowerRequest.justificationText,
           salaryRangeMin: manpowerRequest.salaryRangeMin,
           salaryRangeMax: manpowerRequest.salaryRangeMax,
@@ -331,6 +333,18 @@ export const createRequestsService = (
       const actorRole = await getActorRole(db, userId);
       const isSharedQueueRole = ["HR", "FINANCE", "CEO"].includes(actorRole);
 
+      // Map roles to the statuses they are responsible for.
+      // This acts as a fallback when currentApproverRole is NULL
+      // (e.g. data created before the field was populated).
+      const ROLE_STATUS_MAP = {
+        HR: ["PENDING_HR"],
+        FINANCE: ["PENDING_FINANCE"],
+        CEO: ["PENDING_CEO"],
+      } as const;
+
+      const statusesForRole =
+        ROLE_STATUS_MAP[actorRole as keyof typeof ROLE_STATUS_MAP];
+
       const items = await db
         .select({
           request: manpowerRequest,
@@ -348,6 +362,9 @@ export const createRequestsService = (
             ? or(
                 eq(manpowerRequest.currentApproverRole, actorRole),
                 eq(manpowerRequest.currentApproverId, userId),
+                ...(statusesForRole
+                  ? [inArray(manpowerRequest.status, statusesForRole)]
+                  : []),
               )
             : eq(manpowerRequest.currentApproverId, userId),
         )
