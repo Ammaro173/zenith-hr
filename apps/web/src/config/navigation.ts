@@ -24,8 +24,7 @@ export type UserRole =
 
 export const protectedNavigationItems: {
   title: string;
-  //TODO remove string type from href
-  href: Route | string;
+  href: Route;
   icon: React.ElementType;
   description: string;
   allowedRoles?: UserRole[];
@@ -41,6 +40,7 @@ export const protectedNavigationItems: {
     href: "/requests",
     icon: FileText,
     description: "Create, update, and track requests",
+    allowedRoles: ["MANAGER", "HR", "FINANCE", "CEO", "ADMIN"],
   },
   {
     title: "Approvals",
@@ -54,7 +54,7 @@ export const protectedNavigationItems: {
     href: "/users",
     icon: UsersRound,
     description: "View organization users",
-    allowedRoles: ["ADMIN", "HR", "CEO", "IT", "FINANCE", "MANAGER"],
+    allowedRoles: ["ADMIN", "HR", "CEO", "FINANCE", "MANAGER"],
   },
   {
     title: "Departments",
@@ -68,7 +68,7 @@ export const protectedNavigationItems: {
     href: "/job-descriptions",
     icon: ClipboardList,
     description: "Manage role and department defaults for positions",
-    allowedRoles: ["ADMIN", "HR", "MANAGER"],
+    allowedRoles: ["ADMIN", "HR", "MANAGER", "CEO"],
   },
   {
     title: "Organization Chart",
@@ -154,7 +154,7 @@ export function getNavigationItemsForRole(
  */
 export function getDefaultRouteForRole(role: UserRole | null): string {
   if (role === "ADMIN") {
-    return "/imports";
+    return "/dashboard";
   }
   if (
     role === "CEO" ||
@@ -162,7 +162,7 @@ export function getDefaultRouteForRole(role: UserRole | null): string {
     role === "HR" ||
     role === "MANAGER"
   ) {
-    return "/approvals";
+    return "/dashboard";
   }
   // EMPLOYEE, IT, and unknown roles go to dashboard
   return "/dashboard";
