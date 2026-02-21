@@ -15,6 +15,12 @@ export const dashboardRouter = o.router({
       totalCandidates: number;
       activeContracts: number;
       averageTimeToHire: number;
+      myActiveTrips: number;
+      myPendingSeparations: number;
+      myActivePerformanceReviews: number;
+      teamPendingPerformanceReviews: number;
+      totalDepartmentExpenses: number;
+      companyHeadcount: number;
     }>(cacheKey);
 
     if (cached) {
