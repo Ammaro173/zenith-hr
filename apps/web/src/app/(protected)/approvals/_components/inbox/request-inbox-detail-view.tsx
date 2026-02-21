@@ -8,7 +8,10 @@ import {
   Calendar,
   Check,
   FileText,
+  MapPin,
   RotateCcw,
+  ScrollText,
+  UserCheck,
   Users,
   X,
 } from "lucide-react";
@@ -83,7 +86,7 @@ export function RequestInboxDetailView({
     label: request.status,
   };
   const position = request.positionDetails;
-  const raw = request as unknown as Record<string, unknown>;
+  const jd = request.jobDescription;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -113,7 +116,7 @@ export function RequestInboxDetailView({
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <h2 className="font-semibold text-xl tracking-tight">
-                {position?.title || "Manpower Request"}
+                {jd?.title || position?.title || "Manpower Request"}
               </h2>
               <Badge
                 appearance="light"
@@ -148,43 +151,98 @@ export function RequestInboxDetailView({
 
       {/* Body */}
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
+        {/* Position Details */}
         <section className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-sm">
             <Briefcase className="h-4 w-4 text-muted-foreground" />
             Position Details
           </h3>
           <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4 text-sm">
-            <DetailField label="Department" value={position?.department} />
-            <DetailField label="Location" value={position?.location} />
+            <DetailField
+              label="Department"
+              value={jd?.departmentName ?? position?.department}
+            />
+            <DetailField
+              label="Location"
+              icon={<MapPin className="h-3 w-3 text-muted-foreground" />}
+              value={position?.location}
+            />
             <DetailField
               label="Request Type"
               value={formatLabel(request.requestType)}
             />
-            <DetailField label="Headcount" value={String(raw.headcount ?? 1)} />
+            <DetailField
+              label="Employment Type"
+              value={formatLabel(request.employmentType ?? "")}
+            />
+            <DetailField
+              label="Contract"
+              value={formatLabel(request.contractDuration ?? "")}
+            />
+            <DetailField
+              label="Headcount"
+              value={String(request.headcount ?? 1)}
+            />
+            {jd?.assignedRole ? (
+              <DetailField
+                label="Assigned Role"
+                value={formatLabel(jd.assignedRole)}
+              />
+            ) : null}
+            {jd?.grade ? (
+              <DetailField label="Grade" value={jd.grade} />
+            ) : null}
             {position?.startDate ? (
               <DetailField
                 label="Start Date"
+                icon={<Calendar className="h-3 w-3 text-muted-foreground" />}
                 value={format(new Date(position.startDate), "dd MMM yyyy")}
               />
             ) : null}
-            {position?.reportingTo ? (
-              <DetailField label="Reports To" value={position.reportingTo} />
-            ) : null}
+            <DetailField
+              label="Reports To"
+              icon={<UserCheck className="h-3 w-3 text-muted-foreground" />}
+              value={
+                request.reportingPosition
+                  ? `${request.reportingPosition.name} (${request.reportingPosition.code})`
+                  : position?.reportingTo || undefined
+              }
+              subValue={
+                request.reportingPosition?.incumbentName
+                  ? `Incumbent: ${request.reportingPosition.incumbentName}`
+                  : undefined
+              }
+            />
           </div>
         </section>
 
-        {position?.description ? (
+        {/* Description */}
+        {(jd?.description || position?.description) ? (
           <section className="space-y-3">
             <h3 className="flex items-center gap-2 font-medium text-sm">
               <FileText className="h-4 w-4 text-muted-foreground" />
               Description
             </h3>
             <p className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm leading-relaxed">
-              {position.description}
+              {jd?.description || position?.description}
             </p>
           </section>
         ) : null}
 
+        {/* Responsibilities */}
+        {jd?.responsibilities ? (
+          <section className="space-y-3">
+            <h3 className="flex items-center gap-2 font-medium text-sm">
+              <ScrollText className="h-4 w-4 text-muted-foreground" />
+              Responsibilities
+            </h3>
+            <p className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm leading-relaxed">
+              {jd.responsibilities}
+            </p>
+          </section>
+        ) : null}
+
+        {/* Budget */}
         <section className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-sm">
             <Banknote className="h-4 w-4 text-muted-foreground" />
@@ -193,19 +251,29 @@ export function RequestInboxDetailView({
           <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4 text-sm">
             <DetailField
               label="Salary Range"
-              value={`${Number(raw.salaryRangeMin ?? 0).toLocaleString()} – ${Number(raw.salaryRangeMax ?? 0).toLocaleString()}`}
+              value={`${Number(request.salaryRangeMin ?? 0).toLocaleString()} – ${Number(request.salaryRangeMax ?? 0).toLocaleString()}`}
             />
             <DetailField
               label="Contract"
-              value={formatLabel(String(raw.contractDuration ?? ""))}
-            />
-            <DetailField
-              label="Employment Type"
-              value={formatLabel(String(raw.employmentType ?? ""))}
+              value={formatLabel(request.contractDuration ?? "")}
             />
           </div>
         </section>
 
+        {/* Justification */}
+        {request.justificationText ? (
+          <section className="space-y-3">
+            <h3 className="flex items-center gap-2 font-medium text-sm">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Justification
+            </h3>
+            <p className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm leading-relaxed">
+              {request.justificationText}
+            </p>
+          </section>
+        ) : null}
+
+        {/* Replacing */}
         {request.replacementForUser ? (
           <section className="space-y-3">
             <h3 className="flex items-center gap-2 font-medium text-sm">
@@ -218,6 +286,7 @@ export function RequestInboxDetailView({
           </section>
         ) : null}
 
+        {/* Timeline */}
         <section className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -231,6 +300,7 @@ export function RequestInboxDetailView({
           </div>
         </section>
 
+        {/* Action Buttons */}
         <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t bg-background/80 p-4 backdrop-blur-sm">
           <Button
             disabled={isPending}
@@ -261,14 +331,26 @@ export function RequestInboxDetailView({
 function DetailField({
   label,
   value,
+  subValue,
+  icon,
 }: {
   label: string;
   value: string | undefined | null;
+  subValue?: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <div>
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 font-medium">{value || "—"}</dd>
+      <dd className="mt-0.5 flex items-center gap-1.5 font-medium">
+        {icon}
+        {value || "—"}
+      </dd>
+      {subValue ? (
+        <dd className="mt-0.5 text-muted-foreground text-[10px]">
+          {subValue}
+        </dd>
+      ) : null}
     </div>
   );
 }

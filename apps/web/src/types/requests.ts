@@ -31,6 +31,26 @@ export interface ManpowerRequest {
     id: string;
     name: string;
   } | null;
+  jobDescription?: {
+    title: string;
+    description: string;
+    responsibilities: string | null;
+    departmentName: string | null;
+    grade: string | null;
+    assignedRole: string;
+  } | null;
+  reportingPosition?: {
+    id: string;
+    name: string;
+    code: string;
+    incumbentName: string | null;
+  } | null;
+  headcount?: number;
+  salaryRangeMin?: string | number;
+  salaryRangeMax?: string | number;
+  contractDuration?: string;
+  employmentType?: string;
+  justificationText?: string;
 }
 
 export type RequestStatus = GetMyRequestsInput["status"] extends

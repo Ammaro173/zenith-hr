@@ -410,10 +410,100 @@ export const createRequestsService = (
         )
         .orderBy(desc(manpowerRequest.createdAt));
 
-      return items.map((item) => ({
-        ...item.request,
-        requester: item.requester,
-      }));
+      // Enrich each item with replacement user, job description, and reporting position
+      const enriched = await Promise.all(
+        items.map(async (item) => {
+          const req = item.request;
+
+          // Fetch replacement user if exists
+          let replacementForUser: {
+            id: string;
+            name: string | null;
+          } | null = null;
+          if (req.replacementForUserId) {
+            const [u] = await db
+              .select({ id: user.id, name: user.name })
+              .from(user)
+              .where(eq(user.id, req.replacementForUserId))
+              .limit(1);
+            replacementForUser = u || null;
+          }
+
+          // Fetch linked job description
+          let jd: {
+            title: string;
+            description: string;
+            responsibilities: string | null;
+            departmentName: string | null;
+            grade: string | null;
+            assignedRole: string;
+            reportsToPositionId: string | null;
+          } | null = null;
+          if (req.jobDescriptionId) {
+            const [row] = await db
+              .select({
+                title: jobDescription.title,
+                description: jobDescription.description,
+                responsibilities: jobDescription.responsibilities,
+                departmentName: department.name,
+                grade: jobDescription.grade,
+                assignedRole: jobDescription.assignedRole,
+                reportsToPositionId: jobDescription.reportsToPositionId,
+              })
+              .from(jobDescription)
+              .leftJoin(
+                department,
+                eq(jobDescription.departmentId, department.id),
+              )
+              .where(eq(jobDescription.id, req.jobDescriptionId))
+              .limit(1);
+            jd = row || null;
+          }
+
+          // Resolve reporting position from job description
+          let reportingPosition: {
+            id: string;
+            name: string;
+            code: string;
+            incumbentName: string | null;
+          } | null = null;
+          if (jd?.reportsToPositionId) {
+            const [pos] = await db
+              .select({
+                id: jobPosition.id,
+                name: jobPosition.name,
+                code: jobPosition.code,
+              })
+              .from(jobPosition)
+              .where(eq(jobPosition.id, jd.reportsToPositionId))
+              .limit(1);
+
+            if (pos) {
+              const [assignment] = await db
+                .select({ userName: user.name })
+                .from(userPositionAssignment)
+                .innerJoin(user, eq(userPositionAssignment.userId, user.id))
+                .where(eq(userPositionAssignment.positionId, pos.id))
+                .limit(1);
+
+              reportingPosition = {
+                ...pos,
+                incumbentName: assignment?.userName ?? null,
+              };
+            }
+          }
+
+          return {
+            ...req,
+            requester: item.requester,
+            replacementForUser,
+            jobDescription: jd,
+            reportingPosition,
+          };
+        }),
+      );
+
+      return enriched;
     },
 
     /**
