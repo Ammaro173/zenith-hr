@@ -2,16 +2,25 @@ import { z } from "zod";
 import { userRoleSchema } from "../users/users.schema";
 
 /**
- * Search job descriptions by title
+ * Search job descriptions with server-side pagination
  */
 export const searchJobDescriptionsSchema = z.object({
   search: z.string().optional(),
-  limit: z.number().min(1).max(50).default(10),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(10),
 });
 
 export type SearchJobDescriptionsInput = z.infer<
   typeof searchJobDescriptionsSchema
 >;
+
+export interface SearchJobDescriptionsResponse {
+  data: JobDescriptionResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
 
 /**
  * Create a new job description

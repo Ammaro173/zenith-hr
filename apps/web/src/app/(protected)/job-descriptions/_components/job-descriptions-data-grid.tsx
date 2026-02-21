@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  type ColumnDef,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, Pencil, Plus, Trash } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -40,14 +35,6 @@ export function JobDescriptionsDataGrid() {
   const [deleteItem, setDeleteItem] = useState<JobDescriptionListItem | null>(
     null,
   );
-
-  const {
-    jobDescriptions,
-    globalFilter,
-    setGlobalFilter,
-    isLoading,
-    isFetching,
-  } = useJobDescriptionsTable();
 
   const columns: ColumnDef<JobDescriptionListItem>[] = [
     {
@@ -135,15 +122,14 @@ export function JobDescriptionsDataGrid() {
     },
   ];
 
-  const table = useReactTable({
-    data: jobDescriptions,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize: 10 },
-    },
-  });
+  const {
+    table,
+    globalFilter,
+    setGlobalFilter,
+    isLoading,
+    isFetching,
+    totalCount,
+  } = useJobDescriptionsTable(columns);
 
   if (isLoading) {
     return <JobDescriptionsTableSkeleton />;
@@ -152,7 +138,7 @@ export function JobDescriptionsDataGrid() {
   return (
     <DataGrid
       isLoading={isFetching}
-      recordCount={jobDescriptions.length}
+      recordCount={totalCount}
       table={table}
       tableLayout={{
         cellBorder: true,
@@ -176,7 +162,10 @@ export function JobDescriptionsDataGrid() {
           <Input
             aria-label="Search job descriptions"
             className="h-9 w-full sm:max-w-xs"
-            onChange={(e) => setGlobalFilter(e.target.value)}
+            onChange={(e) => {
+              setGlobalFilter(e.target.value);
+              table.setPageIndex(0);
+            }}
             placeholder="Search job descriptions..."
             type="text"
             value={globalFilter}

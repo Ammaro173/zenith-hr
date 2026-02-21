@@ -45,12 +45,14 @@ export function JobDescriptionCombobox({
     React.useState<JobDescriptionOption | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  const { data: jobDescriptions, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["jobDescriptions", "search", debouncedSearch],
     queryFn: () =>
-      client.jobDescriptions.search({ search: debouncedSearch, limit: 10 }),
+      client.jobDescriptions.search({ search: debouncedSearch, pageSize: 10 }),
     enabled: open,
   });
+
+  const jobDescriptions = data?.data;
 
   // Find selected job description - first check cache, then check current results
   const selectedItem = React.useMemo(() => {
