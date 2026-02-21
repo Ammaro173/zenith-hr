@@ -8,7 +8,7 @@ import {
   type tripStatusEnum,
 } from "@zenith-hr/db/schema/business-trips";
 import { department } from "@zenith-hr/db/schema/departments";
-import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { notifyUser } from "../../shared/notify";
@@ -276,15 +276,37 @@ export const createBusinessTripsService = (
       return [];
     }
 
-    return await db
-      .select()
+    const isSharedQueueRole = ["HR", "FINANCE", "CEO"].includes(actorRole);
+
+    const items = await db
+      .select({
+        trip: businessTrip,
+        requester: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        },
+      })
       .from(businessTrip)
+      .innerJoin(user, eq(businessTrip.requesterId, user.id))
       .where(
         and(
           eq(businessTrip.status, statusFilter),
-          eq(businessTrip.currentApproverId, userId),
+          isSharedQueueRole
+            ? or(
+                eq(businessTrip.currentApproverRole, actorRole),
+                eq(businessTrip.currentApproverId, userId),
+              )
+            : eq(businessTrip.currentApproverId, userId),
         ),
-      );
+      )
+      .orderBy(desc(businessTrip.createdAt));
+
+    return items.map((item) => ({
+      ...item.trip,
+      requester: item.requester,
+    }));
   },
 
   async transition(input: TripActionInput, actorId: string) {

@@ -146,9 +146,25 @@ describe("BusinessTripsService", () => {
     const roleFromMock = mock(() => ({ where: roleWhereMock }));
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
-    // 2) getPendingApprovals query itself
-    const approvalsWhereMock = mock(() => Promise.resolve([{ id: "trip-1" }]));
-    const approvalsFromMock = mock(() => ({ where: approvalsWhereMock }));
+    // 2) getPendingApprovals query: select().from().innerJoin().where().orderBy()
+    const approvalsOrderByMock = mock(() =>
+      Promise.resolve([
+        {
+          trip: { id: "trip-1", requesterId: "user-1" },
+          requester: {
+            id: "user-1",
+            name: "Test",
+            email: "t@t.com",
+            image: null,
+          },
+        },
+      ]),
+    );
+    const approvalsWhereMock = mock(() => ({ orderBy: approvalsOrderByMock }));
+    const approvalsInnerJoinMock = mock(() => ({ where: approvalsWhereMock }));
+    const approvalsFromMock = mock(() => ({
+      innerJoin: approvalsInnerJoinMock,
+    }));
     mockDb.select.mockReturnValueOnce({ from: approvalsFromMock });
 
     const result = await service.getPendingApprovals(actorId);
@@ -160,6 +176,8 @@ describe("BusinessTripsService", () => {
     expect(roleWhereMock).toHaveBeenCalled();
     expect(roleLimitMock).toHaveBeenCalled();
     expect(approvalsFromMock).toHaveBeenCalled();
+    expect(approvalsInnerJoinMock).toHaveBeenCalled();
     expect(approvalsWhereMock).toHaveBeenCalled();
+    expect(approvalsOrderByMock).toHaveBeenCalled();
   });
 });
