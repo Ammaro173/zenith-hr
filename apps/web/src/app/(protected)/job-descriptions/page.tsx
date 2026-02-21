@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { JobDescriptionsDataGrid } from "./_components/job-descriptions-data-grid";
 
 export const metadata: Metadata = {
-  title: "Job Descriptions | Zenith HR",
+  title: "Job Descriptions",
   description:
     "Manage role templates that define assigned role and default department for positions.",
 };

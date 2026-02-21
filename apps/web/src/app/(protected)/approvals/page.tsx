@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UnifiedInbox } from "./_components/unified-inbox";
 
 export const metadata: Metadata = {
-  title: "Approvals Inbox | Zenith HR",
+  title: "Approvals Inbox",
   description: "Inbox for pending approvals.",
 };
 

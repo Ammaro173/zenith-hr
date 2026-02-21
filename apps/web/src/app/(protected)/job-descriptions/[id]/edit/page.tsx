@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { EditJobDescriptionContent } from "./_components/edit-content";
 
 export const metadata: Metadata = {
-  title: "Edit Job Description | Zenith HR",
+  title: "Edit Job Description",
   description:
     "Update assigned role and default department rules used by linked positions.",
 };

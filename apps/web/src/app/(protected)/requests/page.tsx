@@ -8,7 +8,7 @@ import { getServerSession } from "@/lib/server-session";
 import { RequestsDataGrid } from "./_components/requests-data-grid";
 
 export const metadata: Metadata = {
-  title: "Manpower Requests | Zenith HR",
+  title: "Manpower Requests",
   description: "Manage and track your recruitment requests in one place.",
 };
 

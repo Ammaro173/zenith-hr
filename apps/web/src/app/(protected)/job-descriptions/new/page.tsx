@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { CreateJobDescriptionContent } from "./_components/create-content";
 
 export const metadata: Metadata = {
-  title: "Create Job Description | Zenith HR",
+  title: "Create Job Description",
   description:
     "Create a template that defines assigned role and default department for positions.",
 };

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BusinessTripsDataGrid } from "./_components/business-trips-data-grid";
 
 export const metadata: Metadata = {
-  title: "Business Trips | Zenith HR",
+  title: "Business Trips",
   description: "Manage and track your business trips and expenses.",
 };
 

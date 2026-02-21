@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { OrgChartContainer } from "./_components/org-chart-container";
 
 export const metadata: Metadata = {
-  title: "Organization Chart | Zenith HR",
+  title: "Organization Chart",
   description: "Visualize your team's organizational hierarchy.",
 };
 

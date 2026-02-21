@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UsersDataGrid } from "./_components/users-data-grid";
 
 export const metadata: Metadata = {
-  title: "User Directory | Zenith HR",
+  title: "User Directory",
   description: "View and manage organization users.",
 };
 

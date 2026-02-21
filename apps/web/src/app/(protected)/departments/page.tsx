@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DepartmentsDataGrid } from "./_components/departments-data-grid";
 
 export const metadata: Metadata = {
-  title: "Departments | Zenith HR",
+  title: "Departments",
   description: "View and manage organization departments.",
 };
 
