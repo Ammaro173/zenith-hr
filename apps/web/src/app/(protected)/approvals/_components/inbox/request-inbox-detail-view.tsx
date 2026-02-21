@@ -5,13 +5,9 @@ import { format } from "date-fns";
 import {
   Banknote,
   Briefcase,
-  Calendar,
   Check,
   FileText,
-  MapPin,
   RotateCcw,
-  ScrollText,
-  UserCheck,
   Users,
   X,
 } from "lucide-react";
@@ -20,6 +16,7 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import type { ManpowerRequest } from "@/types/requests";
 import { STATUS_VARIANTS } from "@/types/requests";
 import { orpc } from "@/utils/orpc";
@@ -87,6 +84,9 @@ export function RequestInboxDetailView({
   };
   const position = request.positionDetails;
   const jd = request.jobDescription;
+  const reportingLabel = request.reportingPosition
+    ? `${request.reportingPosition.name} (${request.reportingPosition.code})`
+    : position?.reportingTo || null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -111,16 +111,16 @@ export function RequestInboxDetailView({
       />
 
       {/* Header */}
-      <div className="shrink-0 border-b bg-card p-6">
+      <div className="shrink-0 border-b bg-card px-6 py-5">
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-3">
-              <h2 className="font-semibold text-xl tracking-tight">
+              <h2 className="truncate font-semibold text-xl tracking-tight">
                 {jd?.title || position?.title || "Manpower Request"}
               </h2>
               <Badge
                 appearance="light"
-                className="font-semibold shadow-none"
+                className="shrink-0 font-semibold shadow-none"
                 variant={status.variant}
               >
                 {status.label}
@@ -132,14 +132,14 @@ export function RequestInboxDetailView({
           </div>
         </div>
         {request.requester ? (
-          <div className="mt-4 flex items-center gap-3">
-            <Avatar className="h-8 w-8 border">
+          <div className="mt-3 flex items-center gap-3">
+            <Avatar className="h-7 w-7 border">
               <AvatarImage src={request.requester.image || ""} />
-              <AvatarFallback className="text-xs">
+              <AvatarFallback className="text-[10px]">
                 {request.requester.name?.substring(0, 2).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="leading-tight">
               <p className="font-medium text-sm">{request.requester.name}</p>
               <p className="text-muted-foreground text-xs">
                 {request.requester.email}
@@ -149,177 +149,169 @@ export function RequestInboxDetailView({
         ) : null}
       </div>
 
-      {/* Body */}
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
-        {/* Position Details */}
-        <section className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-sm">
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            Position Details
-          </h3>
-          <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4 text-sm">
-            <DetailField
-              label="Department"
-              value={jd?.departmentName ?? position?.department}
-            />
-            <DetailField
-              label="Location"
-              icon={<MapPin className="h-3 w-3 text-muted-foreground" />}
-              value={position?.location}
-            />
-            <DetailField
-              label="Request Type"
-              value={formatLabel(request.requestType)}
-            />
-            <DetailField
-              label="Employment Type"
-              value={formatLabel(request.employmentType ?? "")}
-            />
-            <DetailField
-              label="Contract"
-              value={formatLabel(request.contractDuration ?? "")}
-            />
-            <DetailField
-              label="Headcount"
-              value={String(request.headcount ?? 1)}
-            />
-            {jd?.assignedRole ? (
+      {/* Scrollable Body */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="space-y-5 p-6">
+          {/* Position Details */}
+          <section>
+            <SectionHeader icon={Briefcase} title="Position Details" />
+            <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg border bg-muted/30 p-4 text-sm">
               <DetailField
-                label="Assigned Role"
-                value={formatLabel(jd.assignedRole)}
+                label="Department"
+                value={jd?.departmentName ?? position?.department}
               />
-            ) : null}
-            {jd?.grade ? (
-              <DetailField label="Grade" value={jd.grade} />
-            ) : null}
-            {position?.startDate ? (
+              <DetailField label="Location" value={position?.location} />
               <DetailField
-                label="Start Date"
-                icon={<Calendar className="h-3 w-3 text-muted-foreground" />}
-                value={format(new Date(position.startDate), "dd MMM yyyy")}
+                label="Request Type"
+                value={formatLabel(request.requestType)}
               />
-            ) : null}
-            <DetailField
-              label="Reports To"
-              icon={<UserCheck className="h-3 w-3 text-muted-foreground" />}
-              value={
-                request.reportingPosition
-                  ? `${request.reportingPosition.name} (${request.reportingPosition.code})`
-                  : position?.reportingTo || undefined
-              }
-              subValue={
-                request.reportingPosition?.incumbentName
-                  ? `Incumbent: ${request.reportingPosition.incumbentName}`
-                  : undefined
-              }
-            />
-          </div>
-        </section>
-
-        {/* Description */}
-        {(jd?.description || position?.description) ? (
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 font-medium text-sm">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              Description
-            </h3>
-            <p className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm leading-relaxed">
-              {jd?.description || position?.description}
-            </p>
+              <DetailField
+                label="Headcount"
+                value={String(request.headcount ?? 1)}
+              />
+              <DetailField
+                label="Employment Type"
+                value={formatLabel(request.employmentType ?? "")}
+              />
+              <DetailField
+                label="Contract"
+                value={formatLabel(request.contractDuration ?? "")}
+              />
+              {jd?.assignedRole ? (
+                <DetailField
+                  label="Assigned Role"
+                  value={formatLabel(jd.assignedRole)}
+                />
+              ) : null}
+              {jd?.grade ? (
+                <DetailField label="Grade" value={jd.grade} />
+              ) : null}
+              {position?.startDate ? (
+                <DetailField
+                  label="Start Date"
+                  value={format(new Date(position.startDate), "dd MMM yyyy")}
+                />
+              ) : null}
+              {reportingLabel ? (
+                <DetailField
+                  label="Reports To"
+                  value={reportingLabel}
+                  subValue={
+                    request.reportingPosition?.incumbentName
+                      ? `Incumbent: ${request.reportingPosition.incumbentName}`
+                      : undefined
+                  }
+                />
+              ) : null}
+              {request.requestType === "REPLACEMENT" &&
+              request.replacementForUser ? (
+                <DetailField
+                  label="Replacing"
+                  value={request.replacementForUser.name}
+                />
+              ) : null}
+            </div>
           </section>
-        ) : null}
 
-        {/* Responsibilities */}
-        {jd?.responsibilities ? (
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 font-medium text-sm">
-              <ScrollText className="h-4 w-4 text-muted-foreground" />
-              Responsibilities
-            </h3>
-            <p className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm leading-relaxed">
-              {jd.responsibilities}
-            </p>
+          {/* Budget */}
+          <section>
+            <SectionHeader icon={Banknote} title="Budget" />
+            <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg border bg-muted/30 p-4 text-sm">
+              <DetailField
+                label="Salary Range"
+                value={`${Number(request.salaryRangeMin ?? 0).toLocaleString()} – ${Number(request.salaryRangeMax ?? 0).toLocaleString()}`}
+              />
+              <DetailField
+                label="Employment Type"
+                value={formatLabel(request.employmentType ?? "")}
+              />
+            </div>
           </section>
-        ) : null}
 
-        {/* Budget */}
-        <section className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-sm">
-            <Banknote className="h-4 w-4 text-muted-foreground" />
-            Budget
-          </h3>
-          <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4 text-sm">
-            <DetailField
-              label="Salary Range"
-              value={`${Number(request.salaryRangeMin ?? 0).toLocaleString()} – ${Number(request.salaryRangeMax ?? 0).toLocaleString()}`}
-            />
-            <DetailField
-              label="Contract"
-              value={formatLabel(request.contractDuration ?? "")}
-            />
-          </div>
-        </section>
+          {/* Description & Responsibilities */}
+          {(jd?.description || position?.description || jd?.responsibilities) ? (
+            <section>
+              <SectionHeader icon={FileText} title="Job Details" />
+              <div className="mt-2 space-y-3 rounded-lg border bg-muted/30 p-4">
+                {(jd?.description || position?.description) ? (
+                  <div>
+                    <p className="mb-1 font-medium text-muted-foreground text-xs">
+                      Description
+                    </p>
+                    <p className="text-sm leading-relaxed">
+                      {jd?.description || position?.description}
+                    </p>
+                  </div>
+                ) : null}
+                {jd?.description && jd?.responsibilities ? (
+                  <Separator />
+                ) : null}
+                {jd?.responsibilities ? (
+                  <div>
+                    <p className="mb-1 font-medium text-muted-foreground text-xs">
+                      Responsibilities
+                    </p>
+                    <p className="text-sm leading-relaxed">
+                      {jd.responsibilities}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
 
-        {/* Justification */}
-        {request.justificationText ? (
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 font-medium text-sm">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              Justification
-            </h3>
-            <p className="rounded-lg border bg-muted/30 p-4 text-muted-foreground text-sm leading-relaxed">
-              {request.justificationText}
-            </p>
-          </section>
-        ) : null}
+          {/* Justification */}
+          {request.justificationText ? (
+            <section>
+              <SectionHeader icon={FileText} title="Justification" />
+              <p className="mt-2 rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed">
+                {request.justificationText}
+              </p>
+            </section>
+          ) : null}
 
-        {/* Replacing */}
-        {request.replacementForUser ? (
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-2 font-medium text-sm">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              Replacing
-            </h3>
-            <p className="rounded-lg border bg-muted/30 p-4 text-sm">
-              {request.replacementForUser.name}
-            </p>
-          </section>
-        ) : null}
+          {/* Replacement (standalone only if not already shown in position grid) */}
+          {request.requestType === "REPLACEMENT" &&
+          request.replacementForUser ? null : request.replacementForUser ? (
+            <section>
+              <SectionHeader icon={Users} title="Replacing" />
+              <p className="mt-2 rounded-lg border bg-muted/30 p-4 text-sm">
+                {request.replacementForUser.name}
+              </p>
+            </section>
+          ) : null}
 
-        {/* Timeline */}
-        <section className="space-y-3">
-          <h3 className="flex items-center gap-2 font-medium text-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            Timeline
-          </h3>
-          <div className="rounded-lg border bg-muted/30 p-4 text-sm">
-            <DetailField
-              label="Created"
-              value={format(new Date(request.createdAt), "dd MMM yyyy, HH:mm")}
-            />
-          </div>
-        </section>
+          {/* Submitted date as subtle footer info */}
+          <p className="pb-2 text-center text-muted-foreground text-xs">
+            Submitted{" "}
+            {format(new Date(request.createdAt), "dd MMM yyyy 'at' HH:mm")}
+          </p>
+        </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t bg-background/80 p-4 backdrop-blur-sm">
+      {/* Fixed Action Footer */}
+      <div className="shrink-0 border-t bg-card px-6 py-3">
+        <div className="flex items-center justify-end gap-3">
           <Button
             disabled={isPending}
             onClick={() => openDialog("REQUEST_CHANGE")}
+            size="sm"
             variant="outline"
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
+            <RotateCcw className="mr-2 h-3.5 w-3.5" />
             Request Change
           </Button>
           <Button
             disabled={isPending}
             onClick={() => openDialog("REJECT")}
+            size="sm"
             variant="destructive"
           >
-            <X className="mr-2 h-4 w-4" />
+            <X className="mr-2 h-3.5 w-3.5" />
             Reject
           </Button>
-          <Button disabled={isPending} onClick={approve}>
-            <Check className="mr-2 h-4 w-4" />
+          <Button disabled={isPending} onClick={approve} size="sm">
+            <Check className="mr-2 h-3.5 w-3.5" />
             Approve
           </Button>
         </div>
@@ -328,26 +320,36 @@ export function RequestInboxDetailView({
   );
 }
 
+function SectionHeader({
+  icon: Icon,
+  title,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+}) {
+  return (
+    <h3 className="flex items-center gap-2 font-medium text-sm">
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      {title}
+    </h3>
+  );
+}
+
 function DetailField({
   label,
   value,
   subValue,
-  icon,
 }: {
   label: string;
   value: string | undefined | null;
   subValue?: string;
-  icon?: React.ReactNode;
 }) {
   return (
     <div>
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 flex items-center gap-1.5 font-medium">
-        {icon}
-        {value || "—"}
-      </dd>
+      <dd className="mt-0.5 font-medium">{value || "—"}</dd>
       {subValue ? (
-        <dd className="mt-0.5 text-muted-foreground text-[10px]">
+        <dd className="mt-0.5 text-muted-foreground text-[11px]">
           {subValue}
         </dd>
       ) : null}
