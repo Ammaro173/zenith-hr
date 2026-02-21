@@ -199,21 +199,19 @@ export function UnifiedInbox() {
       {/* Right Content - Detail View */}
       <div className="flex flex-1 flex-col overflow-hidden bg-card">
         {selectedItem ? (
-          <ScrollArea className="h-full flex-1">
-            <div className="h-full">
-              {selectedItem.type === "REQUEST" ? (
-                <RequestInboxDetailView
-                  onActionComplete={() => setSelectedItemId(null)}
-                  request={selectedItem.raw as ManpowerRequest}
-                />
-              ) : (
-                <TripInboxDetailView
-                  onActionComplete={() => setSelectedItemId(null)}
-                  trip={selectedItem.raw as TripWithRequester}
-                />
-              )}
-            </div>
-          </ScrollArea>
+          <div className="flex h-full flex-col">
+            {selectedItem.type === "REQUEST" ? (
+              <RequestInboxDetailView
+                onActionComplete={() => setSelectedItemId(null)}
+                request={selectedItem.raw as ManpowerRequest}
+              />
+            ) : (
+              <TripInboxDetailView
+                onActionComplete={() => setSelectedItemId(null)}
+                trip={selectedItem.raw as TripWithRequester}
+              />
+            )}
+          </div>
         ) : (
           <div className="flex min-h-100 flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
             <div className="mb-4 rounded-full bg-muted/50 p-6">

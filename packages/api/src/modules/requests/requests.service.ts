@@ -3,7 +3,10 @@ import { user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
 import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
+import {
+  jobPosition,
+  userPositionAssignment,
+} from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import {
   and,
@@ -226,6 +229,7 @@ export const createRequestsService = (
         minSalary: number | null;
         maxSalary: number | null;
         assignedRole: string;
+        reportsToPositionId: string | null;
       } | null = null;
       if (request.jobDescriptionId) {
         const [jd] = await db
@@ -239,6 +243,7 @@ export const createRequestsService = (
             minSalary: jobDescription.minSalary,
             maxSalary: jobDescription.maxSalary,
             assignedRole: jobDescription.assignedRole,
+            reportsToPositionId: jobDescription.reportsToPositionId,
           })
           .from(jobDescription)
           .leftJoin(department, eq(jobDescription.departmentId, department.id))
@@ -247,11 +252,46 @@ export const createRequestsService = (
         jobDescriptionDetails = jd || null;
       }
 
+      // Resolve reporting position info from job description
+      let reportingPosition: {
+        id: string;
+        name: string;
+        code: string;
+        incumbentName: string | null;
+      } | null = null;
+      if (jobDescriptionDetails?.reportsToPositionId) {
+        const [pos] = await db
+          .select({
+            id: jobPosition.id,
+            name: jobPosition.name,
+            code: jobPosition.code,
+          })
+          .from(jobPosition)
+          .where(eq(jobPosition.id, jobDescriptionDetails.reportsToPositionId))
+          .limit(1);
+
+        if (pos) {
+          // Find the user currently assigned to this position
+          const [assignment] = await db
+            .select({ userName: user.name })
+            .from(userPositionAssignment)
+            .innerJoin(user, eq(userPositionAssignment.userId, user.id))
+            .where(eq(userPositionAssignment.positionId, pos.id))
+            .limit(1);
+
+          reportingPosition = {
+            ...pos,
+            incumbentName: assignment?.userName ?? null,
+          };
+        }
+      }
+
       return {
         ...request,
         replacementForUser,
         currentApprover,
         jobDescription: jobDescriptionDetails,
+        reportingPosition,
       };
     },
 

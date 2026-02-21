@@ -228,7 +228,16 @@ export function RequestDetailClientPage({
               />
               <DetailItem
                 label="REPORTING TO"
-                value={positionDetails.reportingTo || "Not specified"}
+                subValue={
+                  request.reportingPosition?.incumbentName
+                    ? `Incumbent: ${request.reportingPosition.incumbentName}`
+                    : undefined
+                }
+                value={
+                  request.reportingPosition
+                    ? `${request.reportingPosition.name} (${request.reportingPosition.code})`
+                    : positionDetails.reportingTo || "Not specified"
+                }
               />
 
               {jd?.description && (

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ApprovalsPage() {
   return (
-    <div className="flex h-[calc(100vh-(--spacing(16)))] w-full flex-col bg-background">
+    <div className="flex h-[calc(100svh-10rem)] w-full flex-col bg-background">
       <Suspense fallback={<PageSkeleton />}>
         <UnifiedInbox />
       </Suspense>
