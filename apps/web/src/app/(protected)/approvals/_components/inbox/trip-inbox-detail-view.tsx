@@ -2,7 +2,15 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Banknote, Calendar, Check, ExternalLink, Hotel, MapPin, X } from "lucide-react";
+import {
+  Banknote,
+  Calendar,
+  Check,
+  ExternalLink,
+  Hotel,
+  MapPin,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";

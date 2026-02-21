@@ -203,12 +203,12 @@ export function RequestInboxDetailView({
               {reportingLabel ? (
                 <DetailField
                   label="Reports To"
-                  value={reportingLabel}
                   subValue={
                     request.reportingPosition?.incumbentName
                       ? `Incumbent: ${request.reportingPosition.incumbentName}`
                       : undefined
                   }
+                  value={reportingLabel}
                 />
               ) : null}
               {request.requestType === "REPLACEMENT" &&
@@ -237,11 +237,11 @@ export function RequestInboxDetailView({
           </section>
 
           {/* Description & Responsibilities */}
-          {(jd?.description || position?.description || jd?.responsibilities) ? (
+          {jd?.description || position?.description || jd?.responsibilities ? (
             <section>
               <SectionHeader icon={FileText} title="Job Details" />
               <div className="mt-2 space-y-3 rounded-lg border bg-muted/30 p-4">
-                {(jd?.description || position?.description) ? (
+                {jd?.description || position?.description ? (
                   <div>
                     <p className="mb-1 font-medium text-muted-foreground text-xs">
                       Description
@@ -251,9 +251,7 @@ export function RequestInboxDetailView({
                     </p>
                   </div>
                 ) : null}
-                {jd?.description && jd?.responsibilities ? (
-                  <Separator />
-                ) : null}
+                {jd?.description && jd?.responsibilities ? <Separator /> : null}
                 {jd?.responsibilities ? (
                   <div>
                     <p className="mb-1 font-medium text-muted-foreground text-xs">
@@ -279,8 +277,8 @@ export function RequestInboxDetailView({
           ) : null}
 
           {/* Replacement (standalone only if not already shown in position grid) */}
-          {request.requestType === "REPLACEMENT" &&
-          request.replacementForUser ? null : request.replacementForUser ? (
+          {request.requestType !== "REPLACEMENT" &&
+          request.replacementForUser ? (
             <section>
               <SectionHeader icon={Users} title="Replacing" />
               <p className="mt-2 rounded-lg border bg-muted/30 p-4 text-sm">
@@ -357,9 +355,7 @@ function DetailField({
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="mt-0.5 font-medium">{value || "—"}</dd>
       {subValue ? (
-        <dd className="mt-0.5 text-muted-foreground text-[11px]">
-          {subValue}
-        </dd>
+        <dd className="mt-0.5 text-[11px] text-muted-foreground">{subValue}</dd>
       ) : null}
     </div>
   );
