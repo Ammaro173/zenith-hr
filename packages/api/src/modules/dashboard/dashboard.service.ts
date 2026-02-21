@@ -7,6 +7,7 @@ import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { performanceReview } from "@zenith-hr/db/schema/performance";
 import { separationRequest } from "@zenith-hr/db/schema/separations";
 import { and, count, eq, inArray, type SQL, sum } from "drizzle-orm";
+import type { UserRole } from "../../shared/types";
 
 // --- Strategies ---
 // Open/Closed Principle: New roles can be added without modifying the base service logic significantly.
@@ -16,54 +17,61 @@ type RequestFilterStrategy = (userId: string) => SQL | undefined;
 const EMPLOYEE_STRATEGY: RequestFilterStrategy = (userId) =>
   eq(manpowerRequest.requesterId, userId);
 
-const REQUEST_FILTERS: Record<string, RequestFilterStrategy> = {
+/** Controls which requests each role can see in totalRequests. */
+const REQUEST_FILTERS = {
   EMPLOYEE: EMPLOYEE_STRATEGY,
-  MANAGER: EMPLOYEE_STRATEGY, // Managers see their own + pending for them (handled separately in pending)
-  // HR/Finance/CEO see all by default (strategies return undefined for no filter)
+  MANAGER: EMPLOYEE_STRATEGY,
   HR: () => undefined,
   FINANCE: () => undefined,
   CEO: () => undefined,
-};
+  IT: EMPLOYEE_STRATEGY,
+  ADMIN: () => undefined,
+} satisfies Record<UserRole, RequestFilterStrategy>;
 
-type ActionFilterStrategy = (userId: string) => {
+interface ActionFilterResult {
   where: SQL;
   title: string;
   link: string;
   type: "urgent" | "action" | "normal";
-} | null;
+}
 
-const ACTION_STRATEGIES: Record<string, ActionFilterStrategy> = {
-  MANAGER: () => ({
+type ActionFilterStrategy = (userId: string) => ActionFilterResult | null;
+
+/** Controls which pending-action items each role sees. */
+const ACTION_STRATEGIES = {
+  EMPLOYEE: (_userId: string) => null,
+  MANAGER: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_MANAGER"),
     title: "Manpower Requests",
     link: "/approvals",
-    type: "urgent",
+    type: "urgent" as const,
   }),
-  HR: () => ({
+  HR: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_HR"),
     title: "Action Required",
     link: "/approvals",
-    type: "urgent",
+    type: "urgent" as const,
   }),
-  FINANCE: () => ({
+  FINANCE: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_FINANCE"),
     title: "Budget Approvals",
     link: "/approvals",
-    type: "urgent",
+    type: "urgent" as const,
   }),
-  CEO: () => ({
+  CEO: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_CEO"),
     title: "Final Approvals",
     link: "/approvals",
-    type: "urgent",
+    type: "urgent" as const,
   }),
-  EMPLOYEE: () => null,
-};
+  IT: (_userId: string) => null,
+  ADMIN: (_userId: string) => null,
+} satisfies Record<UserRole, ActionFilterStrategy>;
 
 export const createDashboardService = (db: DbOrTx) => {
   return {
-    async getTotalRequests(userId: string, role: string): Promise<number> {
-      const strategy = REQUEST_FILTERS[role] || EMPLOYEE_STRATEGY;
+    async getTotalRequests(userId: string, role: UserRole): Promise<number> {
+      const strategy = REQUEST_FILTERS[role];
       const filter = strategy(userId);
 
       const query = db.select({ count: count() }).from(manpowerRequest);
@@ -75,29 +83,22 @@ export const createDashboardService = (db: DbOrTx) => {
       return result?.count || 0;
     },
 
-    async getPendingRequests(userId: string, role: string): Promise<number> {
-      // This method had complex logic mixing "My Pending" vs "Pending Actions"
-      // If we strictly follow the requirement that this is for "Dashboard Header Stats",
-      // it usually means "My Requests that are Pending".
-      // Actions are handled by getActionsRequired.
-
-      // Re-using logic: Employees see their own pending.
-      // Others might see what's pending for them?
-      // Let's keep the previous logic but implemented cleanly.
-
+    async getPendingRequests(userId: string, role: UserRole): Promise<number> {
       let whereClause: SQL | undefined;
 
-      if (role === "EMPLOYEE") {
+      if (role === "EMPLOYEE" || role === "IT") {
         whereClause = eq(manpowerRequest.requesterId, userId);
-        // In a real scenario we'd add .and(status != CLOSED)
-      } else if (role === "HR") {
-        whereClause = eq(manpowerRequest.status, "PENDING_HR");
+      } else if (role === "ADMIN") {
+        whereClause = inArray(manpowerRequest.status, [
+          "PENDING_MANAGER",
+          "PENDING_HR",
+          "PENDING_FINANCE",
+          "PENDING_CEO",
+        ]);
       } else {
-        // For roles that approve, "Pending Requests" in stats usually implies "Items waiting for YOU"
-        const strategy = ACTION_STRATEGIES[role];
-        if (strategy) {
-          whereClause = strategy(userId)?.where;
-        }
+        // MANAGER, HR, FINANCE, CEO — items waiting for this role
+        const config = ACTION_STRATEGIES[role](userId);
+        whereClause = config?.where;
       }
 
       const [result] = await db
@@ -108,7 +109,10 @@ export const createDashboardService = (db: DbOrTx) => {
       return result?.count || 0;
     },
 
-    async getApprovedRequests(_userId: string, _role: string): Promise<number> {
+    async getApprovedRequests(
+      _userId: string,
+      _role: UserRole,
+    ): Promise<number> {
       const [result] = await db
         .select({ count: count() })
         .from(manpowerRequest)
@@ -116,7 +120,7 @@ export const createDashboardService = (db: DbOrTx) => {
       return result?.count || 0;
     },
 
-    async getHiringRequests(_userId: string, _role: string): Promise<number> {
+    async getHiringRequests(_userId: string, _role: UserRole): Promise<number> {
       const [result] = await db
         .select({ count: count() })
         .from(manpowerRequest)
@@ -137,8 +141,7 @@ export const createDashboardService = (db: DbOrTx) => {
       return result?.count || 0;
     },
 
-    async getDashboardStats(userId: string, role: string) {
-      // Base stats for all roles
+    async getDashboardStats(userId: string, role: UserRole) {
       const [
         totalRequests,
         pendingRequests,
@@ -164,7 +167,6 @@ export const createDashboardService = (db: DbOrTx) => {
         activeContracts,
       };
 
-      // Role-specific stats
       if (role === "EMPLOYEE" || role === "MANAGER") {
         const [
           myActiveTrips,
@@ -285,13 +287,8 @@ export const createDashboardService = (db: DbOrTx) => {
       return Number(result?.total) || 0;
     },
 
-    async getActionsRequired(userId: string, role: string) {
-      const strategy = ACTION_STRATEGIES[role];
-      if (!strategy) {
-        return [];
-      }
-
-      const config = strategy(userId);
+    async getActionsRequired(userId: string, role: UserRole) {
+      const config = ACTION_STRATEGIES[role](userId);
       if (!config) {
         return [];
       }
@@ -316,7 +313,6 @@ export const createDashboardService = (db: DbOrTx) => {
     },
 
     async getAverageTimeToHire() {
-      // Logic unchanged
       const completedContracts = await db
         .select()
         .from(contract)
@@ -327,7 +323,7 @@ export const createDashboardService = (db: DbOrTx) => {
         const times = completedContracts.map((c) => {
           const created = new Date(c.createdAt).getTime();
           const updated = new Date(c.updatedAt).getTime();
-          return (updated - created) / (1000 * 60 * 60 * 24); // days
+          return (updated - created) / (1000 * 60 * 60 * 24);
         });
         averageTimeToHire = times.reduce((a, b) => a + b, 0) / times.length;
       }

@@ -1,4 +1,5 @@
 import { o, protectedProcedure } from "../../shared/middleware";
+import type { UserRole } from "../../shared/types";
 
 export const dashboardRouter = o.router({
   getStats: protectedProcedure.handler(async ({ context }) => {
@@ -30,7 +31,7 @@ export const dashboardRouter = o.router({
     // Get statistics from service
     // Default to EMPLOYEE if no role (shouldn't happen with typed auth)
     // Default to EMPLOYEE if no role or invalid
-    const role = user.role || "EMPLOYEE";
+    const role = (user.role || "EMPLOYEE") as UserRole;
 
     const stats = await context.services.dashboard.getDashboardStats(
       user.id,
@@ -52,7 +53,7 @@ export const dashboardRouter = o.router({
 
   getPendingCount: protectedProcedure.handler(async ({ context }) => {
     const { user } = context.session;
-    const role = user.role || "EMPLOYEE";
+    const role = (user.role || "EMPLOYEE") as UserRole;
     const count = await context.services.dashboard.getPendingRequests(
       user.id,
       role,
@@ -81,7 +82,7 @@ export const dashboardRouter = o.router({
 
   getActionsRequired: protectedProcedure.handler(async ({ context }) => {
     const { user } = context.session;
-    const role = user.role || "EMPLOYEE";
+    const role = (user.role || "EMPLOYEE") as UserRole;
 
     const actions = await context.services.dashboard.getActionsRequired(
       user.id,
