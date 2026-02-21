@@ -1,8 +1,12 @@
 import type { DbOrTx } from "@zenith-hr/db";
+import { user } from "@zenith-hr/db/schema/auth";
+import { businessTrip, tripExpense } from "@zenith-hr/db/schema/business-trips";
 import { candidates } from "@zenith-hr/db/schema/candidates";
 import { contract } from "@zenith-hr/db/schema/contracts";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { count, eq, inArray, type SQL } from "drizzle-orm";
+import { performanceReview } from "@zenith-hr/db/schema/performance";
+import { separationRequest } from "@zenith-hr/db/schema/separations";
+import { and, count, eq, inArray, type SQL, sum } from "drizzle-orm";
 
 // --- Strategies ---
 // Open/Closed Principle: New roles can be added without modifying the base service logic significantly.
@@ -36,7 +40,7 @@ const ACTION_STRATEGIES: Record<string, ActionFilterStrategy> = {
     type: "urgent",
   }),
   HR: () => ({
-    where: inArray(manpowerRequest.status, ["PENDING_HR", "APPROVED_OPEN"]),
+    where: eq(manpowerRequest.status, "PENDING_HR"),
     title: "Action Required",
     link: "/approvals",
     type: "urgent",
@@ -108,7 +112,7 @@ export const createDashboardService = (db: DbOrTx) => {
       const [result] = await db
         .select({ count: count() })
         .from(manpowerRequest)
-        .where(eq(manpowerRequest.status, "APPROVED_OPEN"));
+        .where(eq(manpowerRequest.status, "HIRING_IN_PROGRESS"));
       return result?.count || 0;
     },
 
@@ -134,6 +138,7 @@ export const createDashboardService = (db: DbOrTx) => {
     },
 
     async getDashboardStats(userId: string, role: string) {
+      // Base stats for all roles
       const [
         totalRequests,
         pendingRequests,
@@ -150,7 +155,7 @@ export const createDashboardService = (db: DbOrTx) => {
         this.getActiveContracts(),
       ]);
 
-      return {
+      const base = {
         totalRequests,
         pendingRequests,
         approvedRequests,
@@ -158,6 +163,126 @@ export const createDashboardService = (db: DbOrTx) => {
         totalCandidates,
         activeContracts,
       };
+
+      // Role-specific stats
+      if (role === "EMPLOYEE" || role === "MANAGER") {
+        const [
+          myActiveTrips,
+          myPendingSeparations,
+          myActivePerformanceReviews,
+        ] = await Promise.all([
+          this.getMyActiveTrips(userId),
+          this.getMyPendingSeparations(userId),
+          this.getMyActivePerformanceReviews(userId),
+        ]);
+
+        const extra: Record<string, number> = {
+          myActiveTrips,
+          myPendingSeparations,
+          myActivePerformanceReviews,
+        };
+
+        if (role === "MANAGER") {
+          extra.teamPendingPerformanceReviews =
+            await this.getTeamPendingPerformanceReviews(userId);
+        }
+
+        return { ...base, ...extra };
+      }
+
+      if (role === "CEO" || role === "FINANCE") {
+        const [companyHeadcount, totalDepartmentExpenses] = await Promise.all([
+          this.getCompanyHeadcount(),
+          this.getTotalDepartmentExpenses(),
+        ]);
+        return { ...base, companyHeadcount, totalDepartmentExpenses };
+      }
+
+      return base;
+    },
+
+    async getMyActiveTrips(userId: string): Promise<number> {
+      const [result] = await db
+        .select({ count: count() })
+        .from(businessTrip)
+        .where(
+          and(
+            eq(businessTrip.requesterId, userId),
+            inArray(businessTrip.status, [
+              "APPROVED",
+              "PENDING_MANAGER",
+              "PENDING_HR",
+              "PENDING_FINANCE",
+              "PENDING_CEO",
+            ]),
+          ),
+        );
+      return result?.count || 0;
+    },
+
+    async getMyPendingSeparations(userId: string): Promise<number> {
+      const [result] = await db
+        .select({ count: count() })
+        .from(separationRequest)
+        .where(
+          and(
+            eq(separationRequest.employeeId, userId),
+            inArray(separationRequest.status, [
+              "REQUESTED",
+              "PENDING_MANAGER",
+              "PENDING_HR",
+              "CLEARANCE_IN_PROGRESS",
+            ]),
+          ),
+        );
+      return result?.count || 0;
+    },
+
+    async getMyActivePerformanceReviews(userId: string): Promise<number> {
+      const [result] = await db
+        .select({ count: count() })
+        .from(performanceReview)
+        .where(
+          and(
+            eq(performanceReview.employeeId, userId),
+            inArray(performanceReview.status, [
+              "SELF_REVIEW",
+              "MANAGER_REVIEW",
+              "IN_REVIEW",
+            ]),
+          ),
+        );
+      return result?.count || 0;
+    },
+
+    async getTeamPendingPerformanceReviews(managerId: string): Promise<number> {
+      const [result] = await db
+        .select({ count: count() })
+        .from(performanceReview)
+        .where(
+          and(
+            eq(performanceReview.reviewerId, managerId),
+            eq(performanceReview.status, "MANAGER_REVIEW"),
+          ),
+        );
+      return result?.count || 0;
+    },
+
+    async getCompanyHeadcount(): Promise<number> {
+      const [result] = await db
+        .select({ count: count() })
+        .from(user)
+        .where(eq(user.status, "ACTIVE"));
+      return result?.count || 0;
+    },
+
+    async getTotalDepartmentExpenses(): Promise<number> {
+      const [result] = await db
+        .select({ total: sum(tripExpense.amount) })
+        .from(tripExpense)
+        .innerJoin(businessTrip, eq(tripExpense.tripId, businessTrip.id))
+        .where(inArray(businessTrip.status, ["APPROVED", "COMPLETED"]));
+      return Number(result?.total) || 0;
     },
 
     async getActionsRequired(userId: string, role: string) {
