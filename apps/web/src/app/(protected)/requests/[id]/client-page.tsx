@@ -12,7 +12,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,13 +26,14 @@ import { client, orpc } from "@/utils/orpc";
 
 interface RequestDetailClientPageProps {
   currentUserId?: string;
+  currentUserRole?: string;
 }
 
 export function RequestDetailClientPage({
   currentUserId,
+  currentUserRole,
 }: RequestDetailClientPageProps) {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
 
@@ -51,13 +52,12 @@ export function RequestDetailClientPage({
         action,
         comment,
       }),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(
         `Request ${data.newStatus.toLowerCase().replace("_", " ")}`,
       );
       setComment("");
-      queryClient.invalidateQueries();
-      router.refresh();
+      await queryClient.invalidateQueries();
     },
     onError: (error) => {
       toast.error(error.message || "Action failed");
@@ -85,9 +85,13 @@ export function RequestDetailClientPage({
 
   const isApprover =
     request.currentApproverId === currentUserId &&
-    !["APPROVED_OPEN", "REJECTED", "ARCHIVED", "DRAFT"].includes(
+    !["APPROVED_OPEN", "REJECTED", "ARCHIVED", "DRAFT", "COMPLETED"].includes(
       request.status,
     );
+
+  const canCompleteHiring =
+    request.status === "HIRING_IN_PROGRESS" &&
+    (currentUserRole === "HR" || currentUserRole === "ADMIN");
 
   const positionDetails = request.positionDetails as {
     title?: string;
@@ -196,6 +200,10 @@ export function RequestDetailClientPage({
                 value={jd?.assignedRole?.replace("_", " ") || "Not specified"}
               />
               <DetailItem label="GRADE" value={jd?.grade || "Not specified"} />
+              <DetailItem
+                label="HEADCOUNT"
+                value={String(request.headcount ?? 1)}
+              />
               <DetailItem
                 icon={<MapPin className="size-3" />}
                 label="LOCATION"
@@ -376,6 +384,45 @@ export function RequestDetailClientPage({
             </Card>
           )}
 
+          {canCompleteHiring && (
+            <Card className="border-green-200 shadow-green-500/5 shadow-lg">
+              <CardHeader className="bg-green-50 pb-4">
+                <CardTitle className="font-bold text-base">
+                  Hiring In Progress
+                </CardTitle>
+                <p className="text-muted-foreground text-xs">
+                  Mark this request as completed once the position has been
+                  filled.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                <div className="space-y-2">
+                  <Label className="font-bold text-xs uppercase tracking-wider">
+                    COMMENTS
+                  </Label>
+                  <Textarea
+                    className="min-h-[80px] resize-none"
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Add a closing note..."
+                    value={comment}
+                  />
+                </div>
+                <Button
+                  className="w-full bg-green-600 text-white hover:bg-green-700"
+                  disabled={transitionMutation.isPending}
+                  onClick={() => transitionMutation.mutate("APPROVE")}
+                >
+                  {transitionMutation.isPending ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-2 size-4" />
+                  )}
+                  Complete Hiring
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Approval Chain */}
           <Card>
             <CardHeader className="border-b pb-4">
@@ -447,10 +494,16 @@ function getChainStepStatus(
     "PENDING_HR",
     "PENDING_FINANCE",
     "PENDING_CEO",
-    "APPROVED_OPEN",
+    "HIRING_IN_PROGRESS",
+    "COMPLETED",
   ];
   const currentIndex = statuses.indexOf(currentStatus);
   const stepIndex = statuses.indexOf(stepStatus);
+
+  // Statuses beyond the chain (HIRING_IN_PROGRESS, COMPLETED, etc.) mean all steps are done
+  if (currentIndex < 0) {
+    return "COMPLETED";
+  }
 
   if (currentIndex > stepIndex) {
     return "COMPLETED";
@@ -467,9 +520,10 @@ function getStepNumber(status: string): number {
     PENDING_HR: 2,
     PENDING_FINANCE: 3,
     PENDING_CEO: 4,
-    APPROVED_OPEN: 4,
+    HIRING_IN_PROGRESS: 4,
+    COMPLETED: 4,
   };
-  return mapping[status] || 1;
+  return mapping[status] || 4;
 }
 
 function DetailItem({
