@@ -61,9 +61,9 @@ export function usePerformanceReviewForm({
   const submitMutation = useMutation({
     mutationFn: (data: { reviewId: string }) =>
       client.performance.submitReview(data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Review submitted successfully");
-      queryClient.invalidateQueries();
+      await queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {
