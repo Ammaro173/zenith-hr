@@ -8,9 +8,9 @@ export function useCreateUser(options?: { onSuccess?: () => void }) {
   return useMutation({
     mutationFn: (input: Parameters<typeof client.users.create>[0]) =>
       client.users.create(input),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("User created successfully");
-      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -25,9 +25,9 @@ export function useUpdateUser(options?: { onSuccess?: () => void }) {
   return useMutation({
     mutationFn: (input: Parameters<typeof client.users.update>[0]) =>
       client.users.update(input),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("User updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -41,9 +41,9 @@ export function useDeactivateUser(options?: { onSuccess?: () => void }) {
 
   return useMutation({
     mutationFn: (userId: string) => client.users.deactivate({ id: userId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("User deactivated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -57,9 +57,9 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
 
   return useMutation({
     mutationFn: (userId: string) => client.users.delete({ id: userId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("User deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -77,9 +77,9 @@ export function useRevokeSession(
   return useMutation({
     mutationFn: (sessionId: string) =>
       client.users.revokeSession({ sessionId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Session revoked successfully");
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["users", userId, "sessions"],
       });
       options?.onSuccess?.();
@@ -98,9 +98,9 @@ export function useRevokeAllSessions(
 
   return useMutation({
     mutationFn: () => client.users.revokeAllSessions({ userId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("All sessions revoked successfully");
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["users", userId, "sessions"],
       });
       options?.onSuccess?.();
@@ -117,9 +117,9 @@ export function useResetPassword(options?: { onSuccess?: () => void }) {
   return useMutation({
     mutationFn: (input: { userId: string; newPassword: string }) =>
       client.users.resetPassword(input),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Password reset successfully");
-      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
