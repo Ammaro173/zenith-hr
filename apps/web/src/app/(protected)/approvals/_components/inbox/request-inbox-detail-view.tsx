@@ -6,11 +6,13 @@ import {
   Banknote,
   Briefcase,
   Check,
+  ExternalLink,
   FileText,
   RotateCcw,
   Users,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -130,6 +132,12 @@ export function RequestInboxDetailView({
               {request.requestCode}
             </p>
           </div>
+          <Button asChild className="shrink-0" size="sm" variant="outline">
+            <Link href={`/requests/${request.id}`}>
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              Full Details
+            </Link>
+          </Button>
         </div>
         {request.requester ? (
           <div className="mt-3 flex items-center gap-3">

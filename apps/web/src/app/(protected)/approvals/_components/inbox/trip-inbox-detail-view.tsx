@@ -2,7 +2,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Banknote, Calendar, Check, Hotel, MapPin, X } from "lucide-react";
+import { Banknote, Calendar, Check, ExternalLink, Hotel, MapPin, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -115,6 +116,12 @@ export function TripInboxDetailView({
             </div>
             <p className="text-muted-foreground text-sm">{purposeLabel}</p>
           </div>
+          <Button asChild className="shrink-0" size="sm" variant="outline">
+            <Link href={`/business-trips/${trip.id}`}>
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              Full Details
+            </Link>
+          </Button>
         </div>
         {trip.requester ? (
           <div className="mt-4 flex items-center gap-3">
