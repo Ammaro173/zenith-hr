@@ -1,7 +1,6 @@
-import { ChevronDown, ChevronUp, Settings2, UserCheck } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings2 } from "lucide-react";
 import * as React from "react";
 import { FormField } from "@/components/shared/form-field";
-import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -38,7 +37,7 @@ export function AdvancedOptionsSection() {
         <div className="space-y-6 pt-4">
           <Separator />
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <div className="flex items-center gap-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
               <UserCheck className="size-3" />
               Workflow Overrides
@@ -61,7 +60,7 @@ export function AdvancedOptionsSection() {
             </div>
           </div>
 
-          <Separator />
+          <Separator /> */}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <form.Field name="positionDetails.location">
@@ -77,7 +76,7 @@ export function AdvancedOptionsSection() {
               )}
             </form.Field>
 
-            <form.Field name="positionDetails.reportingTo">
+            {/* <form.Field name="positionDetails.reportingTo">
               {(field) => (
                 <FormField field={field} label="Reporting To">
                   <Input
@@ -88,7 +87,7 @@ export function AdvancedOptionsSection() {
                   />
                 </FormField>
               )}
-            </form.Field>
+            </form.Field> */}
 
             <form.Field name="positionDetails.startDate">
               {(field) => (
