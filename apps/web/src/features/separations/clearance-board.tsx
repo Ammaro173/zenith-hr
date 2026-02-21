@@ -25,6 +25,7 @@ import {
   KanbanColumnHandle,
   KanbanItem,
 } from "@/components/ui/kanban";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { type client, orpc } from "@/utils/orpc";
@@ -371,7 +372,7 @@ export function ClearanceBoard({
                           Add item
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Add checklist item</DialogTitle>
                           <DialogDescription>
@@ -379,11 +380,9 @@ export function ClearanceBoard({
                           </DialogDescription>
                         </DialogHeader>
 
-                        <div className="grid gap-4">
+                        <div className="grid gap-4 pt-2">
                           <div className="space-y-2">
-                            <label className="text-sm" htmlFor="add-title">
-                              Title
-                            </label>
+                            <Label htmlFor="add-title">Title</Label>
                             <Input
                               id="add-title"
                               onChange={(e) => setAddTitle(e.target.value)}
@@ -392,10 +391,14 @@ export function ClearanceBoard({
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-sm" htmlFor="add-desc">
+                            <Label htmlFor="add-desc">
                               Description
-                            </label>
+                              <span className="ml-1.5 font-normal text-muted-foreground text-xs">
+                                (optional)
+                              </span>
+                            </Label>
                             <Textarea
+                              className="min-h-20 resize-none"
                               id="add-desc"
                               onChange={(e) =>
                                 setAddDescription(e.target.value)
@@ -406,9 +409,7 @@ export function ClearanceBoard({
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
-                              <label className="text-sm" htmlFor="add-due">
-                                Due date
-                              </label>
+                              <Label htmlFor="add-due">Due date</Label>
                               <Input
                                 id="add-due"
                                 onChange={(e) => setAddDueAt(e.target.value)}
@@ -431,11 +432,11 @@ export function ClearanceBoard({
                           </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="pt-2">
                           <Button
                             onClick={() => setAddOpen(false)}
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                           >
                             Cancel
                           </Button>
