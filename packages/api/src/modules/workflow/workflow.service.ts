@@ -46,6 +46,7 @@ const WORKFLOW_TRANSITIONS: Partial<
   },
   APPROVED_OPEN: {
     SUBMIT: "HIRING_IN_PROGRESS",
+    APPROVE: "HIRING_IN_PROGRESS",
   },
 };
 
@@ -74,6 +75,7 @@ export const createWorkflowService = (db: DbOrTx) => {
       PENDING_HR: "HR",
       PENDING_FINANCE: "FINANCE",
       PENDING_CEO: "CEO",
+      APPROVED_OPEN: "HR",
     };
     return mapping[status] ?? null;
   };
