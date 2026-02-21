@@ -3,6 +3,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export function DashboardHeader() {
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -11,6 +12,10 @@ export function DashboardHeader() {
     month: "long",
     day: "numeric",
   });
+
+  const { data: session } = authClient.useSession();
+  const canCreateRequest =
+    session?.user.role === "MANAGER" || session?.user.role === "ADMIN";
 
   return (
     <div className="flex items-center justify-between pb-6">
@@ -21,13 +26,14 @@ export function DashboardHeader() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {/* Could add generic actions here, but specific actions might be better in role views */}
-        <Button asChild>
-          <Link href="/requests/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Request
-          </Link>
-        </Button>
+        {canCreateRequest && (
+          <Button asChild>
+            <Link href="/requests/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Request
+            </Link>
+          </Button>
+        )}
       </div>
     </div>
   );
