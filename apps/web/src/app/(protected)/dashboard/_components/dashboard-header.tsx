@@ -21,7 +21,13 @@ export function DashboardHeader() {
   }, []);
 
   const { data: session } = authClient.useSession();
-  const canCreateRequest = session?.user.role !== "EMPLOYEE";
+  const canCreateRequest = [
+    "MANAGER",
+    "ADMIN",
+    "CEO",
+    "HR",
+    "FINANCE",
+  ].includes(session?.user.role ?? "");
 
   return (
     <div className="flex items-center justify-between pb-6">

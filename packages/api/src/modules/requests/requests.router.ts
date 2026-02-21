@@ -15,7 +15,7 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-const create = requireRoles(["MANAGER", "ADMIN"])
+const create = requireRoles(["MANAGER", "ADMIN", "CEO", "HR", "FINANCE"])
   .input(createRequestSchema)
   .handler(async ({ input, context }) => {
     const newRequest = await context.services.requests.create(
