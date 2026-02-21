@@ -26,8 +26,10 @@ export const createCandidatesService = (
         throw AppError.notFound("Request not found");
       }
 
-      if (request.status !== "APPROVED_OPEN") {
-        throw AppError.badRequest("Request is not in APPROVED_OPEN status");
+      if (request.status !== "HIRING_IN_PROGRESS") {
+        throw AppError.badRequest(
+          "Request is not in HIRING_IN_PROGRESS status",
+        );
       }
 
       // 1. Upload CV

@@ -34,12 +34,9 @@ export const createContractsService = (
         throw AppError.notFound("Request not found");
       }
 
-      if (
-        request.status !== "APPROVED_OPEN" &&
-        request.status !== "HIRING_IN_PROGRESS"
-      ) {
+      if (request.status !== "HIRING_IN_PROGRESS") {
         throw AppError.badRequest(
-          "Request must be APPROVED_OPEN or HIRING_IN_PROGRESS",
+          "Request must be in HIRING_IN_PROGRESS status",
         );
       }
 
