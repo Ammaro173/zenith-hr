@@ -23,9 +23,9 @@ export function useManpowerRequestForm({
   const createMutation = useMutation({
     mutationFn: (data: z.infer<typeof createRequestSchema>) =>
       client.requests.create(data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Manpower request submitted successfully");
-      queryClient.invalidateQueries();
+      await queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {
