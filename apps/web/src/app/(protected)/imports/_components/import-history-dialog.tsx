@@ -231,7 +231,7 @@ function ImportDetailsContent({ history, items }: ImportDetailsContentProps) {
       {/* Items Table */}
       <div className="space-y-2">
         <h4 className="font-medium text-sm">Row Details</h4>
-        <ScrollArea className="h-[400px] rounded-md border">
+        <ScrollArea className="h-100 rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>

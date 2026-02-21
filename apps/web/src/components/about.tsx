@@ -25,7 +25,7 @@ export function About({ id }: { id?: string }) {
               performance, design, and innovation.
             </p>
           </div>
-          <div className="relative h-[400px] overflow-hidden rounded-lg lg:h-auto">
+          <div className="relative h-100 overflow-hidden rounded-lg lg:h-auto">
             <Image
               alt="Audi Club community"
               className="object-cover"

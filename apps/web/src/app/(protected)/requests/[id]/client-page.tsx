@@ -66,7 +66,7 @@ export function RequestDetailClientPage({
 
   if (isRequestLoading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
+      <div className="flex h-100 items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -74,7 +74,7 @@ export function RequestDetailClientPage({
 
   if (!request) {
     return (
-      <div className="flex h-[400px] flex-col items-center justify-center gap-4">
+      <div className="flex h-100 flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">Request not found</p>
         <Button asChild variant="outline">
           <Link href="/requests">Go back</Link>

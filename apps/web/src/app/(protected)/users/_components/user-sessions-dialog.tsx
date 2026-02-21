@@ -43,7 +43,7 @@ function SessionsTable({
   onRevokeSession,
 }: SessionsTableProps) {
   return (
-    <div className="max-h-[400px] overflow-auto rounded-md border">
+    <div className="max-h-100 overflow-auto rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>

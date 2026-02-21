@@ -17,7 +17,7 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center">
+    <div className="flex min-h-100 flex-col items-center justify-center p-8 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
         <AlertCircle className="h-6 w-6" />
       </div>

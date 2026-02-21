@@ -215,7 +215,7 @@ export function UnifiedInbox() {
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex min-h-[400px] flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
+          <div className="flex min-h-100 flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
             <div className="mb-4 rounded-full bg-muted/50 p-6">
               <Briefcase className="h-8 w-8 opacity-20" />
             </div>
