@@ -1,15 +1,14 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+// import { useQuery } from "@tanstack/react-query";
 import {
   TRAVEL_CLASS_OPTIONS,
   TRIP_PURPOSE_OPTIONS,
 } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Plane, User } from "lucide-react";
+import { CalendarIcon, Loader2, Plane } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
 import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,18 +29,18 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { authClient } from "@/lib/auth-client";
+// import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { orpc } from "@/utils/orpc";
+// import { orpc } from "@/utils/orpc";
 import { BusinessTripFormProvider } from "./business-trip-form-context";
 import { useBusinessTripForm } from "./use-business-trip-form";
 
-function formatRole(role: string): string {
-  return role
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
+// function formatRole(role: string): string {
+//   return role
+//     .split("_")
+//     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+//     .join(" ");
+// }
 
 interface BusinessTripFormProps {
   mode?: "page" | "sheet";
@@ -59,19 +58,16 @@ export function BusinessTripForm({
     onCancel,
   });
 
-  const { data: session } = authClient.useSession();
-  const sessionUser = session?.user;
+  // const { data: session } = authClient.useSession();
+  // const sessionUser = session?.user;
 
   // Fetch department name for the current user
-  const { data: userSearchResults } = useQuery({
-    ...orpc.users.search.queryOptions({
-      input: { query: sessionUser?.email ?? "", limit: 1 },
-    }),
-    enabled: !!sessionUser?.email,
-  });
-
-  const departmentName =
-    userSearchResults?.[0]?.departmentName ?? "Not assigned";
+  // const { data: userSearchResults } = useQuery({
+  //   ...orpc.users.search.queryOptions({
+  //     input: { query: sessionUser?.email ?? "", limit: 1 },
+  //   }),
+  //   enabled: !!sessionUser?.email,
+  // });
 
   return (
     <div
@@ -91,7 +87,7 @@ export function BusinessTripForm({
         <BusinessTripFormProvider form={form}>
           <div className="space-y-8">
             {/* Requester Information (Read-Only) */}
-            <Card>
+            {/* <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="size-5" />
@@ -125,7 +121,7 @@ export function BusinessTripForm({
                       <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
                         Department
                       </p>
-                      <p className="text-sm">{departmentName}</p>
+                      <p className="text-sm">{userSearchQuery.data?.[0]?.departmentName ?? "Not assigned"}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
@@ -144,7 +140,7 @@ export function BusinessTripForm({
                   </p>
                 )}
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Trip Details Section */}
             <Card>
@@ -384,10 +380,10 @@ export function BusinessTripForm({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="USD">USD</SelectItem>
-                            <SelectItem value="EUR">EUR</SelectItem>
-                            <SelectItem value="SAR">SAR</SelectItem>
                             <SelectItem value="QAR">QAR</SelectItem>
+                            <SelectItem value="USD">USD</SelectItem>
+                            {/* <SelectItem value="EUR">EUR</SelectItem> */}
+                            {/* <SelectItem value="SAR">SAR</SelectItem> */}
                           </SelectContent>
                         </Select>
                       </FormField>
