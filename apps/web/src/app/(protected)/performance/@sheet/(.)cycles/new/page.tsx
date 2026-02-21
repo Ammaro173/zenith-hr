@@ -42,7 +42,6 @@ export default function InterceptedNewCyclePage() {
           onSuccess={() => {
             setOpen(false);
             router.back();
-            router.refresh();
           }}
         />
       </SheetContent>

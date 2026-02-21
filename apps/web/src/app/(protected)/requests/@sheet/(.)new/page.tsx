@@ -41,8 +41,7 @@ export default function InterceptedNewRequestPage() {
           }}
           onSuccess={() => {
             setOpen(false);
-            router.back();
-            router.refresh();
+            router.push("/requests");
           }}
         />
       </SheetContent>

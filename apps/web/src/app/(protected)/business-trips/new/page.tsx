@@ -31,7 +31,6 @@ export default function NewBusinessTripPage() {
           onCancel={() => router.push("/business-trips")}
           onSuccess={() => {
             router.push("/business-trips");
-            router.refresh();
           }}
         />
       </div>

@@ -42,7 +42,6 @@ export default function InterceptedNewBusinessTripPage() {
           onSuccess={() => {
             setOpen(false);
             router.back();
-            router.refresh();
           }}
         />
       </SheetContent>

@@ -33,7 +33,6 @@ export default function NewRequestPage() {
           onCancel={() => router.push("/requests")}
           onSuccess={() => {
             router.push("/requests");
-            router.refresh();
           }}
         />
       </div>

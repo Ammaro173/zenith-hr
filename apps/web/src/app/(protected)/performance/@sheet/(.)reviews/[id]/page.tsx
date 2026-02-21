@@ -43,7 +43,6 @@ export default function InterceptedReviewPage() {
           onSuccess={() => {
             setOpen(false);
             router.back();
-            router.refresh();
           }}
           reviewId={params.id}
         />
