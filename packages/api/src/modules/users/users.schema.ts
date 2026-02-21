@@ -76,11 +76,20 @@ export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
   sapNo: z.string().min(1).max(50),
-  status: userStatusSchema.default("ACTIVE"),
+  status: userStatusSchema,
   jobDescriptionId: z.string().uuid(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+
+export const createUserDefaults: CreateUserInput = {
+  name: "",
+  email: "",
+  password: "",
+  sapNo: "",
+  status: "ACTIVE",
+  jobDescriptionId: "",
+};
 
 // Update User Input
 export const updateUserSchema = z.object({

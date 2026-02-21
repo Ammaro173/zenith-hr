@@ -1,6 +1,10 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import {
+  createDepartmentDefaults,
+  createDepartmentSchema,
+} from "@zenith-hr/api/modules/departments/departments.schema";
 import { Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
@@ -11,10 +15,6 @@ import type {
   UpdateDepartmentFormData,
 } from "@/types/departments";
 
-// ============================================
-// Types
-// ============================================
-
 export interface DepartmentFormProps {
   mode: "create" | "edit";
   initialData?: DepartmentListItem;
@@ -24,10 +24,6 @@ export interface DepartmentFormProps {
   onCancel: () => void;
   isPending?: boolean;
 }
-
-// ============================================
-// Department Form Component
-// ============================================
 
 export function DepartmentForm({
   mode,
@@ -40,7 +36,11 @@ export function DepartmentForm({
 
   const form = useForm({
     defaultValues: {
+      ...createDepartmentDefaults,
       name: initialData?.name ?? "",
+    },
+    validators: {
+      onChange: createDepartmentSchema,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {

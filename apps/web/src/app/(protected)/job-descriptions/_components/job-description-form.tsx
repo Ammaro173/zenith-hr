@@ -1,6 +1,10 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import {
+  createJobDescriptionDefaults,
+  createJobDescriptionSchema,
+} from "@zenith-hr/api/modules/job-descriptions/job-descriptions.schema";
 import { Loader2 } from "lucide-react";
 import { DepartmentSelect } from "@/components/shared/department-select";
 import { FormField } from "@/components/shared/form-field";
@@ -60,15 +64,19 @@ export function JobDescriptionForm({
 
   const form = useForm({
     defaultValues: {
+      ...createJobDescriptionDefaults,
       title: initialData?.title ?? "",
       description: initialData?.description ?? "",
       responsibilities: initialData?.responsibilities ?? "",
       departmentId: initialData?.departmentId ?? null,
       reportsToPositionId: initialData?.reportsToPositionId ?? null,
       assignedRole: initialData?.assignedRole ?? "EMPLOYEE",
-      grade: initialData?.grade ?? "",
+      grade: initialData?.grade ?? null,
       minSalary: initialData?.minSalary ?? null,
       maxSalary: initialData?.maxSalary ?? null,
+    },
+    validators: {
+      onChange: createJobDescriptionSchema,
     },
     onSubmit: async ({ value }) => {
       await onSubmit({
@@ -156,7 +164,7 @@ export function JobDescriptionForm({
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="e.g. L1, Senior"
-                    value={field.state.value}
+                    value={field.state.value ?? ""}
                   />
                 </FormField>
               )}

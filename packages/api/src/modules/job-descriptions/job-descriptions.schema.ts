@@ -28,18 +28,30 @@ export interface SearchJobDescriptionsResponse {
 export const createJobDescriptionSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().min(1, "Description is required"),
-  responsibilities: z.string().optional(),
-  departmentId: z.string().uuid().nullable().optional(),
-  reportsToPositionId: z.string().uuid().nullable().optional(),
-  assignedRole: userRoleSchema.default("EMPLOYEE"),
-  grade: z.string().max(50).nullable().optional(),
-  minSalary: z.number().int().min(0).nullable().optional(),
-  maxSalary: z.number().int().min(0).nullable().optional(),
+  responsibilities: z.string(),
+  departmentId: z.string().uuid().nullable(),
+  reportsToPositionId: z.string().uuid().nullable(),
+  assignedRole: userRoleSchema,
+  grade: z.string().max(50).nullable(),
+  minSalary: z.number().int().min(0).nullable(),
+  maxSalary: z.number().int().min(0).nullable(),
 });
 
 export type CreateJobDescriptionInput = z.infer<
   typeof createJobDescriptionSchema
 >;
+
+export const createJobDescriptionDefaults: CreateJobDescriptionInput = {
+  title: "",
+  description: "",
+  responsibilities: "",
+  departmentId: null,
+  reportsToPositionId: null,
+  assignedRole: "EMPLOYEE",
+  grade: null,
+  minSalary: null,
+  maxSalary: null,
+};
 
 /**
  * Get job description by ID

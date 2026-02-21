@@ -18,6 +18,10 @@ export const createDepartmentSchema = z.object({
 
 export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
 
+export const createDepartmentDefaults: CreateDepartmentInput = {
+  name: "",
+};
+
 // Schema for updating a department
 export const updateDepartmentSchema = z.object({
   id: z.string(),

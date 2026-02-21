@@ -1,7 +1,11 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import type { UserResponse } from "@zenith-hr/api/modules/users/users.schema";
+import {
+  createUserDefaults,
+  createUserSchema,
+  type UserResponse,
+} from "@zenith-hr/api/modules/users/users.schema";
 import { Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
 import { JobDescriptionCombobox } from "@/components/shared/job-description-combobox";
@@ -52,12 +56,14 @@ export function UserForm({
 
   const form = useForm({
     defaultValues: {
+      ...createUserDefaults,
       name: initialData?.name ?? "",
       email: initialData?.email ?? "",
-      password: "",
       sapNo: initialData?.sapNo ?? "",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
-      jobDescriptionId: null as string | null,
+    },
+    validators: {
+      onChange: createUserSchema,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -184,7 +190,7 @@ export function UserForm({
           {(field) => (
             <FormField field={field} label="Job Description" required>
               <JobDescriptionCombobox
-                onChange={(val) => field.handleChange(val ?? null)}
+                onChange={(val) => field.handleChange(val ?? "")}
                 placeholder="Search and select job description"
                 value={field.state.value}
               />
