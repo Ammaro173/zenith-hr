@@ -44,7 +44,11 @@ const getById = protectedProcedure
 const getMyRequests = protectedProcedure
   .input(getMyRequestsSchema)
   .handler(async ({ input, context }) =>
-    context.services.requests.getByRequester(context.session.user.id, input),
+    context.services.requests.getByRequester(
+      context.session.user.id,
+      context.session.user.role || "EMPLOYEE",
+      input,
+    ),
   );
 
 const getPendingApprovals = protectedProcedure.handler(async ({ context }) =>
