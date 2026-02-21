@@ -5,7 +5,17 @@ import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { and, asc, count, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { getActorRole } from "../../shared/utils";
@@ -318,10 +328,35 @@ export const createRequestsService = (
      * Get pending approvals based on user role
      */
     async getPendingApprovals(userId: string) {
-      return await db
-        .select()
+      const actorRole = await getActorRole(db, userId);
+      const isSharedQueueRole = ["HR", "FINANCE", "CEO"].includes(actorRole);
+
+      const items = await db
+        .select({
+          request: manpowerRequest,
+          requester: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          },
+        })
         .from(manpowerRequest)
-        .where(eq(manpowerRequest.currentApproverId, userId));
+        .innerJoin(user, eq(manpowerRequest.requesterId, user.id))
+        .where(
+          isSharedQueueRole
+            ? or(
+                eq(manpowerRequest.currentApproverRole, actorRole),
+                eq(manpowerRequest.currentApproverId, userId),
+              )
+            : eq(manpowerRequest.currentApproverId, userId),
+        )
+        .orderBy(desc(manpowerRequest.createdAt));
+
+      return items.map((item) => ({
+        ...item.request,
+        requester: item.requester,
+      }));
     },
 
     /**
