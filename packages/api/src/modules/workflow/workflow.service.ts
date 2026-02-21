@@ -41,12 +41,11 @@ const WORKFLOW_TRANSITIONS: Partial<
     REQUEST_CHANGE: "DRAFT",
   },
   PENDING_CEO: {
-    APPROVE: "APPROVED_OPEN",
+    APPROVE: "HIRING_IN_PROGRESS",
     REJECT: "REJECTED",
   },
-  APPROVED_OPEN: {
-    SUBMIT: "HIRING_IN_PROGRESS",
-    APPROVE: "HIRING_IN_PROGRESS",
+  HIRING_IN_PROGRESS: {
+    APPROVE: "COMPLETED",
   },
 };
 
@@ -75,7 +74,6 @@ export const createWorkflowService = (db: DbOrTx) => {
       PENDING_HR: "HR",
       PENDING_FINANCE: "FINANCE",
       PENDING_CEO: "CEO",
-      APPROVED_OPEN: "HR",
     };
     return mapping[status] ?? null;
   };
@@ -85,17 +83,17 @@ export const createWorkflowService = (db: DbOrTx) => {
   ): RequestStatus[] => {
     switch (routeKey) {
       case "HR":
-        return ["PENDING_FINANCE", "PENDING_CEO", "APPROVED_OPEN"];
+        return ["PENDING_FINANCE", "PENDING_CEO", "HIRING_IN_PROGRESS"];
       case "FINANCE":
-        return ["PENDING_HR", "PENDING_CEO", "APPROVED_OPEN"];
+        return ["PENDING_HR", "PENDING_CEO", "HIRING_IN_PROGRESS"];
       case "CEO":
-        return ["PENDING_HR", "PENDING_FINANCE", "APPROVED_OPEN"];
+        return ["PENDING_HR", "PENDING_FINANCE", "HIRING_IN_PROGRESS"];
       default:
         return [
           "PENDING_HR",
           "PENDING_FINANCE",
           "PENDING_CEO",
-          "APPROVED_OPEN",
+          "HIRING_IN_PROGRESS",
         ];
     }
   };
@@ -379,9 +377,13 @@ export const createWorkflowService = (db: DbOrTx) => {
 
           if (!request.currentApproverId) {
             const requiredRole = getApproverForStatus(currentStatus);
+            // HIRING_IN_PROGRESS can only be completed by HR or ADMIN
+            const hiringRole =
+              currentStatus === "HIRING_IN_PROGRESS" ? "HR" : null;
+            const effectiveRole = requiredRole ?? hiringRole;
             if (
-              requiredRole &&
-              actorRole !== requiredRole &&
+              effectiveRole &&
+              actorRole !== effectiveRole &&
               actorRole !== "ADMIN"
             ) {
               throw new AppError(

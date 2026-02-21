@@ -121,8 +121,8 @@ describe("WorkflowService", () => {
       expect(service.getApproverForStatus("DRAFT")).toBeNull();
     });
 
-    it("returns HR for APPROVED_OPEN status", () => {
-      expect(service.getApproverForStatus("APPROVED_OPEN")).toBe("HR");
+    it("returns null for APPROVED_OPEN status", () => {
+      expect(service.getApproverForStatus("APPROVED_OPEN")).toBeNull();
     });
 
     it("returns null for REJECTED status", () => {
@@ -464,7 +464,7 @@ describe("WorkflowService", () => {
   // ============================================================================
 
   describe("transitionRequest - PENDING_CEO status", () => {
-    it("APPROVE by CEO → APPROVED_OPEN", async () => {
+    it("APPROVE by CEO → HIRING_IN_PROGRESS", async () => {
       const mockDb = createMockDb({
         request: { status: "PENDING_CEO" },
         actor: { id: "ceo-1", role: "CEO" },
@@ -478,7 +478,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_CEO");
-      expect(result.newStatus).toBe("APPROVED_OPEN");
+      expect(result.newStatus).toBe("HIRING_IN_PROGRESS");
     });
 
     it("REJECT by CEO → REJECTED", async () => {
@@ -512,30 +512,13 @@ describe("WorkflowService", () => {
   });
 
   // ============================================================================
-  // Tests: transitionRequest - APPROVED_OPEN status
+  // Tests: transitionRequest - HIRING_IN_PROGRESS status
   // ============================================================================
 
-  describe("transitionRequest - APPROVED_OPEN status", () => {
-    it("SUBMIT → HIRING_IN_PROGRESS", async () => {
+  describe("transitionRequest - HIRING_IN_PROGRESS status", () => {
+    it("APPROVE by HR → COMPLETED", async () => {
       const mockDb = createMockDb({
-        request: { status: "APPROVED_OPEN" },
-        actor: { id: "hr-1", role: "HR" },
-      });
-      const service = createWorkflowService(mockDb);
-
-      const result = await service.transitionRequest(
-        "request-123",
-        "hr-1",
-        "SUBMIT",
-      );
-
-      expect(result.previousStatus).toBe("APPROVED_OPEN");
-      expect(result.newStatus).toBe("HIRING_IN_PROGRESS");
-    });
-
-    it("APPROVE by HR → HIRING_IN_PROGRESS from APPROVED_OPEN", async () => {
-      const mockDb = createMockDb({
-        request: { status: "APPROVED_OPEN" },
+        request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
         actor: { id: "hr-1", role: "HR" },
       });
       const service = createWorkflowService(mockDb);
@@ -546,8 +529,37 @@ describe("WorkflowService", () => {
         "APPROVE",
       );
 
-      expect(result.previousStatus).toBe("APPROVED_OPEN");
-      expect(result.newStatus).toBe("HIRING_IN_PROGRESS");
+      expect(result.previousStatus).toBe("HIRING_IN_PROGRESS");
+      expect(result.newStatus).toBe("COMPLETED");
+    });
+
+    it("APPROVE by ADMIN → COMPLETED", async () => {
+      const mockDb = createMockDb({
+        request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
+        actor: { id: "admin-1", role: "ADMIN" },
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "admin-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("HIRING_IN_PROGRESS");
+      expect(result.newStatus).toBe("COMPLETED");
+    });
+
+    it("throws FORBIDDEN when EMPLOYEE tries to complete hiring", async () => {
+      const mockDb = createMockDb({
+        request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
+        actor: { id: "user-1", role: "EMPLOYEE" },
+      });
+      const service = createWorkflowService(mockDb);
+
+      await expect(
+        service.transitionRequest("request-123", "user-1", "APPROVE"),
+      ).rejects.toThrow();
     });
   });
 
