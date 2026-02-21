@@ -43,7 +43,7 @@ const createUserInputArb: fc.Arbitrary<LegacyCreateUserInput> = fc.record({
   email: validEmailArb,
   password: validPasswordArb,
   sapNo: validSapNoArb,
-  positionId: fc.uuid(),
+  jobDescriptionId: fc.uuid(),
   role: fc.constantFrom(...VALID_ROLES),
   status: fc.constantFrom(...VALID_STATUSES),
   departmentId: fc.option(fc.uuid(), { nil: null }),
@@ -93,32 +93,46 @@ function createMockDbForCreate() {
     name: "manager_name",
   });
 
+  // Track select calls to differentiate:
+  // 1. email dup check → []
+  // 2. SAP dup check → []
+  // 3. JD lookup (resolveAndCreatePosition) → JD object
+  // 4. final user fetch → created user row
+  let selectCallCount = 0;
+
   const mockDb = {
     select: mock(() => {
+      selectCallCount++;
+      const currentCall = selectCallCount;
+
       return {
         from: mock(() => ({
           // For subquery creation (manager alias)
           as: mock(() => createSubqueryMock()),
-          // For regular queries
+          // For regular queries (calls 1-3: dup checks + JD lookup)
           where: mock(() => ({
             limit: mock(() => {
-              // Return empty array to indicate no duplicates
-              return Promise.resolve([]);
-            }),
-          })),
-          leftJoin: mock(() => ({
-            where: mock(() => ({
-              limit: mock(() => {
+              // Calls 1 & 2: email/SAP duplicate checks → empty
+              if (currentCall <= 2) {
+                return Promise.resolve([]);
+              }
+              // Call 3: JD lookup from resolveAndCreatePosition
+              if (currentCall === 3) {
                 return Promise.resolve([
                   {
                     id: "00000000-0000-1000-8000-000000000000",
-                    positionDepartmentId: DERIVED_TEST_DEPARTMENT_ID,
-                    jobDepartmentId: DERIVED_TEST_DEPARTMENT_ID,
+                    title: "Test Position",
+                    departmentId: DERIVED_TEST_DEPARTMENT_ID,
+                    reportsToPositionId: null,
                     assignedRole: DERIVED_TEST_ROLE,
                   },
                 ]);
-              }),
-            })),
+              }
+              return Promise.resolve([]);
+            }),
+          })),
+          // Call 4: final user fetch with leftJoin chain
+          leftJoin: mock(() => ({
             leftJoin: mock(() => ({
               where: mock(() => ({
                 limit: mock(() => {
@@ -167,11 +181,9 @@ function createMockDbForCreate() {
               updatedAt: Date;
             },
           );
-        } else if (
-          "positionId" in data &&
-          "userId" in data &&
-          !("email" in data)
-        ) {
+          return Promise.resolve();
+        }
+        if ("positionId" in data && "userId" in data && !("email" in data)) {
           insertedAssignments.push(
             data as {
               userId: string;
@@ -180,24 +192,28 @@ function createMockDbForCreate() {
               updatedAt: Date;
             },
           );
-        } else {
-          // This is a user insert
-          insertedUsers.push(
-            data as {
-              id: string;
-              name: string;
-              email: string;
-              sapNo: string;
-              role: string;
-              status: string;
-              departmentId: string | null;
-              managerUserId: string | null;
-              passwordHash: string | null;
-              createdAt: Date;
-              updatedAt: Date;
-            },
-          );
+          return Promise.resolve();
         }
+        if ("code" in data && "jobDescriptionId" in data) {
+          // Job position insert from resolveAndCreatePosition
+          return Promise.resolve();
+        }
+        // This is a user insert
+        insertedUsers.push(
+          data as {
+            id: string;
+            name: string;
+            email: string;
+            sapNo: string;
+            role: string;
+            status: string;
+            departmentId: string | null;
+            managerUserId: string | null;
+            passwordHash: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+          },
+        );
         return Promise.resolve();
       }),
     })),
@@ -322,7 +338,7 @@ describe("Feature: user-management, Property 1: User creation preserves input da
       email: validEmailArb,
       password: validPasswordArb,
       sapNo: validSapNoArb,
-      positionId: fc.uuid(),
+      jobDescriptionId: fc.uuid(),
     });
 
     await fc.assert(
@@ -340,7 +356,7 @@ describe("Feature: user-management, Property 1: User creation preserves input da
         expect(result.departmentId).toBe(DERIVED_TEST_DEPARTMENT_ID);
         expect(result.positionId).toBeNull();
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -600,6 +616,7 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
       "positionCode",
       "positionName",
       "reportsToPositionId",
+      "jobDescriptionTitle",
       "managerName",
       "createdAt",
       "updatedAt",

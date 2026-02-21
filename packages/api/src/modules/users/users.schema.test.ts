@@ -150,7 +150,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should reject invalid UUID for positionId", () => {
+    it("should reject invalid UUID for jobDescriptionId", () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -158,7 +158,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
-            positionId: invalidUuidArb,
+            jobDescriptionId: invalidUuidArb,
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
@@ -188,7 +188,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should reject missing positionId", () => {
+    it("should reject missing jobDescriptionId", () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -214,7 +214,8 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
-            positionId: fc.uuid(),
+            jobDescriptionId: fc.uuid(),
+            status: fc.constantFrom(...VALID_STATUSES),
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
@@ -233,7 +234,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             email: validEmailArb,
             password: validPasswordArb,
             sapNo: validSapNoArb,
-            positionId: fc.uuid(),
+            jobDescriptionId: fc.uuid(),
             status: fc.constantFrom(...VALID_STATUSES),
           }),
           (input) => {
@@ -295,12 +296,12 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
       );
     });
 
-    it("should reject invalid UUID for positionId when provided", () => {
+    it("should reject invalid UUID for jobDescriptionId when provided", () => {
       fc.assert(
         fc.property(
           fc.record({
             id: fc.string({ minLength: 1 }),
-            positionId: invalidUuidArb,
+            jobDescriptionId: invalidUuidArb,
           }),
           (input) => {
             const result = updateUserSchema.safeParse(input);

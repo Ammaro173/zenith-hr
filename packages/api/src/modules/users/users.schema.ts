@@ -190,6 +190,7 @@ export interface UserResponse {
   positionCode: string | null;
   positionName: string | null;
   reportsToPositionId: string | null;
+  jobDescriptionTitle: string | null;
   managerName: string | null;
   createdAt: Date;
   updatedAt: Date;

@@ -152,24 +152,20 @@ async function resolveAndCreatePosition(
 
   const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
 
-  const [newPosition] = await db
-    .insert(jobPosition)
-    .values({
-      code: positionCode,
-      name: `${userName} — ${jd.title}`,
-      departmentId: jd.departmentId,
-      jobDescriptionId: jd.id,
-      reportsToPositionId: jd.reportsToPositionId,
-      active: true,
-    })
-    .returning({ id: jobPosition.id });
+  const positionId = randomUUID();
 
-  if (!newPosition) {
-    throw new AppError("INTERNAL_ERROR", "Failed to create position", 500);
-  }
+  await db.insert(jobPosition).values({
+    id: positionId,
+    code: positionCode,
+    name: `${userName} — ${jd.title}`,
+    departmentId: jd.departmentId,
+    jobDescriptionId: jd.id,
+    reportsToPositionId: jd.reportsToPositionId,
+    active: true,
+  });
 
   return {
-    positionId: newPosition.id,
+    positionId,
     derivedDepartmentId: jd.departmentId,
     derivedRole: jd.assignedRole,
   };
@@ -188,6 +184,7 @@ async function getManagerInfoByUserIds(
       positionId: string | null;
       positionCode: string | null;
       positionName: string | null;
+      jobDescriptionTitle: string | null;
     }
   >
 > {
@@ -200,6 +197,7 @@ async function getManagerInfoByUserIds(
       positionId: string | null;
       positionCode: string | null;
       positionName: string | null;
+      jobDescriptionTitle: string | null;
     }
   >();
 
@@ -223,10 +221,12 @@ async function getManagerInfoByUserIds(
       jp.code AS position_code,
       jp.name AS position_name,
       jp.reports_to_position_id AS reports_to_position_id,
+      jd.title AS job_description_title,
       manager_assignment.user_id AS manager_user_id,
       manager_user.name AS manager_name
     FROM user_position_assignment upa
     LEFT JOIN job_position jp ON jp.id = upa.position_id
+    LEFT JOIN job_description jd ON jd.id = jp.job_description_id
     LEFT JOIN user_position_assignment manager_assignment
       ON manager_assignment.position_id = jp.reports_to_position_id
     LEFT JOIN "user" manager_user ON manager_user.id = manager_assignment.user_id
@@ -239,6 +239,7 @@ async function getManagerInfoByUserIds(
     position_code: string | null;
     position_name: string | null;
     reports_to_position_id: string | null;
+    job_description_title: string | null;
     manager_user_id: string | null;
     manager_name: string | null;
   }>) {
@@ -249,6 +250,7 @@ async function getManagerInfoByUserIds(
       positionId: row.position_id,
       positionCode: row.position_code,
       positionName: row.position_name,
+      jobDescriptionTitle: row.job_description_title,
     });
   }
 
@@ -263,6 +265,7 @@ async function withSlotManagers<
     positionId?: string | null;
     positionCode?: string | null;
     positionName?: string | null;
+    jobDescriptionTitle?: string | null;
   },
 >(
   db: DbOrTx,
@@ -275,6 +278,7 @@ async function withSlotManagers<
       positionId: string | null;
       positionCode: string | null;
       positionName: string | null;
+      jobDescriptionTitle: string | null;
     }
   >
 > {
@@ -294,6 +298,7 @@ async function withSlotManagers<
           positionId: string | null;
           positionCode: string | null;
           positionName: string | null;
+          jobDescriptionTitle: string | null;
         }
       >();
 
@@ -306,6 +311,7 @@ async function withSlotManagers<
           positionId: row.positionId ?? null,
           positionCode: row.positionCode ?? null,
           positionName: row.positionName ?? null,
+          jobDescriptionTitle: row.jobDescriptionTitle ?? null,
         };
 
     return {
@@ -315,6 +321,7 @@ async function withSlotManagers<
       positionId: manager?.positionId ?? null,
       positionCode: manager?.positionCode ?? null,
       positionName: manager?.positionName ?? null,
+      jobDescriptionTitle: manager?.jobDescriptionTitle ?? null,
     };
   });
 }
@@ -334,6 +341,7 @@ function toUserResponse(
     | "positionCode"
     | "positionName"
     | "reportsToPositionId"
+    | "jobDescriptionTitle"
     | "managerName"
     | "createdAt"
     | "updatedAt"
@@ -352,6 +360,7 @@ function toUserResponse(
     positionCode: row.positionCode,
     positionName: row.positionName,
     reportsToPositionId: row.reportsToPositionId,
+    jobDescriptionTitle: row.jobDescriptionTitle,
     managerName: row.managerName,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -504,6 +513,7 @@ export const createUsersService = (db: DbOrTx) => ({
           positionCode: sql<string | null>`null`,
           positionName: sql<string | null>`null`,
           reportsToPositionId: sql<string | null>`null`,
+          jobDescriptionTitle: sql<string | null>`null`,
           managerName: sql<string | null>`null`,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -870,6 +880,7 @@ export const createUsersService = (db: DbOrTx) => ({
         positionCode: sql<string | null>`null`,
         positionName: sql<string | null>`null`,
         reportsToPositionId: sql<string | null>`null`,
+        jobDescriptionTitle: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -921,6 +932,7 @@ export const createUsersService = (db: DbOrTx) => ({
         positionCode: sql<string | null>`null`,
         positionName: sql<string | null>`null`,
         reportsToPositionId: sql<string | null>`null`,
+        jobDescriptionTitle: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -1029,7 +1041,7 @@ export const createUsersService = (db: DbOrTx) => ({
     }
     if (jobDescriptionId !== undefined) {
       // Get the user's current name for position naming
-      const userName =
+      const userName: string =
         name ??
         (await db
           .select({ name: user.name })
@@ -1096,6 +1108,7 @@ export const createUsersService = (db: DbOrTx) => ({
         positionCode: sql<string | null>`null`,
         positionName: sql<string | null>`null`,
         reportsToPositionId: sql<string | null>`null`,
+        jobDescriptionTitle: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

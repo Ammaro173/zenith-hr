@@ -77,24 +77,13 @@ export const columns = [
       <DataGridColumnHeader column={column} title="Current Job" />
     ),
     cell: ({ row }) => {
-      const { positionName, positionCode } = row.original;
+      const { jobDescriptionTitle } = row.original;
 
-      if (positionName == null && positionCode == null) {
+      if (!jobDescriptionTitle) {
         return <span className="text-muted-foreground">Unassigned</span>;
       }
 
-      return (
-        <div className="flex flex-col">
-          <span className="font-medium">
-            {positionName ?? "Unnamed position"}
-          </span>
-          {positionCode ? (
-            <span className="text-muted-foreground text-xs">
-              {positionCode}
-            </span>
-          ) : null}
-        </div>
-      );
+      return <span className="font-medium">{jobDescriptionTitle}</span>;
     },
     size: 220,
     enableSorting: false,

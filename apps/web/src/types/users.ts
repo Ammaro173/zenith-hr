@@ -23,6 +23,7 @@ export interface UserListItem {
   positionCode: string | null;
   positionName: string | null;
   reportsToPositionId: string | null;
+  jobDescriptionTitle: string | null;
   managerName: string | null;
   createdAt: string | Date;
 }
