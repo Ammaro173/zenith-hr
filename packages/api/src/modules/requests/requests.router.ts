@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { o, protectedProcedure } from "../../shared/middleware";
+import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createRequestSchema,
   getMyRequestsSchema,
@@ -15,7 +15,7 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-const create = protectedProcedure
+const create = requireRoles(["MANAGER", "ADMIN"])
   .input(createRequestSchema)
   .handler(async ({ input, context }) => {
     const newRequest = await context.services.requests.create(
