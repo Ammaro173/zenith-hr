@@ -118,9 +118,10 @@ function computePrecheckFlags(precheck: OffboardingPrecheckResult) {
   precheck.canDelete = !hasDeleteBlockers;
 }
 
-async function resolveUserProfileFromPosition(
+async function resolveAndCreatePosition(
   db: DbOrTx,
-  positionId: string,
+  jobDescriptionId: string,
+  userName: string,
 ): Promise<{
   positionId: string;
   derivedDepartmentId: string | null;
@@ -133,30 +134,44 @@ async function resolveUserProfileFromPosition(
     | "IT"
     | "ADMIN";
 }> {
-  const [position] = await db
+  const [jd] = await db
     .select({
-      id: jobPosition.id,
-      positionDepartmentId: jobPosition.departmentId,
-      jobDepartmentId: jobDescription.departmentId,
+      id: jobDescription.id,
+      title: jobDescription.title,
+      departmentId: jobDescription.departmentId,
+      reportsToPositionId: jobDescription.reportsToPositionId,
       assignedRole: jobDescription.assignedRole,
     })
-    .from(jobPosition)
-    .leftJoin(
-      jobDescription,
-      eq(jobDescription.id, jobPosition.jobDescriptionId),
-    )
-    .where(eq(jobPosition.id, positionId))
+    .from(jobDescription)
+    .where(eq(jobDescription.id, jobDescriptionId))
     .limit(1);
 
-  if (!position) {
-    throw AppError.badRequest("Job position not found");
+  if (!jd) {
+    throw AppError.badRequest("Job description not found");
+  }
+
+  const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
+
+  const [newPosition] = await db
+    .insert(jobPosition)
+    .values({
+      code: positionCode,
+      name: `${userName} — ${jd.title}`,
+      departmentId: jd.departmentId,
+      jobDescriptionId: jd.id,
+      reportsToPositionId: jd.reportsToPositionId,
+      active: true,
+    })
+    .returning({ id: jobPosition.id });
+
+  if (!newPosition) {
+    throw new AppError("INTERNAL_ERROR", "Failed to create position", 500);
   }
 
   return {
-    positionId: position.id,
-    derivedDepartmentId:
-      position.positionDepartmentId ?? position.jobDepartmentId ?? null,
-    derivedRole: position.assignedRole ?? "EMPLOYEE",
+    positionId: newPosition.id,
+    derivedDepartmentId: jd.departmentId,
+    derivedRole: jd.assignedRole,
   };
 }
 
@@ -750,7 +765,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async create(input: CreateUserInput): Promise<UserResponse> {
-    const { name, password, sapNo, status, positionId } = input;
+    const { name, password, sapNo, status, jobDescriptionId } = input;
 
     // Normalize email to lowercase (Better Auth does case-sensitive lookups)
     const email = input.email.toLowerCase();
@@ -793,7 +808,11 @@ export const createUsersService = (db: DbOrTx) => ({
     const accountId = randomUUID();
     const now = new Date();
 
-    const derivedProfile = await resolveUserProfileFromPosition(db, positionId);
+    const derivedProfile = await resolveAndCreatePosition(
+      db,
+      jobDescriptionId,
+      name,
+    );
 
     // Insert user record (passwordHash is null - Better Auth stores password in account table)
     await db.insert(user).values({
@@ -824,7 +843,7 @@ export const createUsersService = (db: DbOrTx) => ({
 
     await db.insert(userPositionAssignment).values({
       userId,
-      positionId,
+      positionId: derivedProfile.positionId,
       createdAt: now,
       updatedAt: now,
     });
@@ -932,7 +951,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async update(input: UpdateUserInput): Promise<UserResponse> {
-    const { id, name, email, sapNo, status, positionId } = input;
+    const { id, name, email, sapNo, status, jobDescriptionId } = input;
 
     // Verify user exists
     const [existingUserRecord] = await db
@@ -1008,19 +1027,29 @@ export const createUsersService = (db: DbOrTx) => ({
     if (status !== undefined) {
       updateData.status = status;
     }
-    if (positionId !== undefined) {
-      const derivedProfile = await resolveUserProfileFromPosition(
+    if (jobDescriptionId !== undefined) {
+      // Get the user's current name for position naming
+      const userName =
+        name ??
+        (await db
+          .select({ name: user.name })
+          .from(user)
+          .where(eq(user.id, id))
+          .limit(1)
+          .then((rows) => rows[0]?.name ?? "Unknown"));
+
+      const derivedProfile = await resolveAndCreatePosition(
         db,
-        positionId,
+        jobDescriptionId,
+        userName,
       );
       updateData.role = derivedProfile.derivedRole;
       updateData.departmentId = derivedProfile.derivedDepartmentId;
-    }
 
-    // Update user record
-    await db.update(user).set(updateData).where(eq(user.id, id));
+      // Update user record first
+      await db.update(user).set(updateData).where(eq(user.id, id));
 
-    if (positionId !== undefined) {
+      // Reassign position
       const [existingAssignment] = await db
         .select({ id: userPositionAssignment.id })
         .from(userPositionAssignment)
@@ -1030,16 +1059,19 @@ export const createUsersService = (db: DbOrTx) => ({
       if (existingAssignment) {
         await db
           .update(userPositionAssignment)
-          .set({ positionId, updatedAt: new Date() })
+          .set({ positionId: derivedProfile.positionId, updatedAt: new Date() })
           .where(eq(userPositionAssignment.id, existingAssignment.id));
       } else {
         await db.insert(userPositionAssignment).values({
           userId: id,
-          positionId,
+          positionId: derivedProfile.positionId,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
       }
+    } else {
+      // No job description change — just update user fields
+      await db.update(user).set(updateData).where(eq(user.id, id));
     }
 
     const manager = db

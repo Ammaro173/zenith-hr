@@ -77,7 +77,7 @@ export const createUserSchema = z.object({
   password: z.string().min(8).max(128),
   sapNo: z.string().min(1).max(50),
   status: userStatusSchema.default("ACTIVE"),
-  positionId: z.string().uuid(),
+  jobDescriptionId: z.string().uuid(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -89,7 +89,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   sapNo: z.string().min(1).max(50).optional(),
   status: userStatusSchema.optional(),
-  positionId: z.string().uuid().optional(),
+  jobDescriptionId: z.string().uuid().optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

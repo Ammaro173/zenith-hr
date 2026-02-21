@@ -41,7 +41,7 @@ export function EditUserDialog({
         email: data.email,
         sapNo: data.sapNo,
         status: data.status,
-        positionId: data.positionId,
+        jobDescriptionId: data.jobDescriptionId,
       }),
     onSuccess: () => {
       toast.success("User updated successfully");

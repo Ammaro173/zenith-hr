@@ -4,7 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import type { UserResponse } from "@zenith-hr/api/modules/users/users.schema";
 import { Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
-import { PositionSearchCombobox } from "@/components/shared/position-search-combobox";
+import { JobDescriptionCombobox } from "@/components/shared/job-description-combobox";
 import { StatusSelect } from "@/components/shared/status-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ export interface CreateUserFormData {
   password: string;
   sapNo: string;
   status: UserStatus;
-  positionId: string;
+  jobDescriptionId: string;
 }
 
 export interface UpdateUserFormData {
@@ -38,7 +38,7 @@ export interface UpdateUserFormData {
   email?: string;
   sapNo?: string;
   status?: UserStatus;
-  positionId?: string;
+  jobDescriptionId?: string;
 }
 
 export function UserForm({
@@ -57,7 +57,7 @@ export function UserForm({
       password: "",
       sapNo: initialData?.sapNo ?? "",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
-      positionId: initialData?.positionId ?? null,
+      jobDescriptionId: null as string | null,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -76,11 +76,8 @@ export function UserForm({
         if (value.status !== initialData.status) {
           updateData.status = value.status;
         }
-        if (
-          value.positionId !== (initialData.positionId ?? null) &&
-          value.positionId
-        ) {
-          updateData.positionId = value.positionId;
+        if (value.jobDescriptionId) {
+          updateData.jobDescriptionId = value.jobDescriptionId;
         }
 
         await onSubmit(updateData);
@@ -182,14 +179,13 @@ export function UserForm({
           )}
         </form.Field>
 
-        {/* Position Field */}
-        <form.Field name="positionId">
+        {/* Job Description Field */}
+        <form.Field name="jobDescriptionId">
           {(field) => (
-            <FormField field={field} label="Job Position" required>
-              <PositionSearchCombobox
-                nullable={isEditMode}
+            <FormField field={field} label="Job Description" required>
+              <JobDescriptionCombobox
                 onChange={(val) => field.handleChange(val ?? null)}
-                placeholder="Search and select position"
+                placeholder="Search and select job description"
                 value={field.state.value}
               />
             </FormField>
