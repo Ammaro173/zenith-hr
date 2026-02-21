@@ -26,6 +26,7 @@ const create = requireRoles(["MANAGER", "ADMIN"])
     if (!newRequest) {
       throw new ORPCError("INTERNAL_SERVER_ERROR");
     }
+    await context.cache.deletePattern("dashboard:stats:*");
     return newRequest;
   });
 
@@ -75,6 +76,7 @@ const update = protectedProcedure
       if (!updated) {
         throw new ORPCError("INTERNAL_SERVER_ERROR");
       }
+      await context.cache.deletePattern("dashboard:stats:*");
       return updated;
     } catch (error: unknown) {
       const message = getErrorMessage(error);
@@ -114,6 +116,7 @@ const transition = protectedProcedure
         input.action,
         input.comment,
       );
+      await context.cache.deletePattern("dashboard:stats:*");
       return {
         requestId: input.requestId,
         ...result,

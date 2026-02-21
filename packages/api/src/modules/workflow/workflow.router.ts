@@ -28,6 +28,8 @@ export const workflowRouter = o.router({
           ipAddress,
         );
 
+        await context.cache.deletePattern("dashboard:stats:*");
+
         return {
           success: true,
           ...result,
