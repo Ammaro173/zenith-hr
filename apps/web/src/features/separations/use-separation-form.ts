@@ -23,9 +23,9 @@ export function useSeparationForm({
   const createMutation = useMutation({
     mutationFn: (data: typeof createSeparationDefaults) =>
       client.separations.create(data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Separation request submitted");
-      queryClient.invalidateQueries();
+      await queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {
