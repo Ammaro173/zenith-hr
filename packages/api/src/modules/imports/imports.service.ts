@@ -134,42 +134,38 @@ export const createImportsService = (db = defaultDb) => ({
             updatedAt: new Date(),
           };
 
-          // If a positionId is provided, derive role and department from the position
-          if (row.positionId) {
-            const [posData] = await db
+          // If a jobDescriptionId is provided, derive role and department and create a position
+          if (row.jobDescriptionId) {
+            const [jdData] = await db
               .select({
-                posDeptId: jobPosition.departmentId,
-                jdDeptId: jobDescription.departmentId,
+                id: jobDescription.id,
+                title: jobDescription.title,
+                departmentId: jobDescription.departmentId,
+                reportsToPositionId: jobDescription.reportsToPositionId,
                 assignedRole: jobDescription.assignedRole,
               })
-              .from(jobPosition)
-              .leftJoin(
-                jobDescription,
-                eq(jobDescription.id, jobPosition.jobDescriptionId),
-              )
-              .where(eq(jobPosition.id, row.positionId))
+              .from(jobDescription)
+              .where(eq(jobDescription.id, row.jobDescriptionId))
               .limit(1);
-            if (posData) {
-              updateData.role = posData.assignedRole ?? row.role;
+            if (jdData) {
+              updateData.role = jdData.assignedRole ?? row.role;
               updateData.departmentId =
-                posData.posDeptId ??
-                posData.jdDeptId ??
-                updateData.departmentId ??
-                null;
-            }
-          }
+                jdData.departmentId ?? updateData.departmentId ?? null;
 
-          await db
-            .update(user)
-            .set(updateData)
-            .where(eq(user.id, existingUserId));
+              // Create a new position for this user
+              const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
+              const positionId = randomUUID();
+              await db.insert(jobPosition).values({
+                id: positionId,
+                code: positionCode,
+                name: `${row.name} — ${jdData.title}`,
+                departmentId: jdData.departmentId,
+                jobDescriptionId: jdData.id,
+                reportsToPositionId: jdData.reportsToPositionId,
+                active: true,
+              });
 
-          if (row.positionId !== undefined) {
-            if (row.positionId === null) {
-              await db
-                .delete(userPositionAssignment)
-                .where(eq(userPositionAssignment.userId, existingUserId));
-            } else {
+              // Reassign position
               const [existingAssignment] = await db
                 .select({ id: userPositionAssignment.id })
                 .from(userPositionAssignment)
@@ -180,20 +176,25 @@ export const createImportsService = (db = defaultDb) => ({
                 await db
                   .update(userPositionAssignment)
                   .set({
-                    positionId: row.positionId,
+                    positionId,
                     updatedAt: new Date(),
                   })
                   .where(eq(userPositionAssignment.id, existingAssignment.id));
               } else {
                 await db.insert(userPositionAssignment).values({
                   userId: existingUserId,
-                  positionId: row.positionId,
+                  positionId,
                   createdAt: new Date(),
                   updatedAt: new Date(),
                 });
               }
             }
           }
+
+          await db
+            .update(user)
+            .set(updateData)
+            .where(eq(user.id, existingUserId));
 
           // If password is provided in upsert, update it in account table
           if (row.password) {
@@ -229,27 +230,38 @@ export const createImportsService = (db = defaultDb) => ({
         const userId = randomUUID();
         const now = new Date();
 
-        // Derive role and department from position if provided
+        // Derive role and department from job description if provided
         let derivedRole = row.role;
         let derivedDepartmentId = row.departmentId ?? null;
-        if (row.positionId) {
-          const [posData] = await db
+        let newPositionId: string | null = null;
+        if (row.jobDescriptionId) {
+          const [jdData] = await db
             .select({
-              posDeptId: jobPosition.departmentId,
-              jdDeptId: jobDescription.departmentId,
+              id: jobDescription.id,
+              title: jobDescription.title,
+              departmentId: jobDescription.departmentId,
+              reportsToPositionId: jobDescription.reportsToPositionId,
               assignedRole: jobDescription.assignedRole,
             })
-            .from(jobPosition)
-            .leftJoin(
-              jobDescription,
-              eq(jobDescription.id, jobPosition.jobDescriptionId),
-            )
-            .where(eq(jobPosition.id, row.positionId))
+            .from(jobDescription)
+            .where(eq(jobDescription.id, row.jobDescriptionId))
             .limit(1);
-          if (posData) {
-            derivedRole = posData.assignedRole ?? row.role;
-            derivedDepartmentId =
-              posData.posDeptId ?? posData.jdDeptId ?? derivedDepartmentId;
+          if (jdData) {
+            derivedRole = jdData.assignedRole ?? row.role;
+            derivedDepartmentId = jdData.departmentId ?? derivedDepartmentId;
+
+            // Auto-create position
+            const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
+            newPositionId = randomUUID();
+            await db.insert(jobPosition).values({
+              id: newPositionId,
+              code: positionCode,
+              name: `${row.name} — ${jdData.title}`,
+              departmentId: jdData.departmentId,
+              jobDescriptionId: jdData.id,
+              reportsToPositionId: jdData.reportsToPositionId,
+              active: true,
+            });
           }
         }
 
@@ -282,10 +294,10 @@ export const createImportsService = (db = defaultDb) => ({
           updatedAt: now,
         });
 
-        if (row.positionId) {
+        if (newPositionId) {
           await db.insert(userPositionAssignment).values({
             userId,
-            positionId: row.positionId,
+            positionId: newPositionId,
             createdAt: now,
             updatedAt: now,
           });
@@ -522,10 +534,10 @@ export const createImportsService = (db = defaultDb) => ({
           .filter((id): id is string => id != null && id !== ""),
       ),
     ];
-    const positionIds = [
+    const jobDescriptionIds = [
       ...new Set(
         rows
-          .map((row) => row.positionId)
+          .map((row) => row.jobDescriptionId)
           .filter((id): id is string => id != null && id !== ""),
       ),
     ];
@@ -544,13 +556,13 @@ export const createImportsService = (db = defaultDb) => ({
         : [];
     const validDepartmentIds = new Set(existingDepartments.map((d) => d.id));
 
-    // Fetch existing positions (for position validation)
-    const existingPositions =
-      positionIds.length > 0
+    // Fetch existing job descriptions (for jobDescriptionId validation)
+    const existingJobDescriptions =
+      jobDescriptionIds.length > 0
         ? await db
-            .select({ id: jobPosition.id })
-            .from(jobPosition)
-            .where(inArray(jobPosition.id, positionIds))
+            .select({ id: jobDescription.id })
+            .from(jobDescription)
+            .where(inArray(jobDescription.id, jobDescriptionIds))
         : [];
 
     // Also fetch users by email for willUpdate check
@@ -562,7 +574,9 @@ export const createImportsService = (db = defaultDb) => ({
             .where(inArray(user.email, emails))
         : [];
 
-    const validPositionIds = new Set(existingPositions.map((s) => s.id));
+    const validJobDescriptionIds = new Set(
+      existingJobDescriptions.map((jd) => jd.id),
+    );
     const existingEmailSet = new Set(existingUsersByEmail.map((u) => u.email));
 
     // Validate each row
@@ -601,15 +615,15 @@ export const createImportsService = (db = defaultDb) => ({
         });
       }
 
-      const positionId = row.positionId;
+      const jobDescriptionId = row.jobDescriptionId;
       if (
-        positionId != null &&
-        positionId !== "" &&
-        !validPositionIds.has(positionId)
+        jobDescriptionId != null &&
+        jobDescriptionId !== "" &&
+        !validJobDescriptionIds.has(jobDescriptionId)
       ) {
         errors.push({
-          field: "positionId",
-          message: "Position does not exist",
+          field: "jobDescriptionId",
+          message: "Job description does not exist",
         });
       }
 

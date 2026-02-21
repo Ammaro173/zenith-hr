@@ -26,7 +26,7 @@ export interface UserImportRow {
   role: UserRole;
   status?: UserStatus;
   departmentId?: string | null;
-  positionId?: string | null;
+  jobDescriptionId?: string | null;
   password?: string;
 }
 

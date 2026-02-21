@@ -15,7 +15,7 @@ const USER_TEMPLATE_HEADERS = [
   "role",
   "status",
   "departmentId",
-  "positionId",
+  "jobDescriptionId",
   "password",
 ] as const;
 
@@ -54,7 +54,7 @@ const USER_COMMENT_ROW = [
   "(Required: EMPLOYEE|MANAGER|HR|FINANCE|CEO|IT|ADMIN)",
   "(Optional: ACTIVE|INACTIVE|ON_LEAVE - defaults to ACTIVE)",
   "(Optional: Department UUID)",
-  "(Optional: Job position UUID)",
+  "(Optional: Job description UUID)",
   "(Optional: Min 8 chars - auto-generated if empty)",
 ];
 

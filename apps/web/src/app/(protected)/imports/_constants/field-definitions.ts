@@ -48,10 +48,10 @@ export const USER_FIELD_DEFINITIONS: FieldDefinition[] = [
     description: "UUID of the department",
   },
   {
-    key: "positionId",
-    label: "Position ID",
+    key: "jobDescriptionId",
+    label: "Job Description ID",
     required: false,
-    description: "UUID of the assigned job position",
+    description: "UUID of the job description template",
   },
   {
     key: "password",

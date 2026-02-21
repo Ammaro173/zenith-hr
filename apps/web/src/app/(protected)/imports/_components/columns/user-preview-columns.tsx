@@ -249,9 +249,9 @@ export const userPreviewColumns = [
     enableResizing: true,
     enablePinning: true,
   }),
-  columnHelper.accessor("positionId", {
+  columnHelper.accessor("jobDescriptionId", {
     header: ({ column }) => (
-      <DataGridColumnHeader column={column} title="Position ID" />
+      <DataGridColumnHeader column={column} title="Job Description ID" />
     ),
     cell: ({ getValue }) => (
       <span className="text-muted-foreground text-xs">{getValue() ?? "—"}</span>

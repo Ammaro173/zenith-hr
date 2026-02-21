@@ -26,7 +26,7 @@ export function useCreateJobDescription(options?: {
       client.jobDescriptions.create({
         title: data.title,
         description: data.description,
-        responsibilities: data.responsibilities ?? undefined,
+        responsibilities: data.responsibilities ?? "",
         departmentId: data.departmentId,
         reportsToPositionId: data.reportsToPositionId,
         assignedRole: data.assignedRole,
@@ -56,7 +56,7 @@ export function useUpdateJobDescription(options?: { onSuccess?: () => void }) {
         id: data.id,
         title: data.title,
         description: data.description,
-        responsibilities: data.responsibilities ?? undefined,
+        responsibilities: data.responsibilities ?? "",
         departmentId: data.departmentId,
         reportsToPositionId: data.reportsToPositionId,
         assignedRole: data.assignedRole,

@@ -123,7 +123,7 @@ export function UserImportTab() {
             userRow[fieldKey] = value || undefined;
             break;
           case "departmentId":
-          case "positionId":
+          case "jobDescriptionId":
             userRow[fieldKey] = value || null;
             break;
           default:
@@ -140,7 +140,7 @@ export function UserImportTab() {
         role: userRow.role ?? "EMPLOYEE",
         status: userRow.status,
         departmentId: userRow.departmentId,
-        positionId: userRow.positionId,
+        jobDescriptionId: userRow.jobDescriptionId,
         password: userRow.password,
       } as UserImportRow;
     });
