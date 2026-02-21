@@ -6,6 +6,8 @@ import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 import { Show } from "@/utils/Show";
 import { DashboardShell } from "./_components/dashboard-shell";
+import { CEOView } from "./_components/RoleViews/ceo-view";
+import { FinanceView } from "./_components/RoleViews/finance-view";
 import { HRView } from "./_components/RoleViews/hr-view";
 import { ManagerView } from "./_components/RoleViews/manager-view";
 import { RequesterView } from "./_components/RoleViews/requester-view";
@@ -19,6 +21,12 @@ interface DashboardStats {
   totalCandidates: number;
   activeContracts: number;
   averageTimeToHire: number;
+  myActiveTrips?: number;
+  myPendingSeparations?: number;
+  myActivePerformanceReviews?: number;
+  teamPendingPerformanceReviews?: number;
+  totalDepartmentExpenses?: number;
+  companyHeadcount?: number;
 }
 
 // View Strategy Map for better extensibility (Open/Closed Principle)
@@ -29,8 +37,8 @@ const ROLE_VIEWS: Record<
   EMPLOYEE: RequesterView,
   MANAGER: ManagerView,
   HR: HRView,
-  FINANCE: ManagerView, // Fallback to ManagerView for now
-  CEO: ManagerView, // Fallback to ManagerView for now
+  FINANCE: FinanceView,
+  CEO: CEOView,
 };
 
 export default function DashboardPage() {
