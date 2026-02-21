@@ -20,9 +20,9 @@ export function useBusinessTripForm({
   const queryClient = useQueryClient();
   const createMutation = useMutation({
     mutationFn: (data: CreateTripInput) => client.businessTrips.create(data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Business trip request submitted successfully");
-      queryClient.invalidateQueries();
+      await queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {
