@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Briefcase, Clock, Users } from "lucide-react";
 import { orpc } from "@/utils/orpc";
 import { ActionRequiredSection } from "../action-required-section";
+import { RequestsPieChart } from "../requests-pie-chart";
 import { StatsCard } from "../stats-card";
 
 interface DashboardStats {
@@ -53,7 +54,14 @@ export function HRView({ stats }: { stats: DashboardStats }) {
         />
       </div>
 
-      {/* HR could have a specific Candidate Pipeline or Recruitment Table here */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <RequestsPieChart
+          approved={stats?.approvedRequests || 0}
+          hiring={stats?.hiringRequests || 0}
+          pending={stats?.pendingRequests || 0}
+        />
+        {/* Further charts or tables can go here */}
+      </div>
     </div>
   );
 }
