@@ -1,11 +1,12 @@
 import { defineConfig } from "drizzle-kit";
-import { env } from "./src/env";
+
+const url = process.env.DATABASE_URL ?? "";
+const isLocal = /localhost|127\.0\.0\.1/.test(url);
 
 export default defineConfig({
   schema: "./src/schema",
-  out: "./src/migrations",
+  out: "./drizzle",
   dialect: "postgresql",
-  dbCredentials: {
-    url: env.DATABASE_URL,
-  },
+  dbCredentials: { url },
+  ...(isLocal ? {} : { driver: "neon-serverless" as const }),
 });

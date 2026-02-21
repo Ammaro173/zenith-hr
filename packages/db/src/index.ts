@@ -1,7 +1,7 @@
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import type { ExtractTablesWithRelations } from "drizzle-orm";
-import { drizzle, type NeonQueryResultHKT } from "drizzle-orm/neon-serverless";
-import type { PgTransaction } from "drizzle-orm/pg-core";
+import { neon, neonConfig } from "@neondatabase/serverless";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import ws from "ws";
 import { env } from "./env";
 import * as schema from "./schema";
@@ -15,15 +15,16 @@ neonConfig.webSocketConstructor = ws;
 // Enable fetch-based queries for edge environments (Cloudflare Workers, Vercel Edge,Docker, etc.)
 neonConfig.poolQueryViaFetch = true;
 
-const pool = new Pool({ connectionString: env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+const url = env.DATABASE_URL;
+const isLocal = /localhost|127\.0\.0\.1/.test(url);
+
+export const db = isLocal
+  ? drizzleNodePg(new Pool({ connectionString: url }), { schema })
+  : drizzleNeon(neon(url), { schema });
+
 export * from "./schema";
 export type DB = typeof db;
 
-export type Transaction = PgTransaction<
-  NeonQueryResultHKT,
-  typeof schema,
-  ExtractTablesWithRelations<typeof schema>
->;
+export type Transaction = Parameters<Parameters<DB["transaction"]>[0]>[0];
 
 export type DbOrTx = DB | Transaction;

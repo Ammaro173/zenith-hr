@@ -25,6 +25,7 @@
     "db:backfill:separations": "bun --env-file=../../.env src/backfill-separations.ts"
   },
   "devDependencies": {
+    "@types/pg": "^8.16.0",
     "@types/ws": "catalog:",
     "@zenith-hr/config": "workspace:*",
     "drizzle-kit": "catalog:",
@@ -38,6 +39,7 @@
     "@t3-oss/env-core": "catalog:",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
+    "pg": "^8.18.0",
     "ws": "^8.19.0",
     "zod": "catalog:"
   }
