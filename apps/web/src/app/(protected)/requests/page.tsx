@@ -14,8 +14,7 @@ export const metadata: Metadata = {
 
 export default async function RequestsPage() {
   const { data: session } = await getServerSession();
-  const canCreateRequest =
-    session?.user.role === "MANAGER" || session?.user.role === "ADMIN";
+  const canCreateRequest = session?.user.role !== "EMPLOYEE";
 
   return (
     <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-8 p-8">
