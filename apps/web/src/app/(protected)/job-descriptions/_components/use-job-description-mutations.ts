@@ -37,7 +37,14 @@ export function useCreateJobDescription(options?: {
     onSuccess: async (result) => {
       toast.success("Job description created successfully");
       await queryClient.invalidateQueries({
-        queryKey: ["jobDescriptions"],
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            Array.isArray(key[0]) &&
+            key[0][0] === "jobDescriptions"
+          );
+        },
       });
       options?.onSuccess?.(result);
     },
@@ -67,7 +74,14 @@ export function useUpdateJobDescription(options?: { onSuccess?: () => void }) {
     onSuccess: async () => {
       toast.success("Job description updated successfully");
       await queryClient.invalidateQueries({
-        queryKey: ["jobDescriptions"],
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            Array.isArray(key[0]) &&
+            key[0][0] === "jobDescriptions"
+          );
+        },
       });
       options?.onSuccess?.();
     },
