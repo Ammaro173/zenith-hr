@@ -2,20 +2,26 @@
 
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
 export function DashboardHeader() {
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const [currentDate, setCurrentDate] = useState("");
+
+  useEffect(() => {
+    setCurrentDate(
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+  }, []);
 
   const { data: session } = authClient.useSession();
-  const canCreateRequest =
-    session?.user.role === "MANAGER" || session?.user.role === "ADMIN";
+  const canCreateRequest = session?.user.role !== "EMPLOYEE";
 
   return (
     <div className="flex items-center justify-between pb-6">
