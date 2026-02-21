@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ApprovalActionDialogProps {
@@ -52,29 +54,45 @@ export function ApprovalActionDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="gap-0 sm:max-w-md">
+        <DialogHeader className="pb-4">
           <DialogTitle>{title}</DialogTitle>
           {description ? (
             <DialogDescription>{description}</DialogDescription>
           ) : null}
         </DialogHeader>
 
-        <div className="space-y-2">
-          <div className="text-muted-foreground text-sm">{commentLabel}</div>
+        <div className="space-y-2 pt-2">
+          <Label htmlFor="approval-comment">
+            {commentLabel}
+            {requireComment ? (
+              <span className="ml-1 text-destructive">*</span>
+            ) : (
+              <span className="ml-1.5 font-normal text-muted-foreground text-xs">
+                (optional)
+              </span>
+            )}
+          </Label>
           <Textarea
+            className="min-h-28 resize-none"
+            id="approval-comment"
             onChange={(e) => onCommentChange(e.target.value)}
             placeholder={commentPlaceholder}
             value={comment}
           />
+          {requireComment && comment.trim().length === 0 ? (
+            <p className="text-muted-foreground text-xs">
+              A comment is required for this action.
+            </p>
+          ) : null}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-6">
           <Button
             disabled={isPending}
             onClick={() => onOpenChange(false)}
             type="button"
-            variant="outline"
+            variant="ghost"
           >
             Cancel
           </Button>
@@ -84,6 +102,9 @@ export function ApprovalActionDialog({
             type="button"
             variant={confirmVariant}
           >
+            {isPending ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : null}
             {confirmLabel}
           </Button>
         </DialogFooter>
