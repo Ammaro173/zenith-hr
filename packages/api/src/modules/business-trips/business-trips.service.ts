@@ -353,7 +353,13 @@ export const createBusinessTripsService = (
       // Handle APPROVE / REJECT (Approval Flow)
       else {
         // Validation: must be current approver or ADMIN
-        if (trip.currentApproverId !== actorId && actorRole !== "ADMIN") {
+        const isAssignedUser = trip.currentApproverId === actorId;
+        const isAssignedRole =
+          trip.currentApproverRole === actorRole &&
+          ["HR", "FINANCE", "CEO"].includes(actorRole as string);
+        const isAdmin = actorRole === "ADMIN";
+
+        if (!(isAssignedUser || isAssignedRole || isAdmin)) {
           throw new AppError("FORBIDDEN", "Not authorized to approve", 403);
         }
 
