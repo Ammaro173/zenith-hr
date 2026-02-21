@@ -2,7 +2,7 @@ import type { DbOrTx } from "@zenith-hr/db";
 import { candidates } from "@zenith-hr/db/schema/candidates";
 import { contract } from "@zenith-hr/db/schema/contracts";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { count, eq, type SQL } from "drizzle-orm";
+import { count, eq, inArray, type SQL } from "drizzle-orm";
 
 // --- Strategies ---
 // Open/Closed Principle: New roles can be added without modifying the base service logic significantly.
@@ -36,8 +36,8 @@ const ACTION_STRATEGIES: Record<string, ActionFilterStrategy> = {
     type: "urgent",
   }),
   HR: () => ({
-    where: eq(manpowerRequest.status, "PENDING_HR"),
-    title: "Requests Review",
+    where: inArray(manpowerRequest.status, ["PENDING_HR", "APPROVED_OPEN"]),
+    title: "Action Required",
     link: "/approvals",
     type: "urgent",
   }),
@@ -86,6 +86,8 @@ export const createDashboardService = (db: DbOrTx) => {
       if (role === "EMPLOYEE") {
         whereClause = eq(manpowerRequest.requesterId, userId);
         // In a real scenario we'd add .and(status != CLOSED)
+      } else if (role === "HR") {
+        whereClause = eq(manpowerRequest.status, "PENDING_HR");
       } else {
         // For roles that approve, "Pending Requests" in stats usually implies "Items waiting for YOU"
         const strategy = ACTION_STRATEGIES[role];
