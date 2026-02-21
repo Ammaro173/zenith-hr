@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Clock, FileCheck, UserPlus, Users } from "lucide-react";
 import { orpc } from "@/utils/orpc";
 import { ActionRequiredSection } from "../action-required-section";
+import { RequestsPieChart } from "../requests-pie-chart";
 import { StatsCard } from "../stats-card";
 
 interface DashboardStats {
@@ -14,6 +15,7 @@ interface DashboardStats {
   totalCandidates: number;
   activeContracts: number;
   averageTimeToHire: number;
+  teamPendingPerformanceReviews?: number;
 }
 
 export function ManagerView({ stats }: { stats: DashboardStats }) {
@@ -41,16 +43,24 @@ export function ManagerView({ stats }: { stats: DashboardStats }) {
           variant="highlight"
         />
         <StatsCard
+          description="Team evaluations"
+          icon={FileCheck}
+          title="Pending Reviews"
+          value={stats?.teamPendingPerformanceReviews || 0}
+        />
+        <StatsCard
           description="Active recruitments"
           icon={UserPlus}
           title="Hiring in Progress"
           value={stats?.hiringRequests || 0}
         />
-        <StatsCard
-          description="New team members"
-          icon={FileCheck} // Using active contracts as proxy for completed hires for manager team (approx)
-          title="Completed Hires"
-          value={stats?.activeContracts || 0}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <RequestsPieChart
+          approved={stats?.approvedRequests || 0}
+          hiring={stats?.hiringRequests || 0}
+          pending={stats?.pendingRequests || 0}
         />
       </div>
     </div>
