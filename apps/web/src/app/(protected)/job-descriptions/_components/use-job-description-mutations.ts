@@ -34,9 +34,9 @@ export function useCreateJobDescription(options?: {
         minSalary: data.minSalary,
         maxSalary: data.maxSalary,
       }),
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       toast.success("Job description created successfully");
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["jobDescriptions"],
       });
       options?.onSuccess?.(result);
@@ -64,9 +64,9 @@ export function useUpdateJobDescription(options?: { onSuccess?: () => void }) {
         minSalary: data.minSalary,
         maxSalary: data.maxSalary,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Job description updated successfully");
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["jobDescriptions"],
       });
       options?.onSuccess?.();
