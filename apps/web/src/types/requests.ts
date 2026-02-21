@@ -64,6 +64,7 @@ export const STATUS_VARIANTS: Record<
   APPROVED_OPEN: { variant: "success", label: "Approved" },
   REJECTED: { variant: "destructive", label: "Rejected" },
   HIRING_IN_PROGRESS: { variant: "info", label: "Hiring" },
+  COMPLETED: { variant: "success", label: "Completed" },
   ARCHIVED: { variant: "secondary", label: "Archived" },
 };
 
