@@ -64,7 +64,7 @@ export const columns = [
     ),
     cell: ({ row }) => {
       const cost = row.original.estimatedCost;
-      const currency = row.original.currency || "USD";
+      const currency = row.original.currency || "QAR";
       if (!cost) {
         return <span className="text-muted-foreground">-</span>;
       }

@@ -186,7 +186,7 @@ export function TripInboxDetailView({
                 label="Estimated Cost"
                 value={
                   trip.estimatedCost
-                    ? `${Number(trip.estimatedCost).toLocaleString()} ${trip.currency || "USD"}`
+                    ? `${Number(trip.estimatedCost).toLocaleString()} ${trip.currency || "QAR"}`
                     : undefined
                 }
               />
@@ -194,7 +194,7 @@ export function TripInboxDetailView({
                 label="Per Diem"
                 value={
                   trip.perDiemAllowance
-                    ? `${Number(trip.perDiemAllowance).toLocaleString()} ${trip.currency || "USD"}`
+                    ? `${Number(trip.perDiemAllowance).toLocaleString()} ${trip.currency || "QAR"}`
                     : undefined
                 }
               />

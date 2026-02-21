@@ -51,7 +51,7 @@ export const createContractsService = (
       const salaryMax = Number(request.salaryRangeMax ?? 0);
       const salary = (salaryMin + salaryMax) / 2;
       const currency =
-        (request.budgetDetails as { currency?: string }).currency || "USD";
+        (request.budgetDetails as { currency?: string }).currency || "QAR";
 
       // 1. Generate PDF
       const pdfBuffer = await pdf.generateContractPdf({

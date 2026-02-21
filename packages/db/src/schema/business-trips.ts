@@ -56,7 +56,7 @@ export const businessTrip = pgTable("business_trip", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("QAR"),
   visaRequired: boolean("visa_required").notNull().default(false),
   needsFlightBooking: boolean("needs_flight_booking").notNull().default(false),
   needsHotelBooking: boolean("needs_hotel_booking").notNull().default(false),
@@ -91,7 +91,7 @@ export const tripExpense = pgTable("trip_expense", {
     .references(() => businessTrip.id, { onDelete: "cascade" }),
   category: text("category").notNull(), // Flight, Hotel, Meal, Transport
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  currency: text("currency").default("USD"),
+  currency: text("currency").default("QAR"),
   date: timestamp("date").notNull(),
   description: text("description"),
   receiptUrl: text("receipt_url"),

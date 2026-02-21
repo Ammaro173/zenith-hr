@@ -64,7 +64,7 @@ describe("BusinessTripsService", () => {
       startDate: new Date("2024-01-01T00:00:00Z"),
       endDate: new Date("2024-01-05T00:00:00Z"),
       estimatedCost: 1000,
-      currency: "USD",
+      currency: "QAR",
       visaRequired: false,
       needsFlightBooking: true,
       needsHotelBooking: true,
@@ -107,7 +107,7 @@ describe("BusinessTripsService", () => {
     const input = {
       tripId: "trip-123",
       amount: 50,
-      currency: "USD",
+      currency: "QAR",
       category: "MEAL" as const,
       date: new Date("2024-01-02T00:00:00Z"),
       description: "Lunch",
