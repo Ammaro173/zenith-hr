@@ -1,9 +1,19 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { client } from "@/utils/orpc";
 
 async function fileToBase64(file: File): Promise<string> {
@@ -134,19 +144,43 @@ export default function CandidateSelectionPage() {
           <label className="block font-medium text-sm" htmlFor="start-date">
             Start Date
           </label>
-          <input
-            className="mt-1 w-full rounded border p-2"
-            id="start-date"
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                startDate: e.target.value,
-              })
-            }
-            required
-            type="date"
-            value={formData.startDate}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                className={cn(
+                  "mt-1 w-full justify-start border p-2 text-left font-normal",
+                  !formData.startDate && "text-muted-foreground",
+                )}
+                id="start-date"
+                type="button"
+                variant="outline"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formData.startDate ? (
+                  format(new Date(formData.startDate), "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                initialFocus
+                mode="single"
+                onSelect={(date) => {
+                  if (date) {
+                    setFormData({
+                      ...formData,
+                      startDate: format(date, "yyyy-MM-dd"),
+                    });
+                  }
+                }}
+                selected={
+                  formData.startDate ? new Date(formData.startDate) : undefined
+                }
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <button
           className="rounded bg-blue-500 px-4 py-2 text-primary hover:bg-blue-600 disabled:opacity-50"

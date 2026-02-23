@@ -2,11 +2,12 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Lock, Plus } from "lucide-react";
+import { CalendarIcon, Lock, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -26,6 +27,11 @@ import {
   KanbanItem,
 } from "@/components/ui/kanban";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { type client, orpc } from "@/utils/orpc";
@@ -410,12 +416,40 @@ export function ClearanceBoard({
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
                               <Label htmlFor="add-due">Due date</Label>
-                              <Input
-                                id="add-due"
-                                onChange={(e) => setAddDueAt(e.target.value)}
-                                type="date"
-                                value={addDueAt}
-                              />
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !addDueAt && "text-muted-foreground",
+                                    )}
+                                    id="add-due"
+                                    type="button"
+                                    variant="outline"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {addDueAt ? (
+                                      format(new Date(addDueAt), "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    initialFocus
+                                    mode="single"
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        setAddDueAt(format(date, "yyyy-MM-dd"));
+                                      }
+                                    }}
+                                    selected={
+                                      addDueAt ? new Date(addDueAt) : undefined
+                                    }
+                                  />
+                                </PopoverContent>
+                              </Popover>
                             </div>
                             <div className="flex items-end">
                               <label className="flex items-center gap-2 text-sm">

@@ -8,7 +8,14 @@ import {
   TRIP_PURPOSE_OPTIONS,
 } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
-import { ArrowLeft, MapPin, Plane, Plus, User } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarIcon,
+  MapPin,
+  Plane,
+  Plus,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -16,6 +23,7 @@ import { toast } from "sonner";
 import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -27,6 +35,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -43,6 +56,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
 
 type AddExpenseInput = z.input<typeof addExpenseSchema>;
@@ -446,24 +460,42 @@ export function BusinessTripDetailClientPage({
                       {(field) => (
                         <div className="space-y-2">
                           <Label htmlFor={field.name}>Date</Label>
-                          <Input
-                            id={field.name}
-                            name={field.name}
-                            onBlur={field.handleBlur}
-                            onChange={(e) =>
-                              field.handleChange(
-                                e.target.value
-                                  ? new Date(e.target.value)
-                                  : new Date(),
-                              )
-                            }
-                            type="date"
-                            value={
-                              field.state.value instanceof Date
-                                ? field.state.value.toISOString().split("T")[0]
-                                : ""
-                            }
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.state.value && "text-muted-foreground",
+                                )}
+                                id={field.name}
+                                type="button"
+                                variant="outline"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.state.value ? (
+                                  format(new Date(field.state.value), "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                initialFocus
+                                mode="single"
+                                onSelect={(date) => {
+                                  if (date) {
+                                    field.handleChange(date);
+                                  }
+                                }}
+                                selected={
+                                  field.state.value
+                                    ? new Date(field.state.value)
+                                    : undefined
+                                }
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       )}
                     </expenseForm.Field>

@@ -1,12 +1,17 @@
 "use client";
 
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -22,14 +27,6 @@ interface SeparationFormProps {
   mode?: "page" | "sheet";
   onSuccess?: () => void;
   onCancel?: () => void;
-}
-
-function toDateInputValue(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-function toLocalDate(value: string): Date {
-  return new Date(`${value}T00:00:00`);
 }
 
 export function SeparationForm({
@@ -90,18 +87,38 @@ export function SeparationForm({
             <form.Field name="lastWorkingDay">
               {(field) => (
                 <FormField field={field} label="Last Working Day" required>
-                  <Input
-                    id={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => {
-                      const next = e.target.value
-                        ? toLocalDate(e.target.value)
-                        : new Date();
-                      field.handleChange(next);
-                    }}
-                    type="date"
-                    value={toDateInputValue(field.state.value)}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !field.state.value && "text-muted-foreground",
+                        )}
+                        id={field.name}
+                        type="button"
+                        variant="outline"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {field.state.value ? (
+                          format(field.state.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        initialFocus
+                        mode="single"
+                        onSelect={(date) => {
+                          if (date) {
+                            field.handleChange(date);
+                          }
+                        }}
+                        selected={field.state.value}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </FormField>
               )}
             </form.Field>
