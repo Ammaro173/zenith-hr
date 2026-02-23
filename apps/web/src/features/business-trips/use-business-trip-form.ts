@@ -4,6 +4,7 @@ import {
   createTripDefaults,
   createTripSchema,
 } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { client } from "@/utils/orpc";
 import type { CreateTripInput } from "./types";
@@ -30,8 +31,20 @@ export function useBusinessTripForm({
     },
   });
 
+  // We explicitly recreate `new Date()` here to avoid stale default dates.
+  // Because `createTripDefaults.startDate` is initialized exactly once when the schema file loads,
+  // forms left open across midnight would default to yesterday's date, tripping past-date validation.
+  const defaultValues = useMemo(
+    () => ({
+      ...createTripDefaults,
+      startDate: new Date(),
+      endDate: new Date(),
+    }),
+    [],
+  );
+
   const form = useForm({
-    defaultValues: createTripDefaults,
+    defaultValues,
     validators: {
       onChange: createTripSchema,
     },

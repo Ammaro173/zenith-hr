@@ -61,6 +61,17 @@ const baseTripSchema = z.object({
 
 // Create schema with date validation and conditional flight validation
 export const createTripSchema = baseTripSchema
+  .refine(
+    (data) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return data.startDate >= today;
+    },
+    {
+      message: "Trip dates cannot be in the past",
+      path: ["startDate"],
+    },
+  )
   .refine((data) => data.startDate <= data.endDate, {
     message: "End date must be after start date",
     path: ["endDate"],
