@@ -8,7 +8,14 @@ import {
   tripActionSchema,
 } from "./business-trips.schema";
 
-const create = requireRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN", "CEO"])
+const create = requireRoles([
+  "EMPLOYEE",
+  "MANAGER",
+  "HR",
+  "FINANCE",
+  "ADMIN",
+  "CEO",
+])
   .input(createTripSchema)
   .handler(
     async ({ input, context }) =>
