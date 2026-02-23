@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -67,11 +66,11 @@ export function CreateDepartmentDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create New Department</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="mb-5">Create New Department</DialogTitle>
+          {/* <DialogDescription>
             Add a new department to the organization. All required fields must
             be filled.
-          </DialogDescription>
+          </DialogDescription> */}
         </DialogHeader>
         <DepartmentForm
           isPending={createMutation.isPending}
