@@ -16,7 +16,13 @@ import type {
 type TransitionResult = RequestStatus;
 type TransitionFn = (actorRole: UserRole) => TransitionResult;
 type TransitionTarget = TransitionResult | TransitionFn;
-type InitiatorRouteKey = "HR" | "FINANCE" | "CEO" | "OTHER";
+type InitiatorRouteKey =
+  | "HR"
+  | "FINANCE"
+  | "CEO"
+  | "MANAGER"
+  | "EMPLOYEE"
+  | "OTHER";
 
 const WORKFLOW_TRANSITIONS: Partial<
   Record<RequestStatus, Partial<Record<ApprovalAction, TransitionTarget>>>
@@ -80,21 +86,27 @@ export const createWorkflowService = (db: DbOrTx) => {
 
   const getApprovalSequenceForInitiator = (
     routeKey: InitiatorRouteKey,
+    terminalStatus: RequestStatus = "HIRING_IN_PROGRESS",
   ): RequestStatus[] => {
     switch (routeKey) {
       case "HR":
-        return ["PENDING_FINANCE", "PENDING_CEO", "HIRING_IN_PROGRESS"];
+        return ["PENDING_FINANCE", "PENDING_CEO", terminalStatus];
       case "FINANCE":
-        return ["PENDING_HR", "PENDING_CEO", "HIRING_IN_PROGRESS"];
+        return ["PENDING_HR", "PENDING_CEO", terminalStatus];
       case "CEO":
-        return ["PENDING_HR", "PENDING_FINANCE", "HIRING_IN_PROGRESS"];
-      default:
+        return ["PENDING_HR", "PENDING_FINANCE", terminalStatus];
+      case "MANAGER":
+        return ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO", terminalStatus];
+      case "EMPLOYEE":
         return [
+          "PENDING_MANAGER",
           "PENDING_HR",
           "PENDING_FINANCE",
           "PENDING_CEO",
-          "HIRING_IN_PROGRESS",
+          terminalStatus,
         ];
+      default:
+        return ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO", terminalStatus];
     }
   };
 
@@ -130,8 +142,11 @@ export const createWorkflowService = (db: DbOrTx) => {
     if (requester?.role === "HR") {
       return "HR";
     }
+    if (requester?.role === "MANAGER") {
+      return "MANAGER";
+    }
 
-    return "OTHER";
+    return "EMPLOYEE";
   };
 
   const createApprovalLog = async (
@@ -191,6 +206,8 @@ export const createWorkflowService = (db: DbOrTx) => {
 
   return {
     getApproverForStatus,
+    getInitiatorRouteKey,
+    getApprovalSequenceForInitiator,
 
     async getInitialStatusForRequester(
       requesterId: string,
