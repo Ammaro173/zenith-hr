@@ -145,7 +145,7 @@ async function seed() {
       name: "Khalid Ibrahim",
       email: "coo@q-auto.com",
       emailVerified: true,
-      role: "ADMIN" as const,
+      role: "MANAGER" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0007",
       departmentId: adminDeptId,

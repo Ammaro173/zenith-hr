@@ -49,39 +49,151 @@ describe("BusinessTripsService", () => {
   } as any;
 
   const mockWorkflowService = {
+    getInitialStatusForRequester: mock(() =>
+      Promise.resolve("PENDING_MANAGER"),
+    ),
     getNextApproverIdForStatus: mock(() => Promise.resolve("manager-1")),
     getApproverForStatus: mock(() => "MANAGER"),
+    getInitiatorRouteKey: mock(() => Promise.resolve("EMPLOYEE")),
+    getApprovalSequenceForInitiator: mock(() => [
+      "PENDING_MANAGER",
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "APPROVED",
+    ]),
   } as any;
 
   const service = createBusinessTripsService(mockDb, mockWorkflowService);
 
-  it("should create a business trip", async () => {
-    const input = {
-      country: "United States",
-      city: "New York",
-      purposeType: "CONFERENCE_EXHIBITION" as const,
-      purposeDetails: "Annual tech conference",
-      startDate: new Date("2024-01-01T00:00:00Z"),
-      endDate: new Date("2024-01-05T00:00:00Z"),
-      estimatedCost: 1000,
-      currency: "QAR",
-      visaRequired: false,
-      needsFlightBooking: true,
-      needsHotelBooking: true,
-      departureCity: "Doha",
-      arrivalCity: "New York",
-    };
-    const requesterId = "user-1";
+  const baseTripInput = {
+    country: "United States",
+    city: "New York",
+    purposeType: "CONFERENCE_EXHIBITION" as const,
+    purposeDetails: "Annual tech conference",
+    startDate: new Date("2024-01-01T00:00:00Z"),
+    endDate: new Date("2024-01-05T00:00:00Z"),
+    estimatedCost: 1000,
+    currency: "QAR",
+    visaRequired: false,
+    needsFlightBooking: true,
+    needsHotelBooking: true,
+    departureCity: "Doha",
+    arrivalCity: "New York",
+  };
 
-    const result = await service.create(input, requesterId);
+  it("should create a trip with PENDING_MANAGER for a standard employee", async () => {
+    // Default mock: getInitialStatusForRequester returns PENDING_MANAGER
+    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
+      "PENDING_MANAGER",
+    );
+
+    const result = await service.create(baseTripInput, "user-1");
 
     expect(result).toEqual(
       expect.objectContaining({ id: "trip-123", status: "DRAFT" }),
     );
+    expect(mockWorkflowService.getInitialStatusForRequester).toHaveBeenCalled();
     expect(mockDb.insert).toHaveBeenCalled();
   });
 
-  it("should transition a trip status", async () => {
+  it("should create a trip with PENDING_HR for CEO (skips manager)", async () => {
+    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
+      "PENDING_HR",
+    );
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
+      "hr-1",
+    );
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock((data) => ({
+        returning: mock(() =>
+          Promise.resolve([{ id: "trip-ceo", status: data.status }]),
+        ),
+      })),
+    });
+
+    const result = await service.create(baseTripInput, "ceo-1");
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-ceo", status: "PENDING_HR" }),
+    );
+  });
+
+  it("should create a trip with PENDING_HR for Finance (skips finance step)", async () => {
+    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
+      "PENDING_HR",
+    );
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
+      "hr-1",
+    );
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock((data) => ({
+        returning: mock(() =>
+          Promise.resolve([{ id: "trip-fin", status: data.status }]),
+        ),
+      })),
+    });
+
+    const result = await service.create(baseTripInput, "finance-1");
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-fin", status: "PENDING_HR" }),
+    );
+  });
+
+  it("should create a trip with PENDING_FINANCE for HR (skips HR step)", async () => {
+    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
+      "PENDING_FINANCE",
+    );
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
+      "finance-1",
+    );
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("FINANCE");
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock((data) => ({
+        returning: mock(() =>
+          Promise.resolve([{ id: "trip-hr", status: data.status }]),
+        ),
+      })),
+    });
+
+    const result = await service.create(baseTripInput, "hr-1");
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-hr", status: "PENDING_FINANCE" }),
+    );
+  });
+
+  it("should create a trip with PENDING_HR for Manager (skips manager step)", async () => {
+    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
+      "PENDING_HR",
+    );
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
+      "hr-1",
+    );
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock((data) => ({
+        returning: mock(() =>
+          Promise.resolve([{ id: "trip-mgr", status: data.status }]),
+        ),
+      })),
+    });
+
+    const result = await service.create(baseTripInput, "manager-1");
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-mgr", status: "PENDING_HR" }),
+    );
+  });
+
+  it("should transition a trip status via SUBMIT", async () => {
     const input = {
       tripId: "trip-123",
       action: "SUBMIT" as const,
@@ -94,6 +206,10 @@ describe("BusinessTripsService", () => {
       status: "DRAFT",
       requesterId: "user-1",
     });
+
+    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
+      "PENDING_MANAGER",
+    );
 
     const result = await service.transition(input, actorId);
 
@@ -179,5 +295,298 @@ describe("BusinessTripsService", () => {
     expect(approvalsInnerJoinMock).toHaveBeenCalled();
     expect(approvalsWhereMock).toHaveBeenCalled();
     expect(approvalsOrderByMock).toHaveBeenCalled();
+  });
+
+  // --- Transition: APPROVE ---
+
+  it("APPROVE should advance employee trip from PENDING_MANAGER to PENDING_HR", async () => {
+    // 1) tx.select().from().where().limit() — fetch trip
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-200",
+          status: "PENDING_MANAGER",
+          requesterId: "user-1",
+          currentApproverId: "manager-1",
+          currentApproverRole: "MANAGER",
+          version: 0,
+          city: "Doha",
+          country: "Qatar",
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    // 2) getActorRole → tx.select().from().where().limit()
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "MANAGER" }]));
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    // Mock workflow: EMPLOYEE sequence for the requester
+    mockWorkflowService.getInitiatorRouteKey.mockResolvedValueOnce("EMPLOYEE");
+    mockWorkflowService.getApprovalSequenceForInitiator.mockReturnValueOnce([
+      "PENDING_MANAGER",
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "APPROVED",
+    ]);
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
+      "hr-1",
+    );
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+
+    // 3) tx.update().set().where().returning()
+    mockDb.update.mockReturnValueOnce({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() =>
+            Promise.resolve([
+              { id: "trip-200", status: "PENDING_HR", version: 1 },
+            ]),
+          ),
+        })),
+      })),
+    });
+
+    // 4) tx.insert() — audit log
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+    // 5) tx.insert() — approval log
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+
+    const result = await service.transition(
+      { tripId: "trip-200", action: "APPROVE" },
+      "manager-1",
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-200", status: "PENDING_HR" }),
+    );
+    expect(
+      mockWorkflowService.getApprovalSequenceForInitiator,
+    ).toHaveBeenCalled();
+  });
+
+  it("APPROVE should advance CEO trip from PENDING_FINANCE to APPROVED (skips PENDING_CEO)", async () => {
+    // Fetch trip at PENDING_FINANCE, requested by CEO
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-ceo-2",
+          status: "PENDING_FINANCE",
+          requesterId: "ceo-1",
+          currentApproverId: "finance-1",
+          currentApproverRole: "FINANCE",
+          version: 2,
+          city: "London",
+          country: "UK",
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    // Actor is FINANCE
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "FINANCE" }]));
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    // CEO sequence: PENDING_HR → PENDING_FINANCE → APPROVED (no PENDING_CEO!)
+    mockWorkflowService.getInitiatorRouteKey.mockResolvedValueOnce("CEO");
+    mockWorkflowService.getApprovalSequenceForInitiator.mockReturnValueOnce([
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "APPROVED",
+    ]);
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(null);
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce(null);
+
+    mockDb.update.mockReturnValueOnce({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() =>
+            Promise.resolve([
+              { id: "trip-ceo-2", status: "APPROVED", version: 3 },
+            ]),
+          ),
+        })),
+      })),
+    });
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+
+    const result = await service.transition(
+      { tripId: "trip-ceo-2", action: "APPROVE" },
+      "finance-1",
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-ceo-2", status: "APPROVED" }),
+    );
+  });
+
+  // --- Transition: REJECT ---
+
+  it("REJECT should set status to REJECTED", async () => {
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-300",
+          status: "PENDING_HR",
+          requesterId: "user-1",
+          currentApproverId: "hr-1",
+          currentApproverRole: "HR",
+          version: 1,
+          city: "Doha",
+          country: "Qatar",
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "HR" }]));
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(null);
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce(null);
+
+    mockDb.update.mockReturnValueOnce({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() =>
+            Promise.resolve([
+              { id: "trip-300", status: "REJECTED", version: 2 },
+            ]),
+          ),
+        })),
+      })),
+    });
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+
+    const result = await service.transition(
+      { tripId: "trip-300", action: "REJECT", comment: "Not justified" },
+      "hr-1",
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-300", status: "REJECTED" }),
+    );
+  });
+
+  // --- Transition: CANCEL ---
+
+  it("CANCEL should set status to CANCELLED when requester cancels", async () => {
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-400",
+          status: "PENDING_MANAGER",
+          requesterId: "user-1",
+          currentApproverId: "manager-1",
+          currentApproverRole: "MANAGER",
+          version: 0,
+          city: "Paris",
+          country: "France",
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "EMPLOYEE" }]));
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(null);
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce(null);
+
+    mockDb.update.mockReturnValueOnce({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() =>
+            Promise.resolve([
+              { id: "trip-400", status: "CANCELLED", version: 1 },
+            ]),
+          ),
+        })),
+      })),
+    });
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+    mockDb.insert.mockReturnValueOnce({
+      values: mock(() => Promise.resolve()),
+    });
+
+    const result = await service.transition(
+      { tripId: "trip-400", action: "CANCEL" },
+      "user-1", // requester cancels their own trip
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "trip-400", status: "CANCELLED" }),
+    );
+  });
+
+  // --- Authorization ---
+
+  it("APPROVE should throw FORBIDDEN when actor is not the assigned approver", async () => {
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-500",
+          status: "PENDING_MANAGER",
+          requesterId: "user-1",
+          currentApproverId: "manager-1",
+          currentApproverRole: "MANAGER",
+          version: 0,
+          city: "Doha",
+          country: "Qatar",
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    // Actor is a random EMPLOYEE, not the assigned approver
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "EMPLOYEE" }]));
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    await expect(
+      service.transition(
+        { tripId: "trip-500", action: "APPROVE" },
+        "random-user", // not the assigned approver
+      ),
+    ).rejects.toThrow("Not authorized to approve");
   });
 });
