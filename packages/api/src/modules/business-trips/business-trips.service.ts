@@ -33,50 +33,6 @@ type AddExpenseInput = z.infer<typeof addExpenseSchema>;
 
 import type { WorkflowService } from "../workflow/workflow.service";
 
-// 1. Initial Status Strategy on Create
-const INITIAL_STATUS_MAP: Partial<Record<UserRole, RequestStatus>> = {
-  MANAGER: "PENDING_HR",
-  HR: "PENDING_FINANCE",
-  FINANCE: "PENDING_CEO",
-  // Default fallback is PENDING_MANAGER (handled in code)
-};
-
-// 2. Pending Approvals View Strategy
-const PENDING_VIEW_MAP: Partial<Record<UserRole, BusinessTripStatus>> = {
-  MANAGER: "PENDING_MANAGER",
-  HR: "PENDING_HR",
-  FINANCE: "PENDING_FINANCE",
-  CEO: "PENDING_CEO",
-};
-
-// 3. Status Transition Strategy (State Machine)
-const NEXT_STATUS_MAP: Partial<Record<BusinessTripStatus, BusinessTripStatus>> =
-  {
-    PENDING_MANAGER: "PENDING_HR",
-    PENDING_HR: "PENDING_FINANCE",
-    PENDING_FINANCE: "PENDING_CEO",
-    PENDING_CEO: "APPROVED",
-  };
-
-// 4. Approval Action Strategy
-const APPROVAL_TRANSITION_MAP: Partial<
-  Record<
-    TripActionInput["action"],
-    (status: BusinessTripStatus) => BusinessTripStatus
-  >
-> = {
-  REJECT: () => "REJECTED",
-  APPROVE: (status) => {
-    const nextState = NEXT_STATUS_MAP[status];
-    if (!nextState) {
-      throw AppError.badRequest(
-        `Invalid approval transition from status: ${status}`,
-      );
-    }
-    return nextState;
-  },
-};
-
 export const createBusinessTripsService = (
   db: DbOrTx,
   workflowService: WorkflowService,
@@ -86,16 +42,11 @@ export const createBusinessTripsService = (
       throw AppError.badRequest("End date must be after start date");
     }
 
-    const requesterRole = await getActorRole(db, requesterId);
-
-    // Determine initial status based on role map, default to PENDING_MANAGER
-    // (If user is ADMIN or EMPLOYEE or others not in map, they start at PENDING_MANAGER logic)
-    // Note: The original logic had:
-    // if MANAGER -> PENDING_HR
-    // if HR -> PENDING_FINANCE
-    // others -> PENDING_MANAGER
-    const initialStatus =
-      INITIAL_STATUS_MAP[requesterRole as UserRole] || "PENDING_MANAGER";
+    // Use the same dynamic routing as manpower requests
+    const initialStatus = await workflowService.getInitialStatusForRequester(
+      requesterId,
+      db,
+    );
 
     // Determine initial approver
     const initialApproverId = await workflowService.getNextApproverIdForStatus(
@@ -270,13 +221,17 @@ export const createBusinessTripsService = (
 
   async getPendingApprovals(userId: string) {
     const actorRole = (await getActorRole(db, userId)) as UserRole;
-    const statusFilter = PENDING_VIEW_MAP[actorRole];
-
-    if (!statusFilter) {
-      return [];
-    }
-
     const isSharedQueueRole = ["HR", "FINANCE", "CEO"].includes(actorRole);
+
+    // Same visibility logic as requests.service.ts
+    const ROLE_STATUS_MAP = {
+      HR: ["PENDING_HR"],
+      FINANCE: ["PENDING_FINANCE"],
+      CEO: ["PENDING_CEO"],
+    } as const;
+
+    const statusesForRole =
+      ROLE_STATUS_MAP[actorRole as keyof typeof ROLE_STATUS_MAP];
 
     const items = await db
       .select({
@@ -291,15 +246,15 @@ export const createBusinessTripsService = (
       .from(businessTrip)
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
       .where(
-        and(
-          eq(businessTrip.status, statusFilter),
-          isSharedQueueRole
-            ? or(
-                eq(businessTrip.currentApproverRole, actorRole),
-                eq(businessTrip.currentApproverId, userId),
-              )
-            : eq(businessTrip.currentApproverId, userId),
-        ),
+        isSharedQueueRole
+          ? or(
+              eq(businessTrip.currentApproverRole, actorRole),
+              eq(businessTrip.currentApproverId, userId),
+              ...(statusesForRole
+                ? [inArray(businessTrip.status, statusesForRole)]
+                : []),
+            )
+          : eq(businessTrip.currentApproverId, userId),
       )
       .orderBy(desc(businessTrip.createdAt));
 
@@ -348,7 +303,10 @@ export const createBusinessTripsService = (
             `Invalid status transition from ${currentStatus}`,
           );
         }
-        newStatus = "PENDING_MANAGER";
+        newStatus = (await workflowService.getInitialStatusForRequester(
+          trip.requesterId,
+          tx,
+        )) as BusinessTripStatus;
       }
       // Handle APPROVE / REJECT (Approval Flow)
       else {
@@ -363,9 +321,25 @@ export const createBusinessTripsService = (
           throw new AppError("FORBIDDEN", "Not authorized to approve", 403);
         }
 
-        const strategy = APPROVAL_TRANSITION_MAP[input.action];
-        if (strategy) {
-          newStatus = strategy(currentStatus);
+        if (input.action === "REJECT") {
+          newStatus = "REJECTED";
+        } else if (input.action === "APPROVE") {
+          // Use dynamic sequence to determine next status
+          const routeKey = await workflowService.getInitiatorRouteKey(
+            trip.requesterId,
+            tx,
+          );
+          const sequence = workflowService.getApprovalSequenceForInitiator(
+            routeKey,
+            "APPROVED",
+          );
+          const currentIndex = sequence.indexOf(currentStatus as RequestStatus);
+          if (currentIndex < 0 || !sequence[currentIndex + 1]) {
+            throw AppError.badRequest(
+              `Invalid approval transition from status: ${currentStatus}`,
+            );
+          }
+          newStatus = sequence[currentIndex + 1] as BusinessTripStatus;
         }
       }
 
