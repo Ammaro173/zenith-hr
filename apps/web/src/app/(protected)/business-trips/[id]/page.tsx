@@ -4,7 +4,16 @@ import { BusinessTripDetailClientPage } from "./client-page";
 
 export default async function BusinessTripDetailPage() {
   const session = await getServerSession();
-  const role = getRoleFromSessionUser(session?.data?.user);
+  const user = session?.data?.user;
+  const role = getRoleFromSessionUser(user);
+  const currentUserId = user?.id;
+  const currentUserRole = (user as { role?: string })?.role;
 
-  return <BusinessTripDetailClientPage role={role} />;
+  return (
+    <BusinessTripDetailClientPage
+      currentUserId={currentUserId}
+      currentUserRole={currentUserRole}
+      role={role}
+    />
+  );
 }

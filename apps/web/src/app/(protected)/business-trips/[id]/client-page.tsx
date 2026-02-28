@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   CalendarIcon,
   Check,
+  Loader2,
   MapPin,
   MessageSquare,
   Plane,
@@ -59,6 +60,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { STATUS_VARIANTS, TRIP_STEP_LABELS } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { WorkflowProgress } from "../../approvals/_components/workflow-progress";
 
@@ -84,17 +86,30 @@ function formatTravelClass(cls: string | null): string {
   return option?.label ?? cls;
 }
 
+const PENDING_TRIP_STATUSES = [
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+] as const;
+
 interface BusinessTripDetailClientPageProps {
+  currentUserId?: string;
+  currentUserRole?: string;
   role: string | null;
 }
 
 export function BusinessTripDetailClientPage({
-  role,
+  currentUserId,
+  currentUserRole,
+  role: _role,
 }: BusinessTripDetailClientPageProps) {
   const params = useParams<{ id: string }>();
   const _router = useRouter();
   const queryClient = useQueryClient();
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
+  const [comment, setComment] = useState("");
 
   const { data: trip, isLoading: isTripLoading } = useQuery(
     orpc.businessTrips.getById.queryOptions({ input: { id: params.id } }),
@@ -125,21 +140,22 @@ export function BusinessTripDetailClientPage({
     }
   };
 
-  const { mutateAsync: transitionTrip } = useMutation(
-    orpc.businessTrips.transition.mutationOptions({
-      onSuccess: () => {
-        toast.success("Trip status updated");
-        queryClient.invalidateQueries({
-          queryKey: orpc.businessTrips.getById.key({
-            input: { id: params.id },
-          }),
-        });
-      },
-      onError: (error) => {
-        toast.error(`Failed to update status: ${error.message}`);
-      },
-    }),
-  );
+  const { mutateAsync: transitionTrip, isPending: isTransitionPending } =
+    useMutation(
+      orpc.businessTrips.transition.mutationOptions({
+        onSuccess: () => {
+          toast.success("Trip status updated");
+          queryClient.invalidateQueries({
+            queryKey: orpc.businessTrips.getById.key({
+              input: { id: params.id },
+            }),
+          });
+        },
+        onError: (error) => {
+          toast.error(`Failed to update status: ${error.message}`);
+        },
+      }),
+    );
 
   const { mutateAsync: addExpense } = useMutation(
     orpc.businessTrips.addExpense.mutationOptions({
@@ -186,15 +202,19 @@ export function BusinessTripDetailClientPage({
     return <div>Trip not found</div>;
   }
 
-  const canReject =
-    (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
-    (role === "HOD_HR" && trip.status === "PENDING_HR") ||
-    role === "ADMIN";
-
-  const canApprove =
-    (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
-    (role === "HOD_HR" && trip.status === "PENDING_HR") ||
-    (role === "ADMIN" && trip.status !== "APPROVED");
+  const isPending = PENDING_TRIP_STATUSES.includes(
+    trip.status as (typeof PENDING_TRIP_STATUSES)[number],
+  );
+  const matchByPosition = trip.currentApprover?.id === currentUserId;
+  const matchByRole =
+    !!trip.requiredApproverRole &&
+    currentUserRole === trip.requiredApproverRole;
+  const isApprover = isPending && (matchByPosition || matchByRole);
+  // const isRequester = trip.requesterId === currentUserId;
+  // const isApprover =
+  //   isPending && !isRequester && (matchByPosition || matchByRole);
+  const canSubmit =
+    trip.status === "DRAFT" && trip.requesterId === currentUserId;
 
   const hasExpenses = (expenses?.length ?? 0) > 0;
 
@@ -215,26 +235,7 @@ export function BusinessTripDetailClientPage({
           </p>
         </div>
         <div className="ml-auto flex gap-2">
-          {canReject && (
-            <Button
-              onClick={() =>
-                transitionTrip({ tripId: trip.id, action: "REJECT" })
-              }
-              variant="destructive"
-            >
-              Reject
-            </Button>
-          )}
-          {canApprove && (
-            <Button
-              onClick={() =>
-                transitionTrip({ tripId: trip.id, action: "APPROVE" })
-              }
-            >
-              Approve
-            </Button>
-          )}
-          {trip.status === "DRAFT" && (
+          {canSubmit && (
             <Button
               onClick={() =>
                 transitionTrip({ tripId: trip.id, action: "SUBMIT" })
@@ -245,6 +246,68 @@ export function BusinessTripDetailClientPage({
           )}
         </div>
       </div>
+
+      {isApprover && (
+        <Card className="border-primary/20 shadow-lg shadow-primary/5">
+          <CardHeader className="bg-primary/5 pb-4">
+            <CardTitle className="font-bold text-base">
+              Pending Your Action
+            </CardTitle>
+            <p className="text-muted-foreground text-xs">
+              As {trip.requiredApproverRole ?? "approver"}, please review this
+              trip request.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <div className="space-y-2">
+              <Label className="font-bold text-xs uppercase tracking-wider">
+                COMMENTS (required for rejection)
+              </Label>
+              <Textarea
+                className="min-h-25 resize-none"
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a note (required when rejecting)..."
+                value={comment}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              <Button
+                className="w-full bg-black text-white hover:bg-black/90"
+                disabled={isTransitionPending}
+                onClick={() =>
+                  transitionTrip({
+                    tripId: trip.id,
+                    action: "APPROVE",
+                    comment: comment || undefined,
+                  }).then(() => setComment(""))
+                }
+              >
+                {isTransitionPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : null}
+                Approve
+              </Button>
+              <Button
+                className="w-full text-destructive hover:bg-destructive/5"
+                disabled={isTransitionPending || !comment.trim()}
+                onClick={() =>
+                  transitionTrip({
+                    tripId: trip.id,
+                    action: "REJECT",
+                    comment: comment.trim(),
+                  }).then(() => setComment(""))
+                }
+                variant="outline"
+              >
+                {isTransitionPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : null}
+                Reject
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Requester Information */}
@@ -291,7 +354,11 @@ export function BusinessTripDetailClientPage({
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status</span>
-              <Badge variant="outline">{trip.status}</Badge>
+              <Badge
+                variant={STATUS_VARIANTS[trip.status]?.variant ?? "outline"}
+              >
+                {STATUS_VARIANTS[trip.status]?.label ?? trip.status}
+              </Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Destination</span>
@@ -440,7 +507,7 @@ export function BusinessTripDetailClientPage({
                   </div>
                   {log.stepName && (
                     <p className="mt-1 text-muted-foreground text-xs">
-                      Step: {log.stepName}
+                      Step: {TRIP_STEP_LABELS[log.stepName] ?? log.stepName}
                     </p>
                   )}
                   {log.comment && (
