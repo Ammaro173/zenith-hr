@@ -78,10 +78,13 @@ describe("BusinessTripsService", () => {
   const mockWorkflowService = {
     getNextTripApprover: mock(() =>
       Promise.resolve({
-        positionId: "pos-1",
-        requiredRole: "MANAGER",
+        approverPositionId: "pos-1",
+        approverRole: "MANAGER",
         nextStatus: "PENDING_MANAGER",
       }),
+    ),
+    getTripApproverForStatus: mock(() =>
+      Promise.resolve({ approverPositionId: null, approverRole: null }),
     ),
     canActorTransition: mock(() => Promise.resolve(true)),
     getInitialStatusForRequester: mock(() =>

@@ -554,7 +554,7 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return maybeSkip({
+        return await maybeSkip({
           approverPositionId: firstManager.positionId,
           approverRole: firstManager.positionRole,
           nextStatus: "PENDING_MANAGER",
@@ -582,7 +582,7 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return maybeSkip({
+        return await maybeSkip({
           approverPositionId: null,
           approverRole: hrPosition.role as PositionRole,
           nextStatus: "PENDING_HR",
@@ -606,7 +606,7 @@ export const createWorkflowService = (db: DbOrTx) => {
       if (hodPosition) {
         const users = await getPositionUsers(hodPosition.positionId, txOrDb);
         if (users.length > 0) {
-          return maybeSkip({
+          return await maybeSkip({
             approverPositionId: hodPosition.positionId,
             approverRole: hodPosition.positionRole,
             nextStatus: "PENDING_HOD",
@@ -635,7 +635,7 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return maybeSkip({
+        return await maybeSkip({
           approverPositionId: null,
           approverRole: hrPosition.role as PositionRole,
           nextStatus: "PENDING_HR",
@@ -671,7 +671,7 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return maybeSkip({
+        return await maybeSkip({
           approverPositionId: null,
           approverRole: financePosition.role as PositionRole,
           nextStatus: "PENDING_FINANCE",
@@ -702,7 +702,7 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return maybeSkip({
+        return await maybeSkip({
           approverPositionId: null,
           approverRole: ceoPosition.role as PositionRole,
           nextStatus: "PENDING_CEO",
