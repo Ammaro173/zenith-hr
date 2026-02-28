@@ -277,14 +277,14 @@ export const createBusinessTripsService = (
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
       .where(
         and(
-          // Only show non-draft, non-cancelled trips in approvals
+          // Only show actionable pending trips in approvals (exclude REJECTED)
           or(
             eq(businessTrip.status, "PENDING_MANAGER"),
             eq(businessTrip.status, "PENDING_HOD"),
             eq(businessTrip.status, "PENDING_HR"),
             eq(businessTrip.status, "PENDING_FINANCE"),
             eq(businessTrip.status, "PENDING_CEO"),
-            eq(businessTrip.status, "REJECTED"),
+            // eq(businessTrip.status, "REJECTED"),
           ),
           or(...visibilityConditions),
         ),
@@ -363,6 +363,13 @@ export const createBusinessTripsService = (
       }
       // Handle APPROVE / REJECT (Approval Flow)
       else {
+        // if (isRequester) {
+        //   throw new AppError(
+        //     "FORBIDDEN",
+        //     "Requester cannot approve or reject their own trip",
+        //     403,
+        //   );
+        // }
         // Use workflow service to check if actor can transition
         const canTransition = await workflowService.canActorTransition(
           actorId,
@@ -371,6 +378,7 @@ export const createBusinessTripsService = (
           currentStatus as
             | "DRAFT"
             | "PENDING_MANAGER"
+            | "PENDING_HOD"
             | "PENDING_HR"
             | "PENDING_FINANCE"
             | "PENDING_CEO",
@@ -420,6 +428,7 @@ export const createBusinessTripsService = (
             currentStatus as
               | "DRAFT"
               | "PENDING_MANAGER"
+              | "PENDING_HOD"
               | "PENDING_HR"
               | "PENDING_FINANCE"
               | "PENDING_CEO",
@@ -429,7 +438,7 @@ export const createBusinessTripsService = (
         }
       }
 
-      // Determine next approver using new trip workflow
+      // Set current approver (who can act at newStatus), not the next step's approver
       let nextApproverPositionId: string | null = null;
       let nextApproverRole: PositionRole | null = null;
 
@@ -438,18 +447,13 @@ export const createBusinessTripsService = (
         newStatus !== "CANCELLED" &&
         trip.requesterPositionId
       ) {
-        const nextApprover = await workflowService.getNextTripApprover(
+        const currentApprover = await workflowService.getTripApproverForStatus(
           trip.requesterPositionId,
-          newStatus as
-            | "DRAFT"
-            | "PENDING_MANAGER"
-            | "PENDING_HR"
-            | "PENDING_FINANCE"
-            | "PENDING_CEO",
+          newStatus,
           tx,
         );
-        nextApproverPositionId = nextApprover.approverPositionId;
-        nextApproverRole = nextApprover.approverRole;
+        nextApproverPositionId = currentApprover.approverPositionId;
+        nextApproverRole = currentApprover.approverRole;
       }
 
       // Update with optimistic locking
