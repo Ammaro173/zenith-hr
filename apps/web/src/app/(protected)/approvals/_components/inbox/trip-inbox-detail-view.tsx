@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { BusinessTrip } from "@/types/business-trips";
-import { STATUS_VARIANTS } from "@/types/business-trips";
+import { STATUS_VARIANTS, TRIP_STEP_LABELS } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { ApprovalActionDialog } from "../approval-action-dialog";
 import { WorkflowProgress } from "../workflow-progress";
@@ -327,7 +327,7 @@ export function TripInboxDetailView({
                   </div>
                   {log.stepName ? (
                     <p className="mt-1 text-muted-foreground text-xs">
-                      Step: {log.stepName}
+                      Step: {TRIP_STEP_LABELS[log.stepName] ?? log.stepName}
                     </p>
                   ) : null}
                   {log.comment ? (
