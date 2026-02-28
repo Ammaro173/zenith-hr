@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 const WORKFLOW_STEPS = [
   { key: "PENDING_MANAGER", label: "Direct Manager" },
+  { key: "PENDING_HOD", label: "HOD" },
   { key: "PENDING_HR", label: "Head of HR" },
   { key: "PENDING_FINANCE", label: "Head of Finance" },
   { key: "PENDING_CEO", label: "CEO" },
@@ -27,15 +28,17 @@ export function WorkflowProgress({
         return -1;
       case "PENDING_MANAGER":
         return 0;
-      case "PENDING_HR":
+      case "PENDING_HOD":
         return 1;
-      case "PENDING_FINANCE":
+      case "PENDING_HR":
         return 2;
-      case "PENDING_CEO":
+      case "PENDING_FINANCE":
         return 3;
+      case "PENDING_CEO":
+        return 4;
       case "APPROVED":
       case "COMPLETED":
-        return 4;
+        return 5;
       case "REJECTED":
         return -2; // Special case for rejected
       default:
@@ -44,6 +47,9 @@ export function WorkflowProgress({
   };
 
   const currentStep = getStepIndex(currentStatus);
+  const isTerminalApproved =
+    currentStatus === "APPROVED" || currentStatus === "COMPLETED";
+  const effectiveStep = isTerminalApproved ? currentStep + 1 : currentStep;
 
   if (currentStatus === "REJECTED") {
     return (
@@ -66,9 +72,9 @@ export function WorkflowProgress({
   return (
     <div className={cn("flex items-center justify-between", className)}>
       {WORKFLOW_STEPS.map((step, index) => {
-        const isCompleted = index < currentStep;
-        const isCurrent = index === currentStep;
-        const isPending = index > currentStep;
+        const isCompleted = index < effectiveStep;
+        const isCurrent = index === effectiveStep;
+        const isPending = index > effectiveStep;
 
         return (
           <div className="flex items-center" key={step.key}>
@@ -104,7 +110,7 @@ export function WorkflowProgress({
               <div
                 className={cn(
                   "mx-2 h-0.5 w-8 transition-colors",
-                  index < currentStep ? "bg-primary" : "bg-muted",
+                  index < effectiveStep ? "bg-primary" : "bg-muted",
                 )}
               />
             )}
