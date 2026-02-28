@@ -1,6 +1,12 @@
 "use client";
 
-import { Briefcase, ChevronDown, ChevronRight, Users } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  ChevronDown,
+  ChevronRight,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -71,6 +77,12 @@ export function UserCard({
 
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate font-medium text-sm">{user.name}</span>
+          {user.positionName && (
+            <span className="truncate text-muted-foreground text-xs">
+              {" "}
+              · {user.positionName}
+            </span>
+          )}
           <Badge
             appearance="light"
             className="shrink-0 text-[10px]"
@@ -79,7 +91,8 @@ export function UserCard({
             {roleConfig.label}
           </Badge>
           {user.departmentName && (
-            <span className="hidden truncate text-muted-foreground text-xs sm:inline">
+            <span className="hidden items-center gap-1 truncate text-muted-foreground text-xs sm:flex">
+              <Building2 className="h-3 w-3 shrink-0" />
               {user.departmentName}
             </span>
           )}
@@ -114,6 +127,11 @@ export function UserCard({
             <p className="truncate font-semibold text-muted-foreground text-sm">
               {user.name}
             </p>
+            {user.positionName && (
+              <p className="truncate text-muted-foreground text-xs">
+                {user.positionName}
+              </p>
+            )}
             <Badge
               appearance="light"
               className="text-[10px]"
@@ -155,6 +173,11 @@ export function UserCard({
 
         <div className="w-full space-y-1">
           <p className="truncate font-semibold text-sm">{user.name}</p>
+          {user.positionName && (
+            <p className="truncate text-muted-foreground text-xs">
+              {user.positionName}
+            </p>
+          )}
           <Badge
             appearance="light"
             className="text-[10px]"
@@ -163,7 +186,8 @@ export function UserCard({
             {roleConfig.label}
           </Badge>
           {user.departmentName && (
-            <p className="truncate text-muted-foreground text-xs">
+            <p className="flex items-center justify-center gap-1.5 truncate text-muted-foreground text-xs">
+              <Building2 className="h-3.5 w-3.5 shrink-0" />
               {user.departmentName}
             </p>
           )}
