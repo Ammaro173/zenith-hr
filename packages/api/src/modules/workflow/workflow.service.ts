@@ -18,6 +18,9 @@ import type {
 } from "../../shared/types";
 import { getActorPositionInfo } from "../../shared/utils";
 
+/** RequestStatus + PENDING_HOD (trip-only); used by canActorTransition for both MPR and trips */
+type TransitionStatus = RequestStatus | "PENDING_HOD";
+
 // MPR routing matrix based on requester's PositionRole
 const MPR_ROUTES: Record<
   PositionRole,
@@ -195,6 +198,21 @@ export const createWorkflowService = (db: DbOrTx) => {
       positionId: row.position_id as string,
       positionRole: row.position_role as PositionRole,
     }));
+  };
+
+  /**
+   * Get role for a position (for requester skip logic in trip flow)
+   */
+  const getPositionRole = async (
+    positionId: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<PositionRole | null> => {
+    const [row] = await txOrDb
+      .select({ role: jobPosition.role })
+      .from(jobPosition)
+      .where(eq(jobPosition.id, positionId))
+      .limit(1);
+    return (row?.role as PositionRole) ?? null;
   };
 
   /**
@@ -460,8 +478,18 @@ export const createWorkflowService = (db: DbOrTx) => {
     );
   };
 
+  const HOD_ROLES: PositionRole[] = ["HOD_HR", "HOD_FINANCE", "HOD", "HOD_IT"];
+
+  /** Roles that skip PENDING_MANAGER at DRAFT: HODs and CEO (executive chain only). */
+  const SKIP_MANAGER_AT_DRAFT: PositionRole[] = [...HOD_ROLES, "CEO"];
+
   /**
-   * Trip routing: walk up manager chain, then hit executive chain
+   * Trip routing: walk up manager chain, then hit executive chain.
+   * Skips PENDING_MANAGER for HOD and CEO requesters (they go via executive chain only).
+   * - HOD_HR requester → HOD_FINANCE → CEO (HR skipped by maybeSkip).
+   * - HOD_FINANCE requester → HOD_HR → CEO (Finance skipped by maybeSkip).
+   * - CEO requester → HOD_HR → HOD_FINANCE (CEO step skipped by maybeSkip → APPROVED).
+   * Skips any step where the approver role is the same as the requester's role (no self-approval).
    */
   const getNextTripApprover = async (
     requesterPositionId: string,
@@ -472,7 +500,41 @@ export const createWorkflowService = (db: DbOrTx) => {
     approverRole: PositionRole | null;
     nextStatus: string;
   }> => {
+    const requesterPositionRole = await getPositionRole(
+      requesterPositionId,
+      txOrDb,
+    );
+
+    const maybeSkip = async (result: {
+      approverPositionId: string | null;
+      approverRole: PositionRole | null;
+      nextStatus: string;
+    }) => {
+      if (
+        requesterPositionRole &&
+        result.approverRole === requesterPositionRole &&
+        result.nextStatus !== "APPROVED"
+      ) {
+        return await getNextTripApprover(
+          requesterPositionId,
+          result.nextStatus,
+          txOrDb,
+        );
+      }
+      return result;
+    };
+
     if (currentStatus === "DRAFT") {
+      if (
+        requesterPositionRole &&
+        SKIP_MANAGER_AT_DRAFT.includes(requesterPositionRole)
+      ) {
+        return getNextTripApprover(
+          requesterPositionId,
+          "PENDING_MANAGER",
+          txOrDb,
+        );
+      }
       // Start with manager chain
       const chain = await getManagerChain(requesterPositionId, txOrDb);
       if (chain.length > 0) {
@@ -492,11 +554,11 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return {
+        return maybeSkip({
           approverPositionId: firstManager.positionId,
           approverRole: firstManager.positionRole,
           nextStatus: "PENDING_MANAGER",
-        };
+        });
       }
 
       // No manager chain, go to HR
@@ -520,11 +582,11 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return {
+        return maybeSkip({
           approverPositionId: null,
           approverRole: hrPosition.role as PositionRole,
           nextStatus: "PENDING_HR",
-        };
+        });
       }
 
       throw new AppError(
@@ -535,21 +597,20 @@ export const createWorkflowService = (db: DbOrTx) => {
     }
 
     if (currentStatus === "PENDING_MANAGER") {
-      // After manager, check if there's a different HOD in chain, then go to HR
-      const executives = await findExecutivePositions(
-        requesterPositionId,
-        txOrDb,
+      // After manager, check if there's an HOD or HOD_IT in the chain (use full chain, not just executives)
+      const chain = await getManagerChain(requesterPositionId, txOrDb);
+      const hodPosition = chain.find(
+        (p) => p.positionRole === "HOD" || p.positionRole === "HOD_IT",
       );
-      const hodPosition = executives.find((e) => e.positionRole === "HOD");
 
       if (hodPosition) {
         const users = await getPositionUsers(hodPosition.positionId, txOrDb);
         if (users.length > 0) {
-          return {
+          return maybeSkip({
             approverPositionId: hodPosition.positionId,
             approverRole: hodPosition.positionRole,
             nextStatus: "PENDING_HOD",
-          };
+          });
         }
       }
 
@@ -574,11 +635,11 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return {
+        return maybeSkip({
           approverPositionId: null,
           approverRole: hrPosition.role as PositionRole,
           nextStatus: "PENDING_HR",
-        };
+        });
       }
 
       throw new AppError(
@@ -610,11 +671,11 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return {
+        return maybeSkip({
           approverPositionId: null,
           approverRole: financePosition.role as PositionRole,
           nextStatus: "PENDING_FINANCE",
-        };
+        });
       }
 
       throw new AppError(
@@ -641,11 +702,11 @@ export const createWorkflowService = (db: DbOrTx) => {
             500,
           );
         }
-        return {
+        return maybeSkip({
           approverPositionId: null,
           approverRole: ceoPosition.role as PositionRole,
           nextStatus: "PENDING_CEO",
-        };
+        });
       }
 
       throw new AppError(
@@ -671,13 +732,116 @@ export const createWorkflowService = (db: DbOrTx) => {
   };
 
   /**
+   * Who can act at a given trip status (current approver for that step).
+   * Use this when setting currentApproverPositionId/requiredApproverRole after a transition.
+   */
+  const getTripApproverForStatus = async (
+    requesterPositionId: string,
+    status: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<{
+    approverPositionId: string | null;
+    approverRole: PositionRole | null;
+  }> => {
+    if (status === "PENDING_MANAGER") {
+      const next = await getNextTripApprover(
+        requesterPositionId,
+        "DRAFT",
+        txOrDb,
+      );
+      return {
+        approverPositionId: next.approverPositionId,
+        approverRole: next.approverRole,
+      };
+    }
+    if (status === "PENDING_HOD") {
+      const chain = await getManagerChain(requesterPositionId, txOrDb);
+      const hodPosition = chain.find(
+        (p) => p.positionRole === "HOD" || p.positionRole === "HOD_IT",
+      );
+      if (hodPosition) {
+        const users = await getPositionUsers(hodPosition.positionId, txOrDb);
+        if (users.length > 0) {
+          return {
+            approverPositionId: hodPosition.positionId,
+            approverRole: hodPosition.positionRole,
+          };
+        }
+      }
+      return { approverPositionId: null, approverRole: null };
+    }
+    if (status === "PENDING_HR") {
+      const [hrPosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, ["HOD_HR"] as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+      if (hrPosition) {
+        const users = await getPositionUsers(hrPosition.id, txOrDb);
+        if (users.length > 0) {
+          return {
+            approverPositionId: null,
+            approverRole: hrPosition.role as PositionRole,
+          };
+        }
+      }
+      return { approverPositionId: null, approverRole: null };
+    }
+    if (status === "PENDING_FINANCE") {
+      const [financePosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, ["HOD_FINANCE"] as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+      if (financePosition) {
+        const users = await getPositionUsers(financePosition.id, txOrDb);
+        if (users.length > 0) {
+          return {
+            approverPositionId: null,
+            approverRole: financePosition.role as PositionRole,
+          };
+        }
+      }
+      return { approverPositionId: null, approverRole: null };
+    }
+    if (status === "PENDING_CEO") {
+      const [ceoPosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(and(eq(jobPosition.role, "CEO"), eq(jobPosition.active, true)))
+        .limit(1);
+      if (ceoPosition) {
+        const users = await getPositionUsers(ceoPosition.id, txOrDb);
+        if (users.length > 0) {
+          return {
+            approverPositionId: null,
+            approverRole: ceoPosition.role as PositionRole,
+          };
+        }
+      }
+      return { approverPositionId: null, approverRole: null };
+    }
+    return { approverPositionId: null, approverRole: null };
+  };
+
+  /**
    * Check if actor can perform action on request (position-based auth)
    */
   const canActorTransition = async (
     actorId: string,
     currentApproverPositionId: string | null,
     requiredApproverRole: PositionRole | null,
-    currentStatus: RequestStatus,
+    currentStatus: TransitionStatus,
     _action: ApprovalAction,
     txOrDb: DbOrTx = db,
   ): Promise<boolean> => {
@@ -986,6 +1150,7 @@ export const createWorkflowService = (db: DbOrTx) => {
 
     // Trip-specific helpers
     getNextTripApprover,
+    getTripApproverForStatus,
     findExecutivePositions,
 
     // Legacy helpers (for backward compatibility)
