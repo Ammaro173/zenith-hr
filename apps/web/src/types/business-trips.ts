@@ -52,6 +52,7 @@ export const STATUS_VARIANTS: Record<
 > = {
   DRAFT: { variant: "secondary", label: "Draft" },
   PENDING_MANAGER: { variant: "warning", label: "Pending Manager" },
+  PENDING_HOD: { variant: "warning", label: "Pending HOD" },
   PENDING_HR: { variant: "warning", label: "Pending HR" },
   PENDING_FINANCE: { variant: "warning", label: "Pending Finance" },
   PENDING_CEO: { variant: "warning", label: "Pending CEO" },
@@ -67,3 +68,17 @@ export const STATUS_OPTIONS = Object.entries(STATUS_VARIANTS).map(
     value: key,
   }),
 );
+
+/** Human-readable labels for approval history step names (raw status → display) */
+export const TRIP_STEP_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  PENDING_MANAGER: "Manager Review",
+  PENDING_HOD: "HOD Review",
+  PENDING_HR: "HR Review",
+  PENDING_FINANCE: "Finance Review",
+  PENDING_CEO: "CEO Review",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
