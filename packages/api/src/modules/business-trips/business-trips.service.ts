@@ -587,6 +587,8 @@ export const createBusinessTripsService = (
           businessTrip.requiredApproverRole,
           actorPosInfo.positionRole as PositionRole,
         ),
+        // Trips the actor has ever acted on (e.g. approved/rejected) stay in "All Related"
+        sql`${businessTrip.id} IN (SELECT request_id FROM approval_log WHERE actor_id = ${actorId})`,
       ) as SQL,
     ];
 
