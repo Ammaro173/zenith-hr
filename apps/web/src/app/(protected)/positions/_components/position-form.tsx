@@ -123,7 +123,7 @@ export function PositionForm({
           <div className="grid grid-cols-2 gap-4">
             <form.Field name="role">
               {(field) => (
-                <FormField field={field} label="Hierarchy Level" required>
+                <FormField field={field} label="System Permission" required>
                   <RoleSelect
                     onChange={(val) =>
                       field.handleChange(val as Exclude<UserRole, "ADMIN">)
