@@ -25,9 +25,9 @@ import type { Option } from "@/types/data-table";
 
 interface DataTableFacetedFilterProps<TData, TValue> {
   column?: Column<TData, TValue>;
-  title?: string;
-  options: Option[];
   multiple?: boolean;
+  options: Option[];
+  title?: string;
 }
 
 export function DataTableFacetedFilter<TData, TValue>({

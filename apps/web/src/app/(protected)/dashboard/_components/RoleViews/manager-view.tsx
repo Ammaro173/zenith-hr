@@ -8,14 +8,14 @@ import { RequestsPieChart } from "../requests-pie-chart";
 import { StatsCard } from "../stats-card";
 
 interface DashboardStats {
-  totalRequests: number;
-  pendingRequests: number;
-  approvedRequests: number;
-  hiringRequests: number;
-  totalCandidates: number;
   activeContracts: number;
+  approvedRequests: number;
   averageTimeToHire: number;
+  hiringRequests: number;
+  pendingRequests: number;
   teamPendingPerformanceReviews?: number;
+  totalCandidates: number;
+  totalRequests: number;
 }
 
 export function ManagerView({ stats }: { stats: DashboardStats }) {

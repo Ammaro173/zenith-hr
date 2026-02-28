@@ -40,10 +40,10 @@ export interface Country {
 }
 
 interface CountryDropdownProps {
-  options?: Country[];
-  onChange?: (countryName: string) => void;
   defaultValue?: string;
   disabled?: boolean;
+  onChange?: (countryName: string) => void;
+  options?: Country[];
   placeholder?: string;
   slim?: boolean;
 }

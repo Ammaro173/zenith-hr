@@ -10,6 +10,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import type { PendingTripApprovalsResult } from "@zenith-hr/api/modules/business-trips/business-trips.service";
 import { format } from "date-fns";
 import { FunnelX, MoreHorizontal } from "lucide-react";
 import type { Route } from "next";
@@ -36,14 +37,15 @@ import { Filters } from "@/components/ui/filters";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { BusinessTrip } from "@/types/business-trips";
 import { STATUS_OPTIONS, STATUS_VARIANTS } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { ApprovalActionDialog } from "./approval-action-dialog";
 
 type TripApprovalAction = "APPROVE" | "REJECT";
 
-const columnHelper = createColumnHelper<BusinessTrip>();
+type PendingTripItem = PendingTripApprovalsResult[number];
+
+const columnHelper = createColumnHelper<PendingTripItem>();
 
 const filterFields: FilterFieldConfig[] = [
   {
@@ -63,7 +65,7 @@ export function PendingTripApprovalsGrid() {
     orpc.businessTrips.getPendingApprovals.queryOptions(),
   );
 
-  const trips = (data ?? []) as BusinessTrip[];
+  const trips: PendingTripApprovalsResult = data ?? [];
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [filters, setFilters] = useState<Filter[]>([]);

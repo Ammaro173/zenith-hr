@@ -11,8 +11,8 @@ import {
 const create = requireRoles([
   "EMPLOYEE",
   "MANAGER",
-  "HR",
-  "FINANCE",
+  "HOD_HR",
+  "HOD_FINANCE",
   "ADMIN",
   "CEO",
 ])
@@ -45,10 +45,20 @@ const getMyTrips = protectedProcedure
       ),
   );
 
+const getAllRelated = protectedProcedure
+  .input(getMyTripsSchema)
+  .handler(
+    async ({ input, context }) =>
+      await context.services.businessTrips.getAllRelated(
+        context.session.user.id,
+        input,
+      ),
+  );
+
 const getPendingApprovals = requireRoles([
   "MANAGER",
-  "HR",
-  "FINANCE",
+  "HOD_HR",
+  "HOD_FINANCE",
   "ADMIN",
   "CEO",
 ]).handler(async ({ context }) =>
@@ -58,8 +68,8 @@ const getPendingApprovals = requireRoles([
 const transition = requireRoles([
   "EMPLOYEE",
   "MANAGER",
-  "HR",
-  "FINANCE",
+  "HOD_HR",
+  "HOD_FINANCE",
   "ADMIN",
   "CEO",
 ])
@@ -101,6 +111,13 @@ const getExpenses = protectedProcedure
       await context.services.businessTrips.getExpenses(input.tripId),
   );
 
+const getApprovalHistory = protectedProcedure
+  .input(z.object({ tripId: z.string().uuid() }))
+  .handler(
+    async ({ input, context }) =>
+      await context.services.businessTrips.getApprovalHistory(input.tripId),
+  );
+
 const calculateAllowance = protectedProcedure
   .input(
     z.object({
@@ -121,9 +138,11 @@ export const businessTripsRouter = o.router({
   create,
   getById,
   getMyTrips,
+  getAllRelated,
   getPendingApprovals,
   transition,
   addExpense,
   getExpenses,
+  getApprovalHistory,
   calculateAllowance,
 });

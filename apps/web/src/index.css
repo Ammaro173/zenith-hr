@@ -214,8 +214,8 @@
 }
 
 @utility container {
-  margin-inline: auto;
   padding-inline: 2rem;
+  margin-inline: auto;
 
   @media (width >= theme(--breakpoint-sm)) {
     max-width: none;
@@ -243,9 +243,9 @@
   .autofill-white {
     &:-webkit-autofill,
     &:-moz-autofill {
-      background-color: white;
       color: var(--color-foreground);
       -webkit-text-fill-color: var(--color-foreground);
+      background-color: white;
       box-shadow: 0 0 0 30px white inset;
     }
   }

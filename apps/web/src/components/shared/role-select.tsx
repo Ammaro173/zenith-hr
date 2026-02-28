@@ -11,10 +11,10 @@ import { ROLE_OPTIONS } from "@/types/users";
 import { For } from "@/utils/For";
 
 interface RoleSelectProps {
-  value?: string;
+  disabled?: boolean;
   onChange: (val: string) => void;
   placeholder?: string;
-  disabled?: boolean;
+  value?: string;
 }
 
 export function RoleSelect({

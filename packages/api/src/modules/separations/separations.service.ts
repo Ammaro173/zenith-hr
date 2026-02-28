@@ -30,8 +30,8 @@ import type {
 
 type Lane =
   | "OPERATIONS"
-  | "IT"
-  | "FINANCE"
+  | "HOD_IT"
+  | "HOD_FINANCE"
   | "ADMIN_ASSETS"
   | "INSURANCE"
   | "USED_CARS"
@@ -48,14 +48,14 @@ export const createSeparationsService = (
   storage: StorageService,
 ) => {
   const getRoleDefaultLanes = (role: string): Lane[] => {
-    if (role === "HR") {
+    if (role === "HOD_HR") {
       return ["HR_PAYROLL"];
     }
-    if (role === "IT") {
-      return ["IT"];
+    if (role === "HOD_IT") {
+      return ["HOD_IT"];
     }
-    if (role === "FINANCE") {
-      return ["FINANCE"];
+    if (role === "HOD_FINANCE") {
+      return ["HOD_FINANCE"];
     }
     if (role === "ADMIN") {
       return ["ADMIN_ASSETS"];
@@ -164,7 +164,7 @@ export const createSeparationsService = (
     }
 
     const actorRole = await getActorRole(db, actorId);
-    if (actorRole === "HR" || actorRole === "ADMIN") {
+    if (actorRole === "HOD_HR" || actorRole === "ADMIN") {
       return { request, actorRole };
     }
     if (request.employeeId === actorId) {
@@ -202,7 +202,7 @@ export const createSeparationsService = (
         let status: "PENDING_MANAGER" | "PENDING_HR";
         if (
           requesterRole === "MANAGER" ||
-          requesterRole === "HR" ||
+          requesterRole === "HOD_HR" ||
           requesterRole === "ADMIN"
         ) {
           status = "PENDING_HR";
@@ -227,7 +227,11 @@ export const createSeparationsService = (
           .returning();
 
         if (!request) {
-          throw new Error("Failed to create separation request");
+          throw new AppError(
+            "INTERNAL_ERROR",
+            "Failed to create separation request",
+            500,
+          );
         }
 
         await tx.insert(auditLog).values({
@@ -290,7 +294,7 @@ export const createSeparationsService = (
       if (
         !(
           actorRole === "MANAGER" ||
-          actorRole === "HR" ||
+          actorRole === "HOD_HR" ||
           actorRole === "ADMIN"
         )
       ) {
@@ -310,7 +314,7 @@ export const createSeparationsService = (
 
         if (
           request.status !== "PENDING_MANAGER" &&
-          actorRole !== "HR" &&
+          actorRole !== "HOD_HR" &&
           actorRole !== "ADMIN"
         ) {
           throw AppError.badRequest("Request is not pending manager approval");
@@ -322,7 +326,11 @@ export const createSeparationsService = (
             actorId
           : false;
         const isDirectManager = isDirectManagerBySlot;
-        if (!isDirectManager && actorRole !== "HR" && actorRole !== "ADMIN") {
+        if (
+          !isDirectManager &&
+          actorRole !== "HOD_HR" &&
+          actorRole !== "ADMIN"
+        ) {
           throw new AppError("FORBIDDEN", "Not authorized as manager", 403);
         }
 
@@ -348,7 +356,7 @@ export const createSeparationsService = (
         const [hrUser] = await tx
           .select({ id: user.id })
           .from(user)
-          .where(and(eq(user.role, "HR"), eq(user.status, "ACTIVE")))
+          .where(and(eq(user.role, "HOD_HR"), eq(user.status, "ACTIVE")))
           .limit(1);
         if (hrUser?.id) {
           await enqueueOutbox(tx, {
@@ -370,7 +378,7 @@ export const createSeparationsService = (
       actorId: string,
     ) {
       const actorRole = await getActorRole(db, actorId);
-      if (!(actorRole === "HR" || actorRole === "ADMIN")) {
+      if (!(actorRole === "HOD_HR" || actorRole === "ADMIN")) {
         throw new AppError("FORBIDDEN", "Only HR can approve", 403);
       }
 
@@ -484,12 +492,12 @@ export const createSeparationsService = (
       }
 
       // HR/Admin can act across all lanes.
-      const isPrivileged = actorRole === "HR" || actorRole === "ADMIN";
+      const isPrivileged = actorRole === "HOD_HR" || actorRole === "ADMIN";
       const allowedLanes = isPrivileged
         ? ([
             "OPERATIONS",
-            "IT",
-            "FINANCE",
+            "HOD_IT",
+            "HOD_FINANCE",
             "ADMIN_ASSETS",
             "INSURANCE",
             "USED_CARS",
@@ -601,7 +609,7 @@ export const createSeparationsService = (
     ) {
       const actorRole = await getActorRole(db, actorId);
 
-      if (actorRole !== "HR") {
+      if (actorRole !== "HOD_HR") {
         throw new AppError("FORBIDDEN", "Only HR can start clearance", 403);
       }
 
@@ -783,11 +791,11 @@ export const createSeparationsService = (
     async getMyClearanceInbox(actorId: string) {
       const actorRole = await getActorRole(db, actorId);
       const lanes =
-        actorRole === "HR" || actorRole === "ADMIN"
+        actorRole === "HOD_HR" || actorRole === "ADMIN"
           ? ([
               "OPERATIONS",
-              "IT",
-              "FINANCE",
+              "HOD_IT",
+              "HOD_FINANCE",
               "ADMIN_ASSETS",
               "INSURANCE",
               "USED_CARS",

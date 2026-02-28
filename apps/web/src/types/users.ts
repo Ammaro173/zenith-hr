@@ -2,46 +2,46 @@
 export type UserRole =
   | "EMPLOYEE"
   | "MANAGER"
-  | "HR"
-  | "FINANCE"
+  | "HOD"
+  | "HOD_HR"
+  | "HOD_FINANCE"
+  | "HOD_IT"
   | "CEO"
-  | "IT"
   | "ADMIN";
 
 export type UserStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE";
 
 export interface UserListItem {
-  id: string;
-  name: string;
-  email: string;
-  sapNo: string;
-  role: UserRole;
-  status: UserStatus;
+  createdAt: string | Date;
   departmentId: string | null;
   departmentName: string | null;
-  positionId: string | null;
+  email: string;
+  id: string;
+  managerName: string | null;
+  name: string;
   positionCode: string | null;
+  positionId: string | null;
   positionName: string | null;
   reportsToPositionId: string | null;
-  jobDescriptionTitle: string | null;
-  managerName: string | null;
-  createdAt: string | Date;
+  role: UserRole;
+  sapNo: string;
+  status: UserStatus;
 }
 
 // Hierarchical node structure for org chart
 export interface HierarchyNode {
-  id: string;
-  name: string;
-  email: string;
-  sapNo: string;
-  role: UserRole;
-  status: UserStatus;
-  departmentName: string | null;
-  /** The name of the job position this node occupies (or the vacant position name). */
-  positionName?: string | null;
   children: HierarchyNode[];
+  departmentName: string | null;
+  email: string;
+  id: string;
   /** True when this node represents an unoccupied position slot (no real user). */
   isVacancy?: boolean;
+  name: string;
+  /** The name of the job position this node occupies (or the vacant position name). */
+  positionName?: string | null;
+  role: UserRole;
+  sapNo: string;
+  status: UserStatus;
 }
 
 // Role display configuration
@@ -60,9 +60,10 @@ export const ROLE_VARIANTS: Record<
 > = {
   CEO: { variant: "primary", label: "CEO" },
   ADMIN: { variant: "destructive", label: "Admin" },
-  HR: { variant: "info", label: "HR" },
-  FINANCE: { variant: "warning", label: "Finance" },
-  IT: { variant: "secondary", label: "IT" },
+  HOD_HR: { variant: "info", label: "HOD - HR" },
+  HOD_FINANCE: { variant: "warning", label: "HOD - Finance" },
+  HOD_IT: { variant: "secondary", label: "HOD - IT" },
+  HOD: { variant: "success", label: "Head of Department" },
   MANAGER: { variant: "success", label: "Manager" },
   EMPLOYEE: { variant: "secondary", label: "Employee" },
 };

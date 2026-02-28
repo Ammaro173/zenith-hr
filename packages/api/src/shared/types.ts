@@ -1,11 +1,33 @@
 export type UserRole =
   | "EMPLOYEE"
   | "MANAGER"
-  | "HR"
-  | "FINANCE"
+  | "HOD"
+  | "HOD_HR"
+  | "HOD_FINANCE"
+  | "HOD_IT"
   | "CEO"
-  | "IT"
   | "ADMIN";
+
+export type PositionRole =
+  | "EMPLOYEE"
+  | "MANAGER"
+  | "HOD"
+  | "HOD_HR"
+  | "HOD_FINANCE"
+  | "HOD_IT"
+  | "CEO";
+
+export type TripStatus =
+  | "DRAFT"
+  | "PENDING_MANAGER"
+  | "PENDING_HOD"
+  | "PENDING_HR"
+  | "PENDING_FINANCE"
+  | "PENDING_CEO"
+  | "APPROVED"
+  | "REJECTED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export type RequestStatus =
   | "DRAFT"

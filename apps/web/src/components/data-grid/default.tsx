@@ -16,18 +16,18 @@ import { DataGridTable } from "@/components/ui/data-grid-table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface IData {
-  id: string;
-  name: string;
   availability: "online" | "away" | "busy" | "offline";
   avatar: string;
-  status: "active" | "inactive";
-  flag: string; // Emoji flags
-  email: string;
+  balance: number;
   company: string;
-  role: string;
+  email: string;
+  flag: string; // Emoji flags
+  id: string;
   joined: string;
   location: string;
-  balance: number;
+  name: string;
+  role: string;
+  status: "active" | "inactive";
 }
 
 const demoData: IData[] = [

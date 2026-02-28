@@ -2,8 +2,8 @@
 import type { ReactNode } from "react";
 
 interface Props {
-  isTrue: boolean;
   children: ReactNode;
+  isTrue: boolean;
 }
 
 export const If = ({ isTrue, children }: Props) => (isTrue ? children : null);

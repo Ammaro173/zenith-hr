@@ -24,17 +24,17 @@ import {
 import { client } from "@/utils/orpc";
 
 interface UserSession {
-  id: string;
   createdAt: Date;
   expiresAt: Date;
+  id: string;
   ipAddress: string | null;
   userAgent: string | null;
 }
 
 interface SessionsTableProps {
-  sessions: UserSession[];
   isPending: boolean;
   onRevokeSession: (sessionId: string) => void;
+  sessions: UserSession[];
 }
 
 function SessionsTable({
@@ -102,10 +102,10 @@ function SessionsTable({
 }
 
 interface SessionsContentProps {
-  sessions: UserSession[] | undefined;
   isLoading: boolean;
   isPending: boolean;
   onRevokeSession: (sessionId: string) => void;
+  sessions: UserSession[] | undefined;
 }
 
 function SessionsContent({
@@ -140,8 +140,8 @@ function SessionsContent({
 }
 
 interface UserSessionsDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
   userId: string;
   userName: string;
 }

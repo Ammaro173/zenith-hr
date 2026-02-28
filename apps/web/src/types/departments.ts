@@ -1,9 +1,9 @@
 // Department types for the Department Management page
 
 export interface DepartmentListItem {
+  createdAt: string | Date;
   id: string;
   name: string;
-  createdAt: string | Date;
   updatedAt: string | Date;
 }
 

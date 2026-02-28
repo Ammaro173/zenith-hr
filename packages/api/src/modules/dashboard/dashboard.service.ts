@@ -21,18 +21,19 @@ const EMPLOYEE_STRATEGY: RequestFilterStrategy = (userId) =>
 const REQUEST_FILTERS = {
   EMPLOYEE: EMPLOYEE_STRATEGY,
   MANAGER: EMPLOYEE_STRATEGY,
-  HR: () => undefined,
-  FINANCE: () => undefined,
+  HOD: EMPLOYEE_STRATEGY,
+  HOD_HR: () => undefined,
+  HOD_FINANCE: () => undefined,
+  HOD_IT: EMPLOYEE_STRATEGY,
   CEO: () => undefined,
-  IT: EMPLOYEE_STRATEGY,
   ADMIN: () => undefined,
 } satisfies Record<UserRole, RequestFilterStrategy>;
 
 interface ActionFilterResult {
-  where: SQL;
-  title: string;
   link: string;
+  title: string;
   type: "urgent" | "action" | "normal";
+  where: SQL;
 }
 
 type ActionFilterStrategy = (userId: string) => ActionFilterResult | null;
@@ -46,13 +47,14 @@ const ACTION_STRATEGIES = {
     link: "/approvals",
     type: "urgent" as const,
   }),
-  HR: (_userId: string) => ({
+  HOD: (_userId: string) => null,
+  HOD_HR: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_HR"),
     title: "Action Required",
     link: "/approvals",
     type: "urgent" as const,
   }),
-  FINANCE: (_userId: string) => ({
+  HOD_FINANCE: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_FINANCE"),
     title: "Budget Approvals",
     link: "/approvals",
@@ -64,7 +66,7 @@ const ACTION_STRATEGIES = {
     link: "/approvals",
     type: "urgent" as const,
   }),
-  IT: (_userId: string) => null,
+  HOD_IT: (_userId: string) => null,
   ADMIN: (_userId: string) => null,
 } satisfies Record<UserRole, ActionFilterStrategy>;
 
@@ -86,7 +88,7 @@ export const createDashboardService = (db: DbOrTx) => {
     async getPendingRequests(userId: string, role: UserRole): Promise<number> {
       let whereClause: SQL | undefined;
 
-      if (role === "EMPLOYEE" || role === "IT") {
+      if (role === "EMPLOYEE" || role === "HOD_IT" || role === "HOD") {
         whereClause = eq(manpowerRequest.requesterId, userId);
       } else if (role === "ADMIN") {
         whereClause = inArray(manpowerRequest.status, [
@@ -192,7 +194,7 @@ export const createDashboardService = (db: DbOrTx) => {
         return { ...base, ...extra };
       }
 
-      if (role === "CEO" || role === "FINANCE") {
+      if (role === "CEO" || role === "HOD_FINANCE") {
         const [companyHeadcount, totalDepartmentExpenses] = await Promise.all([
           this.getCompanyHeadcount(),
           this.getTotalDepartmentExpenses(),

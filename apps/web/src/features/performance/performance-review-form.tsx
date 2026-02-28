@@ -13,10 +13,10 @@ import { PerformanceReviewFormProvider } from "./performance-review-form-context
 import { usePerformanceReviewForm } from "./use-performance-review-form";
 
 interface PerformanceReviewFormProps {
-  reviewId: string;
   mode?: "page" | "sheet";
-  onSuccess?: () => void;
   onCancel?: () => void;
+  onSuccess?: () => void;
+  reviewId: string;
 }
 
 export function PerformanceReviewForm({

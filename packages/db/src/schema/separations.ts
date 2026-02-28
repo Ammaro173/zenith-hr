@@ -32,8 +32,8 @@ export const separationStatusEnum = pgEnum("separation_status", [
 
 export const clearanceLaneEnum = pgEnum("clearance_lane", [
   "OPERATIONS",
-  "IT",
-  "FINANCE",
+  "HOD_IT",
+  "HOD_FINANCE",
   "ADMIN_ASSETS",
   "INSURANCE",
   "USED_CARS",

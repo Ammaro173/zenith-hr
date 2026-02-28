@@ -27,16 +27,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { client } from "@/utils/orpc";
 
 interface Goal {
-  id: string;
-  title: string;
   description: string | null;
+  id: string;
   status: string;
   targetDate?: Date | string | null;
+  title: string;
 }
 
 interface FutureGoalsSectionProps {
-  reviewId: string;
   goals: Goal[];
+  reviewId: string;
 }
 
 export function FutureGoalsSection({

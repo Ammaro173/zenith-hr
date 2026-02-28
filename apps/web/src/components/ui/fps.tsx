@@ -36,12 +36,12 @@ const fpsVariants = cva(
 interface FpsProps
   extends React.ComponentProps<"div">,
     Omit<VariantProps<typeof fpsVariants>, "status"> {
+  enabled?: boolean;
+  errorThreshold?: number;
   label?: string;
+  portalContainer?: Element | DocumentFragment | null;
   updateInterval?: number;
   warningThreshold?: number;
-  errorThreshold?: number;
-  portalContainer?: Element | DocumentFragment | null;
-  enabled?: boolean;
 }
 
 function Fps(props: FpsProps) {

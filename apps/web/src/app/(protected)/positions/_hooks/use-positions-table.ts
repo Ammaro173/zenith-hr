@@ -7,11 +7,9 @@ import { useMemo } from "react";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { orpc } from "@/utils/orpc";
-import type { JobDescriptionListItem } from "../_components/job-description-form";
+import type { PositionListItem } from "../_components/position-form";
 
-export function useJobDescriptionsTable(
-  columns: ColumnDef<JobDescriptionListItem>[],
-) {
+export function usePositionsTable(columns: ColumnDef<PositionListItem>[]) {
   const [globalFilter, setGlobalFilter] = useQueryState("q", {
     defaultValue: "",
     shallow: false,
@@ -19,49 +17,47 @@ export function useJobDescriptionsTable(
 
   const debouncedSearch = useDebouncedValue(globalFilter, 300);
 
-  const { table, pagination } = useDataTable({
+  const { table } = useDataTable({
     columns,
     data: [],
-    pageCount: -1,
+    pageCount: 1,
     initialState: {
-      sorting: [{ id: "title", desc: false }],
+      sorting: [{ id: "name", desc: false }],
     },
     shallow: false,
   });
 
   const queryInput = useMemo(
     () => ({
-      page: pagination.pageIndex + 1,
-      pageSize: pagination.pageSize,
-      search: debouncedSearch || undefined,
+      query: debouncedSearch,
+      limit: 100,
     }),
-    [pagination, debouncedSearch],
+    [debouncedSearch],
   );
 
   const { data, isLoading, isFetching } = useQuery({
-    ...orpc.jobDescriptions.search.queryOptions({
+    ...orpc.positions.search.queryOptions({
       input: queryInput,
     }),
     placeholderData: (previousData) => previousData,
   });
 
-  const jobDescriptions = data?.data ?? [];
-  const totalCount = data?.total ?? 0;
+  const positions = (data ?? []) as PositionListItem[];
 
   table.setOptions((prev) => ({
     ...prev,
-    data: jobDescriptions as JobDescriptionListItem[],
-    pageCount: Math.ceil(totalCount / pagination.pageSize),
-    rowCount: totalCount,
+    data: positions,
+    pageCount: 1,
+    rowCount: positions.length,
   }));
 
   return {
     table,
-    jobDescriptions,
+    positions,
     globalFilter,
     setGlobalFilter,
     isLoading,
     isFetching,
-    totalCount,
+    totalCount: positions.length,
   };
 }

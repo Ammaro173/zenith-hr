@@ -19,7 +19,7 @@ import { filterFields } from "./filter-config";
 export function UsersDataGrid() {
   const { data: session } = authClient.useSession();
   const currentRole = getRoleFromSessionUser(session?.user);
-  const canCreateUser = currentRole === "ADMIN" || currentRole === "HR";
+  const canCreateUser = currentRole === "ADMIN" || currentRole === "HOD_HR";
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 

@@ -29,8 +29,8 @@ export function DepartmentRowActions({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const canEdit = currentRole === "ADMIN" || currentRole === "HR";
-  const canDelete = currentRole === "ADMIN" || currentRole === "HR";
+  const canEdit = currentRole === "ADMIN" || currentRole === "HOD_HR";
+  const canDelete = currentRole === "ADMIN" || currentRole === "HOD_HR";
 
   if (!(canEdit || canDelete)) {
     return null;

@@ -6,7 +6,7 @@ export default async function PerformancePage() {
   const session = await getServerSession();
   const role = getRoleFromSessionUser(session?.data?.user);
 
-  const canCreateCycle = role === "HR" || role === "ADMIN";
+  const canCreateCycle = role === "HOD_HR" || role === "ADMIN";
 
   return <PerformanceClientPage canCreateCycle={canCreateCycle} />;
 }

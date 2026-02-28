@@ -38,8 +38,8 @@ import { type client, orpc } from "@/utils/orpc";
 
 type Lane =
   | "OPERATIONS"
-  | "IT"
-  | "FINANCE"
+  | "HOD_IT"
+  | "HOD_FINANCE"
   | "ADMIN_ASSETS"
   | "INSURANCE"
   | "USED_CARS"
@@ -49,8 +49,8 @@ type ChecklistStatus = "PENDING" | "CLEARED" | "REJECTED";
 
 const LANE_ORDER: Lane[] = [
   "OPERATIONS",
-  "IT",
-  "FINANCE",
+  "HOD_IT",
+  "HOD_FINANCE",
   "ADMIN_ASSETS",
   "INSURANCE",
   "USED_CARS",
@@ -59,8 +59,8 @@ const LANE_ORDER: Lane[] = [
 
 const LANE_LABEL: Record<Lane, string> = {
   OPERATIONS: "Operations",
-  IT: "IT",
-  FINANCE: "Finance",
+  HOD_IT: "HOD_IT",
+  HOD_FINANCE: "HOD_FINANCE",
   ADMIN_ASSETS: "Admin/Assets",
   INSURANCE: "Insurance",
   USED_CARS: "Used Cars",
@@ -83,14 +83,14 @@ function laneCanAct(role: string | null, lane: Lane): boolean {
   if (!role) {
     return false;
   }
-  if (role === "HR" || role === "ADMIN") {
+  if (role === "HOD_HR" || role === "ADMIN") {
     return true;
   }
-  if (role === "IT") {
-    return lane === "IT";
+  if (role === "HOD_IT") {
+    return lane === "HOD_IT";
   }
-  if (role === "FINANCE") {
-    return lane === "FINANCE";
+  if (role === "HOD_FINANCE") {
+    return lane === "HOD_FINANCE";
   }
   return false;
 }
@@ -105,7 +105,7 @@ export function ClearanceBoard({
   const queryClient = useQueryClient();
   const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [addOpen, setAddOpen] = useState(false);
-  const [addLane, setAddLane] = useState<Lane>("IT");
+  const [addLane, setAddLane] = useState<Lane>("HOD_IT");
   const [addTitle, setAddTitle] = useState("");
   const [addDescription, setAddDescription] = useState("");
   const [addDueAt, setAddDueAt] = useState("");
@@ -139,8 +139,8 @@ export function ClearanceBoard({
   const grouped = useMemo(() => {
     const initial: Record<Lane, SeparationBoardItem[]> = {
       OPERATIONS: [],
-      IT: [],
-      FINANCE: [],
+      HOD_IT: [],
+      HOD_FINANCE: [],
       ADMIN_ASSETS: [],
       INSURANCE: [],
       USED_CARS: [],
@@ -365,7 +365,7 @@ export function ClearanceBoard({
                     </KanbanItem>
                   ))}
 
-                  {role === "HR" || role === "ADMIN" ? (
+                  {role === "HOD_HR" || role === "ADMIN" ? (
                     <Dialog onOpenChange={setAddOpen} open={addOpen}>
                       <DialogTrigger asChild>
                         <Button

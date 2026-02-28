@@ -15,7 +15,15 @@ const getErrorMessage = (error: unknown): string => {
   return String(error);
 };
 
-const create = requireRoles(["MANAGER", "ADMIN", "CEO", "HR", "FINANCE"])
+const create = requireRoles([
+  "MANAGER",
+  "HOD",
+  "ADMIN",
+  "CEO",
+  "HOD_HR",
+  "HOD_FINANCE",
+  "HOD_IT",
+])
   .input(createRequestSchema)
   .handler(async ({ input, context }) => {
     const newRequest = await context.services.requests.create(
@@ -50,6 +58,12 @@ const getMyRequests = protectedProcedure
       context.session.user.role || "EMPLOYEE",
       input,
     ),
+  );
+
+const getAllRelated = protectedProcedure
+  .input(getMyRequestsSchema)
+  .handler(async ({ input, context }) =>
+    context.services.requests.getAllRelated(context.session.user.id, input),
   );
 
 const getPendingApprovals = protectedProcedure.handler(async ({ context }) =>
@@ -139,6 +153,7 @@ export const requestsRouter = o.router({
   create,
   getById,
   getMyRequests,
+  getAllRelated,
   getPendingApprovals,
   update,
   getVersions,

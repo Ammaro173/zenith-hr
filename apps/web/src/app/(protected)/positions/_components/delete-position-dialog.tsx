@@ -14,50 +14,51 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { client } from "@/utils/orpc";
-import type { JobDescriptionListItem } from "./job-description-form";
+import type { PositionListItem } from "./position-form";
 
-interface DeleteJobDescriptionDialogProps {
-  open: boolean;
+interface DeletePositionDialogProps {
   onOpenChange: (open: boolean) => void;
-  jobDescription: JobDescriptionListItem | null;
+  open: boolean;
+  position: PositionListItem | null;
 }
 
-export function DeleteJobDescriptionDialog({
+export function DeletePositionDialog({
   open,
   onOpenChange,
-  jobDescription,
-}: DeleteJobDescriptionDialogProps) {
+  position,
+}: DeletePositionDialogProps) {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => client.jobDescriptions.delete({ id }),
-    onSuccess: () => {
-      toast.success("Job description deleted successfully");
-      queryClient.invalidateQueries({
+    mutationFn: (id: string) => client.positions.delete({ id }),
+    onSuccess: async () => {
+      toast.success("Position deleted successfully");
+      await queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
           return (
             Array.isArray(key) &&
             Array.isArray(key[0]) &&
-            key[0][0] === "jobDescriptions"
+            key[0][0] === "positions"
           );
         },
       });
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to delete job description");
+      toast.error(error.message || "Failed to delete position");
     },
   });
 
   const handleDelete = () => {
-    if (!jobDescription) {
+    if (!position) {
       return;
     }
-    deleteMutation.mutate(jobDescription.id);
+    deleteMutation.mutate(position.id);
   };
 
-  if (!jobDescription) {
+  if (!position) {
     return null;
   }
 
@@ -67,16 +68,16 @@ export function DeleteJobDescriptionDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-destructive" />
-            Delete Job Description
+            Delete Position
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
             <span className="block">
               Are you sure you want to delete{" "}
-              <span className="font-semibold">{jobDescription.title}</span>?
+              <span className="font-semibold">{position.name}</span> (
+              {position.code})?
             </span>
             <span className="block">
-              Linked positions will lose this template's default role and
-              department mapping.
+              Any users assigned to this position will need to be reassigned.
             </span>
             <span className="block">This action cannot be undone.</span>
           </AlertDialogDescription>

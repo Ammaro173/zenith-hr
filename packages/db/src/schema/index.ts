@@ -6,24 +6,22 @@ export * from "./candidates";
 export * from "./contracts";
 export * from "./departments";
 export * from "./import-history";
-export * from "./job-descriptions";
 export * from "./manpower-requests";
 export * from "./notifications";
 export * from "./performance";
 export * from "./position-slots";
 export * from "./request-versions";
 export * from "./separations";
+export * from "./users";
 
 // Define relations after all schemas are imported
 import { relations } from "drizzle-orm";
 import { approvalLog } from "./approval-logs";
-import { user } from "./auth";
 import { contract } from "./contracts";
-import { department } from "./departments";
-import { jobDescription } from "./job-descriptions";
 import { manpowerRequest } from "./manpower-requests";
 import { jobPosition } from "./position-slots";
 import { requestVersion } from "./request-versions";
+import { user } from "./users";
 
 // Re-export relations using export-from syntax
 export { approvalLogRelations } from "./approval-logs";
@@ -54,21 +52,6 @@ export {
 } from "./position-slots";
 export { requestVersionRelations } from "./request-versions";
 
-export const jobDescriptionRelations = relations(
-  jobDescription,
-  ({ one, many }) => ({
-    department: one(department, {
-      fields: [jobDescription.departmentId],
-      references: [department.id],
-    }),
-    reportsToPosition: one(jobPosition, {
-      fields: [jobDescription.reportsToPositionId],
-      references: [jobPosition.id],
-    }),
-    positions: many(jobPosition),
-  }),
-);
-
 export const manpowerRequestRelations = relations(
   manpowerRequest,
   ({ one, many }) => ({
@@ -78,6 +61,10 @@ export const manpowerRequestRelations = relations(
     }),
     requesterPosition: one(jobPosition, {
       fields: [manpowerRequest.requesterPositionId],
+      references: [jobPosition.id],
+    }),
+    position: one(jobPosition, {
+      fields: [manpowerRequest.positionId],
       references: [jobPosition.id],
     }),
     currentApproverPosition: one(jobPosition, {

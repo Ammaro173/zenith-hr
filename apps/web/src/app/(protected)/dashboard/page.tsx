@@ -14,19 +14,19 @@ import { RequesterView } from "./_components/RoleViews/requester-view";
 
 // Shared interface for props
 interface DashboardStats {
-  totalRequests: number;
-  pendingRequests: number;
-  approvedRequests: number;
-  hiringRequests: number;
-  totalCandidates: number;
   activeContracts: number;
+  approvedRequests: number;
   averageTimeToHire: number;
+  companyHeadcount?: number;
+  hiringRequests: number;
+  myActivePerformanceReviews?: number;
   myActiveTrips?: number;
   myPendingSeparations?: number;
-  myActivePerformanceReviews?: number;
+  pendingRequests: number;
   teamPendingPerformanceReviews?: number;
+  totalCandidates: number;
   totalDepartmentExpenses?: number;
-  companyHeadcount?: number;
+  totalRequests: number;
 }
 
 // View Strategy Map for better extensibility (Open/Closed Principle)
@@ -36,8 +36,8 @@ const ROLE_VIEWS: Record<
 > = {
   EMPLOYEE: RequesterView,
   MANAGER: ManagerView,
-  HR: HRView,
-  FINANCE: FinanceView,
+  HOD_HR: HRView,
+  HOD_FINANCE: FinanceView,
   CEO: CEOView,
 };
 

@@ -14,8 +14,8 @@ import { useManpowerRequestForm } from "./use-manpower-request-form";
 
 interface ManpowerRequestFormProps {
   mode?: "page" | "sheet";
-  onSuccess?: () => void;
   onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 export function ManpowerRequestForm({

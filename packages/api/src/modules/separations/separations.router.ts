@@ -14,7 +14,7 @@ import {
 } from "./separations.schema";
 
 export const separationsRouter = o.router({
-  create: requireRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN"])
+  create: requireRoles(["EMPLOYEE", "MANAGER", "HOD_HR", "ADMIN"])
     .input(createSeparationSchema)
     .handler(
       async ({ input, context }) =>
@@ -31,14 +31,14 @@ export const separationsRouter = o.router({
         await context.services.separations.get(input.separationId),
     ),
 
-  update: requireRoles(["MANAGER", "HR", "ADMIN"])
+  update: requireRoles(["MANAGER", "HOD_HR", "ADMIN"])
     .input(updateSeparationSchema)
     .handler(async ({ input, context }) => {
       // TODO: Add permission checks
       return await context.services.separations.update(input);
     }),
 
-  approveByManager: requireRoles(["MANAGER", "HR", "ADMIN"])
+  approveByManager: requireRoles(["MANAGER", "HOD_HR", "ADMIN"])
     .input(approveByManagerSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.approveByManager(
@@ -47,7 +47,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  approveByHr: requireRoles(["HR", "ADMIN"])
+  approveByHr: requireRoles(["HOD_HR", "ADMIN"])
     .input(approveByHrSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.approveByHr(
@@ -56,7 +56,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  startClearance: requireRoles(["HR"])
+  startClearance: requireRoles(["HOD_HR"])
     .input(startClearanceSchema)
     .handler(async ({ input, context }) =>
       context.services.separations.startClearance(
@@ -75,7 +75,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  addChecklistItem: requireRoles(["HR", "ADMIN"])
+  addChecklistItem: requireRoles(["HOD_HR", "ADMIN"])
     .input(addChecklistItemSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.addChecklistItem(
@@ -84,7 +84,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  reorderChecklistItems: requireRoles(["HR", "ADMIN"])
+  reorderChecklistItems: requireRoles(["HOD_HR", "ADMIN"])
     .input(reorderChecklistItemsSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.reorderChecklistItems(
@@ -93,7 +93,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  uploadDocument: requireRoles(["EMPLOYEE", "MANAGER", "HR", "ADMIN"])
+  uploadDocument: requireRoles(["EMPLOYEE", "MANAGER", "HOD_HR", "ADMIN"])
     .input(uploadSeparationDocumentSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.uploadDocument(

@@ -8,7 +8,6 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Plane } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
-import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +28,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 // import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 // import { orpc } from "@/utils/orpc";
@@ -44,8 +49,8 @@ import { useBusinessTripForm } from "./use-business-trip-form";
 
 interface BusinessTripFormProps {
   mode?: "page" | "sheet";
-  onSuccess?: () => void;
   onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 export function BusinessTripForm({
@@ -382,11 +387,55 @@ export function BusinessTripForm({
                           <SelectContent>
                             <SelectItem value="QAR">QAR</SelectItem>
                             <SelectItem value="USD">USD</SelectItem>
-                            {/* <SelectItem value="EUR">EUR</SelectItem> */}
-                            {/* <SelectItem value="SAR">SAR</SelectItem> */}
                           </SelectContent>
                         </Select>
                       </FormField>
+                    )}
+                  </form.Field>
+                </div>
+
+                <Separator />
+
+                {/* Per Diem with Tooltip */}
+                <div className="grid grid-cols-2 gap-4">
+                  <form.Field name="perDiemAllowance">
+                    {(field) => (
+                      <TooltipProvider>
+                        <FormField
+                          field={field}
+                          label={
+                            <span className="flex items-center gap-1">
+                              Per Diem Allowance
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help text-muted-foreground">
+                                    (?)
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p>
+                                    Per diem is a daily allowance for meals and
+                                    incidental expenses during your business
+                                    trip. This covers food, local
+                                    transportation, and other small expenses.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </span>
+                          }
+                        >
+                          <Input
+                            id={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(e) =>
+                              field.handleChange(e.target.valueAsNumber)
+                            }
+                            placeholder="0.00"
+                            type="number"
+                            value={field.state.value ?? ""}
+                          />
+                        </FormField>
+                      </TooltipProvider>
                     )}
                   </form.Field>
                 </div>
@@ -575,27 +624,18 @@ export function BusinessTripForm({
               }
             </form.Subscribe>
 
-            {/* Delegation Section */}
-            <Card>
+            {/* Workflow Info */}
+            <Card className="bg-muted/50">
               <CardHeader>
-                <CardTitle>Delegation of Authority</CardTitle>
+                <CardTitle className="font-medium text-sm">
+                  Approval Workflow
+                </CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-6">
-                <form.Field name="delegatedUserId">
-                  {(field) => (
-                    <FormField
-                      description="Person who will handle your responsibilities while you're away"
-                      field={field}
-                      label="Select Replacement (Optional)"
-                    >
-                      <UserSearchCombobox
-                        onChange={field.handleChange}
-                        placeholder="Search for delegate..."
-                        value={field.state.value}
-                      />
-                    </FormField>
-                  )}
-                </form.Field>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  Your request will be routed through: Direct Manager → Head of
+                  Department → HR Head → Finance Head → CEO
+                </p>
               </CardContent>
             </Card>
           </div>

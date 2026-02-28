@@ -20,7 +20,7 @@ export const USER_FIELDS = [
   "role",
   "status",
   "departmentId",
-  "jobDescriptionId",
+  "positionId",
   "password",
 ] as const;
 
@@ -71,7 +71,6 @@ const FIELD_VARIATIONS: Record<string, string> = {
   user_role: "role",
   jobrole: "role",
   job_role: "role",
-  position: "role",
 
   // User fields - status
   status: "status",
@@ -89,11 +88,10 @@ const FIELD_VARIATIONS: Record<string, string> = {
   deptid: "departmentId",
   dept_id: "departmentId",
 
-  // User fields - jobDescriptionId
-  jobdescriptionid: "jobDescriptionId",
-  job_description_id: "jobDescriptionId",
-  jobdescription: "jobDescriptionId",
-  job_description: "jobDescriptionId",
+  // User fields - positionId
+  positionid: "positionId",
+  position_id: "positionId",
+  position: "positionId",
 
   // User fields - password
   password: "password",

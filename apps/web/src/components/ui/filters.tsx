@@ -45,22 +45,19 @@ import { cn } from "@/lib/utils";
 export interface FilterI18nConfig {
   // UI Labels
   addFilter: string;
-  searchFields: string;
+  addFilterTitle: string;
+  defaultColor: string;
+  defaultCurrency: string;
+  false: string;
+
+  // Helper functions
+  helpers: {
+    formatOperator: (operator: string) => string;
+  };
+  max: string;
+  min: string;
   noFieldsFound: string;
   noResultsFound: string;
-  select: string;
-  true: string;
-  false: string;
-  min: string;
-  max: string;
-  to: string;
-  typeAndPressEnter: string;
-  selected: string;
-  selectedCount: string;
-  percent: string;
-  defaultCurrency: string;
-  defaultColor: string;
-  addFilterTitle: string;
 
   // Operators
   operators: {
@@ -91,6 +88,7 @@ export interface FilterI18nConfig {
     empty: string;
     notEmpty: string;
   };
+  percent: string;
 
   // Placeholders
   placeholders: {
@@ -100,11 +98,13 @@ export interface FilterI18nConfig {
     enterKey: string;
     enterValue: string;
   };
-
-  // Helper functions
-  helpers: {
-    formatOperator: (operator: string) => string;
-  };
+  searchFields: string;
+  select: string;
+  selected: string;
+  selectedCount: string;
+  to: string;
+  true: string;
+  typeAndPressEnter: string;
 
   // Validation
   validation: {
@@ -191,20 +191,20 @@ export const DEFAULT_I18N: FilterI18nConfig = {
 
 // Context for all Filter component props
 interface FilterContextValue {
-  variant: "solid" | "outline";
-  size: "sm" | "md" | "lg";
-  radius: "md" | "full";
-  i18n: FilterI18nConfig;
-  cursorPointer: boolean;
-  className?: string;
-  showAddButton?: boolean;
-  addButtonText?: string;
-  addButtonIcon?: React.ReactNode;
-  addButtonClassName?: string;
   addButton?: React.ReactNode;
-  showSearchInput?: boolean;
-  trigger?: React.ReactNode;
+  addButtonClassName?: string;
+  addButtonIcon?: React.ReactNode;
+  addButtonText?: string;
   allowMultiple?: boolean;
+  className?: string;
+  cursorPointer: boolean;
+  i18n: FilterI18nConfig;
+  radius: "md" | "full";
+  showAddButton?: boolean;
+  showSearchInput?: boolean;
+  size: "sm" | "md" | "lg";
+  trigger?: React.ReactNode;
+  variant: "solid" | "outline";
 }
 
 const FilterContext = createContext<FilterContextValue>({
@@ -717,30 +717,30 @@ function FilterRemoveButton({
 
 // Generic types for flexible filter system
 export interface FilterOption<T = unknown> {
-  value: T;
-  label: string;
   icon?: React.ReactNode;
+  label: string;
   metadata?: Record<string, unknown>;
+  value: T;
 }
 
 export interface FilterOperator {
-  value: string;
   label: string;
   supportsMultiple?: boolean;
+  value: string;
 }
 
 // Custom renderer props interface
 export interface CustomRendererProps<T = unknown> {
   field: FilterFieldConfig<T>;
-  values: T[];
   onChange: (values: T[]) => void;
   operator: string;
+  values: T[];
 }
 
 // Grouped field configuration interface
 export interface FilterFieldGroup<T = unknown> {
-  group?: string;
   fields: FilterFieldConfig<T>[];
+  group?: string;
 }
 
 // Union type for both flat and grouped field configurations
@@ -749,9 +749,43 @@ export type FilterFieldsConfig<T = unknown> =
   | FilterFieldGroup<T>[];
 
 export interface FilterFieldConfig<T = unknown> {
+  allowCustomValues?: boolean;
+  className?: string;
+  customRenderer?: (props: CustomRendererProps<T>) => React.ReactNode;
+  customValueRenderer?: (
+    values: T[],
+    options: FilterOption<T>[],
+  ) => React.ReactNode;
+  // Default operator to use when creating a filter for this field
+  defaultOperator?: string;
+  fields?: FilterFieldConfig<T>[];
+  // Group-level configuration
+  group?: string;
+  // Grouping options (legacy support)
+  groupLabel?: string;
+  icon?: React.ReactNode;
   key?: string;
   label?: string;
-  icon?: React.ReactNode;
+  max?: number;
+  maxSelections?: number;
+  min?: number;
+  offLabel?: string;
+  // Input event handlers
+  onInputChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  // Boolean field options
+  onLabel?: string;
+  onValueChange?: (values: T[]) => void;
+  operators?: FilterOperator[];
+  // Field-specific options
+  options?: FilterOption<T>[];
+  pattern?: string;
+  placeholder?: string;
+  popoverContentClassName?: string;
+  prefix?: string | React.ReactNode;
+  searchable?: boolean;
+  selectedOptionsClassName?: string;
+  step?: number;
+  suffix?: string | React.ReactNode;
   type?:
     | "select"
     | "multiselect"
@@ -768,43 +802,9 @@ export interface FilterFieldConfig<T = unknown> {
     | "datetime"
     | "custom"
     | "separator";
-  // Group-level configuration
-  group?: string;
-  fields?: FilterFieldConfig<T>[];
-  // Field-specific options
-  options?: FilterOption<T>[];
-  operators?: FilterOperator[];
-  customRenderer?: (props: CustomRendererProps<T>) => React.ReactNode;
-  customValueRenderer?: (
-    values: T[],
-    options: FilterOption<T>[],
-  ) => React.ReactNode;
-  placeholder?: string;
-  searchable?: boolean;
-  maxSelections?: number;
-  min?: number;
-  max?: number;
-  step?: number;
-  prefix?: string | React.ReactNode;
-  suffix?: string | React.ReactNode;
-  pattern?: string;
   validation?: (value: unknown) => boolean;
-  allowCustomValues?: boolean;
-  className?: string;
-  popoverContentClassName?: string;
-  selectedOptionsClassName?: string;
-  // Grouping options (legacy support)
-  groupLabel?: string;
-  // Boolean field options
-  onLabel?: string;
-  offLabel?: string;
-  // Input event handlers
-  onInputChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  // Default operator to use when creating a filter for this field
-  defaultOperator?: string;
   // Controlled values support for this field
   value?: T[];
-  onValueChange?: (values: T[]) => void;
 }
 
 // Helper functions to handle both flat and grouped field configurations
@@ -990,9 +990,9 @@ const getOperatorsForField = <T = unknown>(
 
 interface FilterOperatorDropdownProps<T = unknown> {
   field: FilterFieldConfig<T>;
+  onChange: (operator: string) => void;
   operator: string;
   values: T[];
-  onChange: (operator: string) => void;
 }
 
 function FilterOperatorDropdown<T = unknown>({
@@ -1047,19 +1047,19 @@ function FilterOperatorDropdown<T = unknown>({
 
 interface FilterValueSelectorProps<T = unknown> {
   field: FilterFieldConfig<T>;
-  values: T[];
   onChange: (values: T[]) => void;
   operator: string;
+  values: T[];
 }
 
 interface SelectOptionsPopoverProps<T = unknown> {
   field: FilterFieldConfig<T>;
-  values: T[];
+  inline?: boolean;
+  onBack?: () => void;
   onChange: (values: T[]) => void;
   onClose?: () => void;
   showBackButton?: boolean;
-  onBack?: () => void;
-  inline?: boolean;
+  values: T[];
 }
 
 function SelectOptionsPopover<T = unknown>({
@@ -1789,23 +1789,23 @@ function FilterValueSelector<T = unknown>({
 }
 
 export interface Filter<T = unknown> {
-  id: string;
   field: string;
+  id: string;
   operator: string;
   values: T[];
 }
 
 export interface FilterGroup<T = unknown> {
+  fields: FilterFieldConfig<T>[];
+  filters: Filter<T>[];
   id: string;
   label?: string;
-  filters: Filter<T>[];
-  fields: FilterFieldConfig<T>[];
 }
 
 // FiltersContent component for the filter panel content
 interface FiltersContentProps<T = unknown> {
-  filters: Filter<T>[];
   fields: FilterFieldsConfig<T>;
+  filters: Filter<T>[];
   onChange: (filters: Filter<T>[]) => void;
 }
 
@@ -1906,24 +1906,24 @@ export const FiltersContent = <T = unknown>({
 };
 
 interface FiltersProps<T = unknown> {
-  filters: Filter<T>[];
-  fields: FilterFieldsConfig<T>;
-  onChange: (filters: Filter<T>[]) => void;
-  className?: string;
-  showAddButton?: boolean;
-  addButtonText?: string;
-  addButtonIcon?: React.ReactNode;
-  addButtonClassName?: string;
   addButton?: React.ReactNode;
-  variant?: "solid" | "outline";
-  size?: "sm" | "md" | "lg";
-  radius?: "md" | "full";
-  i18n?: Partial<FilterI18nConfig>;
-  showSearchInput?: boolean;
-  cursorPointer?: boolean;
-  trigger?: React.ReactNode;
+  addButtonClassName?: string;
+  addButtonIcon?: React.ReactNode;
+  addButtonText?: string;
   allowMultiple?: boolean;
+  className?: string;
+  cursorPointer?: boolean;
+  fields: FilterFieldsConfig<T>;
+  filters: Filter<T>[];
+  i18n?: Partial<FilterI18nConfig>;
+  onChange: (filters: Filter<T>[]) => void;
   popoverContentClassName?: string;
+  radius?: "md" | "full";
+  showAddButton?: boolean;
+  showSearchInput?: boolean;
+  size?: "sm" | "md" | "lg";
+  trigger?: React.ReactNode;
+  variant?: "solid" | "outline";
 }
 
 export function Filters<T = unknown>({

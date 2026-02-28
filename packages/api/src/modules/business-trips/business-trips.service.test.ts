@@ -34,21 +34,56 @@ describe("BusinessTripsService", () => {
         findMany: mock(() => Promise.resolve([])),
       },
     },
-    select: mock(() => ({
-      from: mock(() => ({
-        where: mock(() => ({
-          limit: mock(() =>
-            Promise.resolve([
-              { id: "trip-123", status: "DRAFT", requesterId: "user-1" },
-            ]),
-          ),
-        })),
-      })),
-    })),
+    select: mock(() => {
+      const qb: any = {
+        from: mock(() => qb),
+        innerJoin: mock(() => qb),
+        where: mock(() => qb),
+        limit: mock(() =>
+          Promise.resolve([
+            {
+              id: "trip-123",
+              status: "DRAFT",
+              requesterId: "user-1",
+              requesterPositionId: "pos-1",
+              positionId: "pos-1",
+              positionRole: "EMPLOYEE",
+              role: "EMPLOYEE",
+              departmentId: "dept-1",
+              reportsToPositionId: "pos-2",
+            },
+          ]),
+        ),
+        // biome-ignore lint/suspicious/noThenProperty: mock object
+        then: (onFulfilled: any) =>
+          Promise.resolve([
+            {
+              id: "trip-123",
+              status: "DRAFT",
+              requesterId: "user-1",
+              requesterPositionId: "pos-1",
+              positionId: "pos-1",
+              positionRole: "EMPLOYEE",
+              role: "EMPLOYEE",
+              departmentId: "dept-1",
+              reportsToPositionId: "pos-2",
+            },
+          ]).then(onFulfilled),
+      };
+      return qb;
+    }),
     transaction: mock((cb) => cb(mockDb)),
   } as any;
 
   const mockWorkflowService = {
+    getNextTripApprover: mock(() =>
+      Promise.resolve({
+        positionId: "pos-1",
+        requiredRole: "MANAGER",
+        nextStatus: "PENDING_MANAGER",
+      }),
+    ),
+    canActorTransition: mock(() => Promise.resolve(true)),
     getInitialStatusForRequester: mock(() =>
       Promise.resolve("PENDING_MANAGER"),
     ),
@@ -83,28 +118,35 @@ describe("BusinessTripsService", () => {
   };
 
   it("should create a trip with PENDING_MANAGER for a standard employee", async () => {
-    // Default mock: getInitialStatusForRequester returns PENDING_MANAGER
-    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
-      "PENDING_MANAGER",
-    );
+    mockWorkflowService.getNextTripApprover.mockResolvedValueOnce({
+      positionId: "pos-1",
+      requiredRole: "MANAGER",
+      nextStatus: "PENDING_MANAGER",
+    });
+
+    mockDb.insert.mockReturnValueOnce({
+      values: mock((data) => ({
+        returning: mock(() =>
+          Promise.resolve([{ id: "trip-123", status: data.status }]),
+        ),
+      })),
+    });
 
     const result = await service.create(baseTripInput, "user-1");
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "trip-123", status: "DRAFT" }),
+      expect.objectContaining({ id: "trip-123", status: "PENDING_MANAGER" }),
     );
-    expect(mockWorkflowService.getInitialStatusForRequester).toHaveBeenCalled();
+    expect(mockWorkflowService.getNextTripApprover).toHaveBeenCalled();
     expect(mockDb.insert).toHaveBeenCalled();
   });
 
   it("should create a trip with PENDING_HR for CEO (skips manager)", async () => {
-    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
-      "PENDING_HR",
-    );
-    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
-      "hr-1",
-    );
-    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+    mockWorkflowService.getNextTripApprover.mockResolvedValueOnce({
+      positionId: "pos-1",
+      requiredRole: "HOD_HR",
+      nextStatus: "PENDING_HR",
+    });
 
     mockDb.insert.mockReturnValueOnce({
       values: mock((data) => ({
@@ -122,13 +164,11 @@ describe("BusinessTripsService", () => {
   });
 
   it("should create a trip with PENDING_HR for Finance (skips finance step)", async () => {
-    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
-      "PENDING_HR",
-    );
-    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
-      "hr-1",
-    );
-    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+    mockWorkflowService.getNextTripApprover.mockResolvedValueOnce({
+      positionId: "pos-1",
+      requiredRole: "HOD_HR",
+      nextStatus: "PENDING_HR",
+    });
 
     mockDb.insert.mockReturnValueOnce({
       values: mock((data) => ({
@@ -146,13 +186,11 @@ describe("BusinessTripsService", () => {
   });
 
   it("should create a trip with PENDING_FINANCE for HR (skips HR step)", async () => {
-    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
-      "PENDING_FINANCE",
-    );
-    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
-      "finance-1",
-    );
-    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("FINANCE");
+    mockWorkflowService.getNextTripApprover.mockResolvedValueOnce({
+      positionId: "pos-1",
+      requiredRole: "HOD_FINANCE",
+      nextStatus: "PENDING_FINANCE",
+    });
 
     mockDb.insert.mockReturnValueOnce({
       values: mock((data) => ({
@@ -170,13 +208,11 @@ describe("BusinessTripsService", () => {
   });
 
   it("should create a trip with PENDING_HR for Manager (skips manager step)", async () => {
-    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
-      "PENDING_HR",
-    );
-    mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
-      "hr-1",
-    );
-    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+    mockWorkflowService.getNextTripApprover.mockResolvedValueOnce({
+      positionId: "pos-1",
+      requiredRole: "HOD_HR",
+      nextStatus: "PENDING_HR",
+    });
 
     mockDb.insert.mockReturnValueOnce({
       values: mock((data) => ({
@@ -205,16 +241,29 @@ describe("BusinessTripsService", () => {
       id: "trip-123",
       status: "DRAFT",
       requesterId: "user-1",
+      requesterPositionId: "pos-1",
     });
 
-    mockWorkflowService.getInitialStatusForRequester.mockResolvedValueOnce(
-      "PENDING_MANAGER",
-    );
+    mockWorkflowService.getNextTripApprover.mockResolvedValueOnce({
+      positionId: "pos-2",
+      requiredRole: "MANAGER",
+      nextStatus: "PENDING_MANAGER",
+    });
+
+    mockDb.update.mockReturnValueOnce({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() =>
+            Promise.resolve([{ id: "trip-123", status: "PENDING_MANAGER" }]),
+          ),
+        })),
+      })),
+    });
 
     const result = await service.transition(input, actorId);
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "trip-123", status: "SUBMITTED" }),
+      expect.objectContaining({ id: "trip-123", status: "PENDING_MANAGER" }),
     );
     expect(mockDb.update).toHaveBeenCalled();
   });
@@ -257,12 +306,24 @@ describe("BusinessTripsService", () => {
     const actorId = "manager-1";
 
     // 1) getActorRole(db, actorId)
-    const roleLimitMock = mock(() => Promise.resolve([{ role: "MANAGER" }]));
+    const roleLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          role: "MANAGER",
+          positionRole: "MANAGER",
+          positionId: "pos-1",
+          departmentId: "dep-1",
+          reportsToPositionId: null,
+        },
+      ]),
+    );
     const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
-    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
-    // 2) getPendingApprovals query: select().from().innerJoin().where().orderBy()
+    // 3) getPendingApprovals query: select().from().innerJoin().where().orderBy()
     const approvalsOrderByMock = mock(() =>
       Promise.resolve([
         {
@@ -309,20 +370,36 @@ describe("BusinessTripsService", () => {
           requesterId: "user-1",
           currentApproverId: "manager-1",
           currentApproverRole: "MANAGER",
+          requesterPositionId: "pos-1",
           version: 0,
           city: "Doha",
           country: "Qatar",
         },
       ]),
     );
-    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
     const tripFromMock = mock(() => ({ where: tripWhereMock }));
     mockDb.select.mockReturnValueOnce({ from: tripFromMock });
 
-    // 2) getActorRole → tx.select().from().where().limit()
-    const roleLimitMock = mock(() => Promise.resolve([{ role: "MANAGER" }]));
+    // 2) getActorPositionInfo → tx.select().from().innerJoin().where().limit()
+    const roleLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          role: "MANAGER",
+          positionRole: "MANAGER",
+          positionId: "pos-1",
+          departmentId: "dep-1",
+          reportsToPositionId: null,
+        },
+      ]),
+    );
     const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
-    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
     // Mock workflow: EMPLOYEE sequence for the requester
@@ -337,7 +414,7 @@ describe("BusinessTripsService", () => {
     mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(
       "hr-1",
     );
-    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HR");
+    mockWorkflowService.getApproverForStatus.mockReturnValueOnce("HOD_HR");
 
     // 3) tx.update().set().where().returning()
     mockDb.update.mockReturnValueOnce({
@@ -369,9 +446,7 @@ describe("BusinessTripsService", () => {
     expect(result).toEqual(
       expect.objectContaining({ id: "trip-200", status: "PENDING_HR" }),
     );
-    expect(
-      mockWorkflowService.getApprovalSequenceForInitiator,
-    ).toHaveBeenCalled();
+    expect(mockWorkflowService.getNextTripApprover).toHaveBeenCalled();
   });
 
   it("APPROVE should advance CEO trip from PENDING_FINANCE to APPROVED (skips PENDING_CEO)", async () => {
@@ -383,21 +458,29 @@ describe("BusinessTripsService", () => {
           status: "PENDING_FINANCE",
           requesterId: "ceo-1",
           currentApproverId: "finance-1",
-          currentApproverRole: "FINANCE",
+          currentApproverRole: "HOD_FINANCE",
+          requesterPositionId: "pos-ceo",
           version: 2,
           city: "London",
           country: "UK",
         },
       ]),
     );
-    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
     const tripFromMock = mock(() => ({ where: tripWhereMock }));
     mockDb.select.mockReturnValueOnce({ from: tripFromMock });
 
     // Actor is FINANCE
-    const roleLimitMock = mock(() => Promise.resolve([{ role: "FINANCE" }]));
+    const roleLimitMock = mock(() =>
+      Promise.resolve([{ role: "HOD_FINANCE" }]),
+    );
     const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
-    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
     // CEO sequence: PENDING_HR → PENDING_FINANCE → APPROVED (no PENDING_CEO!)
@@ -449,20 +532,26 @@ describe("BusinessTripsService", () => {
           status: "PENDING_HR",
           requesterId: "user-1",
           currentApproverId: "hr-1",
-          currentApproverRole: "HR",
+          currentApproverRole: "HOD_HR",
+          requesterPositionId: "pos-1",
           version: 1,
           city: "Doha",
           country: "Qatar",
         },
       ]),
     );
-    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
     const tripFromMock = mock(() => ({ where: tripWhereMock }));
     mockDb.select.mockReturnValueOnce({ from: tripFromMock });
 
-    const roleLimitMock = mock(() => Promise.resolve([{ role: "HR" }]));
+    const roleLimitMock = mock(() => Promise.resolve([{ role: "HOD_HR" }]));
     const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
-    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
     mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(null);
@@ -508,19 +597,35 @@ describe("BusinessTripsService", () => {
           requesterId: "user-1",
           currentApproverId: "manager-1",
           currentApproverRole: "MANAGER",
+          requesterPositionId: "pos-1",
           version: 0,
           city: "Paris",
           country: "France",
         },
       ]),
     );
-    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
     const tripFromMock = mock(() => ({ where: tripWhereMock }));
     mockDb.select.mockReturnValueOnce({ from: tripFromMock });
 
-    const roleLimitMock = mock(() => Promise.resolve([{ role: "EMPLOYEE" }]));
+    const roleLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          role: "EMPLOYEE",
+          positionRole: "EMPLOYEE",
+          positionId: "pos-emp",
+          departmentId: "dep-1",
+          reportsToPositionId: null,
+        },
+      ]),
+    );
     const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
-    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
     mockWorkflowService.getNextApproverIdForStatus.mockResolvedValueOnce(null);
@@ -564,6 +669,7 @@ describe("BusinessTripsService", () => {
           id: "trip-500",
           status: "PENDING_MANAGER",
           requesterId: "user-1",
+          requesterPositionId: "pos-1",
           currentApproverId: "manager-1",
           currentApproverRole: "MANAGER",
           version: 0,
@@ -572,21 +678,39 @@ describe("BusinessTripsService", () => {
         },
       ]),
     );
-    const tripWhereMock = mock(() => ({ limit: tripLimitMock }));
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
     const tripFromMock = mock(() => ({ where: tripWhereMock }));
     mockDb.select.mockReturnValueOnce({ from: tripFromMock });
 
     // Actor is a random EMPLOYEE, not the assigned approver
-    const roleLimitMock = mock(() => Promise.resolve([{ role: "EMPLOYEE" }]));
+    const roleLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          role: "EMPLOYEE",
+          positionRole: "EMPLOYEE",
+          positionId: "pos-emp",
+          departmentId: "dep-1",
+          reportsToPositionId: null,
+        },
+      ]),
+    );
     const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
-    const roleFromMock = mock(() => ({ where: roleWhereMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    mockWorkflowService.canActorTransition.mockResolvedValueOnce(false);
 
     await expect(
       service.transition(
         { tripId: "trip-500", action: "APPROVE" },
         "random-user", // not the assigned approver
       ),
-    ).rejects.toThrow("Not authorized to approve");
+    ).rejects.toThrow("Not authorized to perform this action");
   });
 });

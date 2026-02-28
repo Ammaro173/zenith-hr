@@ -15,9 +15,9 @@ export interface ValidationError {
  * Validation result for a single row
  */
 export interface ValidationResult {
-  rowIndex: number;
-  isValid: boolean;
   errors: ValidationError[];
+  isValid: boolean;
+  rowIndex: number;
   willUpdate?: boolean;
 }
 
@@ -25,14 +25,22 @@ export interface ValidationResult {
  * User import row for validation
  */
 export interface UserImportRow {
-  name: string;
-  email: string;
-  sapNo: string;
-  role: "EMPLOYEE" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
-  status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
   departmentId?: string | null;
-  jobDescriptionId?: string | null;
+  email: string;
+  name: string;
   password?: string;
+  positionId?: string | null;
+  role:
+    | "EMPLOYEE"
+    | "MANAGER"
+    | "HOD"
+    | "HOD_HR"
+    | "HOD_FINANCE"
+    | "HOD_IT"
+    | "CEO"
+    | "ADMIN";
+  sapNo: string;
+  status?: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
 }
 
 /**

@@ -32,11 +32,11 @@ import { cn } from "@/lib/utils";
 import type { RowValidationResult } from "@/types/imports";
 
 interface DataPreviewTableProps<TData> {
-  data: TData[];
   columns: ColumnDef<TData>[];
-  validationResults?: RowValidationResult[];
-  isLoading?: boolean;
+  data: TData[];
   emptyMessage?: string;
+  isLoading?: boolean;
+  validationResults?: RowValidationResult[];
 }
 
 export function DataPreviewTable<TData extends { rowIndex: number }>({

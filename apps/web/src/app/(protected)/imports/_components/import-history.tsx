@@ -15,17 +15,17 @@ import {
  */
 interface ImportHistoryComponentProps {
   /**
-   * Optional filter by import type
+   * Optional limit for number of items to display
    */
-  type?: "users" | "departments";
+  limit?: number;
   /**
    * Optional callback when a history item is clicked
    */
   onViewDetails?: (historyId: string) => void;
   /**
-   * Optional limit for number of items to display
+   * Optional filter by import type
    */
-  limit?: number;
+  type?: "users" | "departments";
 }
 
 /**

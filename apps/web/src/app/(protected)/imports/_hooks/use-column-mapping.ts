@@ -19,13 +19,13 @@ const STORAGE_KEYS = {
  * Return type for the useColumnMapping hook
  */
 export interface UseColumnMappingReturn {
-  mapping: ColumnMapping;
-  setMapping: (mapping: ColumnMapping) => void;
-  updateMapping: (csvColumn: string, field: string | null) => void;
   autoDetect: (headers: string[], type: "users" | "departments") => void;
-  unmappedRequiredFields: string[];
   isValid: boolean;
+  mapping: ColumnMapping;
   reset: () => void;
+  setMapping: (mapping: ColumnMapping) => void;
+  unmappedRequiredFields: string[];
+  updateMapping: (csvColumn: string, field: string | null) => void;
 }
 
 /**

@@ -2,8 +2,8 @@
 import { type ReactNode, useEffect, useState } from "react";
 
 interface Props {
-  delay?: number;
   children: ReactNode;
+  delay?: number;
 }
 
 export function RenderAfter({ delay = 1000, children }: Props) {

@@ -27,8 +27,8 @@ import { ApprovalActionDialog } from "../approval-action-dialog";
 type DialogAction = "REJECT" | "REQUEST_CHANGE";
 
 interface RequestInboxDetailViewProps {
-  request: ManpowerRequest;
   onActionComplete: () => void;
+  request: ManpowerRequest;
 }
 
 export function RequestInboxDetailView({
@@ -84,11 +84,11 @@ export function RequestInboxDetailView({
     variant: "secondary" as const,
     label: request.status,
   };
-  const position = request.positionDetails;
-  const jd = request.jobDescription;
+  const positionDetails = request.positionDetails;
+  const requestPosition = request.position;
   const reportingLabel = request.reportingPosition
     ? `${request.reportingPosition.name} (${request.reportingPosition.code})`
-    : position?.reportingTo || null;
+    : positionDetails?.reportingTo || null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -118,7 +118,9 @@ export function RequestInboxDetailView({
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-3">
               <h2 className="truncate font-semibold text-xl tracking-tight">
-                {jd?.title || position?.title || "Manpower Request"}
+                {requestPosition?.name ||
+                  positionDetails?.title ||
+                  "Manpower Request"}
               </h2>
               <Badge
                 appearance="light"
@@ -166,9 +168,11 @@ export function RequestInboxDetailView({
             <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg border bg-muted/30 p-4 text-sm">
               <DetailField
                 label="Department"
-                value={jd?.departmentName ?? position?.department}
+                value={
+                  requestPosition?.departmentName ?? positionDetails?.department
+                }
               />
-              <DetailField label="Location" value={position?.location} />
+              <DetailField label="Location" value={positionDetails?.location} />
               <DetailField
                 label="Request Type"
                 value={formatLabel(request.requestType)}
@@ -185,19 +189,22 @@ export function RequestInboxDetailView({
                 label="Contract"
                 value={formatLabel(request.contractDuration ?? "")}
               />
-              {jd?.assignedRole ? (
+              {requestPosition?.role ? (
                 <DetailField
                   label="Assigned Role"
-                  value={formatLabel(jd.assignedRole)}
+                  value={formatLabel(requestPosition.role)}
                 />
               ) : null}
-              {jd?.grade ? (
-                <DetailField label="Grade" value={jd.grade} />
+              {requestPosition?.grade ? (
+                <DetailField label="Grade" value={requestPosition.grade} />
               ) : null}
-              {position?.startDate ? (
+              {positionDetails?.startDate ? (
                 <DetailField
                   label="Start Date"
-                  value={format(new Date(position.startDate), "dd MMM yyyy")}
+                  value={format(
+                    new Date(positionDetails.startDate),
+                    "dd MMM yyyy",
+                  )}
                 />
               ) : null}
               {reportingLabel ? (
@@ -237,28 +244,35 @@ export function RequestInboxDetailView({
           </section>
 
           {/* Description & Responsibilities */}
-          {jd?.description || position?.description || jd?.responsibilities ? (
+          {requestPosition?.description ||
+          positionDetails?.description ||
+          requestPosition?.responsibilities ? (
             <section>
               <SectionHeader icon={FileText} title="Job Details" />
               <div className="mt-2 space-y-3 rounded-lg border bg-muted/30 p-4">
-                {jd?.description || position?.description ? (
+                {requestPosition?.description ||
+                positionDetails?.description ? (
                   <div>
                     <p className="mb-1 font-medium text-muted-foreground text-xs">
                       Description
                     </p>
                     <p className="text-sm leading-relaxed">
-                      {jd?.description || position?.description}
+                      {requestPosition?.description ||
+                        positionDetails?.description}
                     </p>
                   </div>
                 ) : null}
-                {jd?.description && jd?.responsibilities ? <Separator /> : null}
-                {jd?.responsibilities ? (
+                {requestPosition?.description &&
+                requestPosition?.responsibilities ? (
+                  <Separator />
+                ) : null}
+                {requestPosition?.responsibilities ? (
                   <div>
                     <p className="mb-1 font-medium text-muted-foreground text-xs">
                       Responsibilities
                     </p>
                     <p className="text-sm leading-relaxed">
-                      {jd.responsibilities}
+                      {requestPosition.responsibilities}
                     </p>
                   </div>
                 ) : null}

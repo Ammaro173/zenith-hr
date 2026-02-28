@@ -103,12 +103,12 @@ ${colorConfig
 const ChartTooltip = RechartsPrimitive.Tooltip;
 
 interface ChartTooltipPayload {
-  name?: string;
-  value?: number;
-  dataKey?: string;
   color?: string;
-  type?: string;
+  dataKey?: string;
+  name?: string;
   payload?: Record<string, unknown>;
+  type?: string;
+  value?: number;
 }
 
 type ChartTooltipProps = React.ComponentProps<"div"> & {
@@ -277,11 +277,11 @@ function ChartTooltipContent({
 const ChartLegend = RechartsPrimitive.Legend;
 
 interface ChartLegendPayload {
-  value?: string | number;
   color?: string;
-  type?: string;
   dataKey?: string;
   payload?: Record<string, unknown>;
+  type?: string;
+  value?: string | number;
 }
 
 type ChartLegendProps = React.ComponentProps<"div"> & {

@@ -26,18 +26,18 @@ import {
 // Let's implement it as a layout component that takes props for now to keep it clean.
 
 interface RequestItem {
-  requestCode: string;
   createdAt: string;
   positionDetails?: {
     title?: string;
   };
+  requestCode: string;
   // biome-ignore lint/suspicious/noExplicitAny: simplified structure
   [key: string]: any;
 }
 
 interface ActiveRequestsTableProps {
-  requests?: RequestItem[]; // Replace with proper type later
   isLoading?: boolean;
+  requests?: RequestItem[]; // Replace with proper type later
 }
 
 export function ActiveRequestsTable({

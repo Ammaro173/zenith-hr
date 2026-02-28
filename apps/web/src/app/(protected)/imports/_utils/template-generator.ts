@@ -15,7 +15,7 @@ const USER_TEMPLATE_HEADERS = [
   "role",
   "status",
   "departmentId",
-  "jobDescriptionId",
+  "positionId",
   "password",
 ] as const;
 

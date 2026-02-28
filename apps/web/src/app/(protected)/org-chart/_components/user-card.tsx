@@ -12,11 +12,11 @@ import {
 } from "@/types/users";
 
 interface UserCardProps {
-  user: HierarchyNode;
+  className?: string;
   isExpanded?: boolean;
   onToggle?: () => void;
+  user: HierarchyNode;
   variant?: "chart" | "compact";
-  className?: string;
 }
 
 export function UserCard({

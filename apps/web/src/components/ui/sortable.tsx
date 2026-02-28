@@ -67,14 +67,14 @@ const ITEM_HANDLE_NAME = "SortableItemHandle";
 const OVERLAY_NAME = "SortableOverlay";
 
 interface SortableRootContextValue<T> {
+  activeId: UniqueIdentifier | null;
+  flatCursor: boolean;
+  getItemValue: (item: T) => UniqueIdentifier;
   id: string;
   items: UniqueIdentifier[];
   modifiers: DndContextProps["modifiers"];
-  strategy: SortableContextProps["strategy"];
-  activeId: UniqueIdentifier | null;
   setActiveId: (id: UniqueIdentifier | null) => void;
-  getItemValue: (item: T) => UniqueIdentifier;
-  flatCursor: boolean;
+  strategy: SortableContextProps["strategy"];
 }
 
 const SortableRootContext =
@@ -323,9 +323,9 @@ function SortableRoot<T>(props: SortableRootProps<T>) {
 const SortableContentContext = React.createContext<boolean>(false);
 
 interface SortableContentProps extends React.ComponentProps<"div"> {
-  strategy?: SortableContextProps["strategy"];
-  children: React.ReactNode;
   asChild?: boolean;
+  children: React.ReactNode;
+  strategy?: SortableContextProps["strategy"];
   withoutSlot?: boolean;
 }
 
@@ -366,12 +366,12 @@ function SortableContent(props: SortableContentProps) {
 }
 
 interface SortableItemContextValue {
-  id: string;
   attributes: DraggableAttributes;
+  disabled?: boolean;
+  id: string;
+  isDragging?: boolean;
   listeners: DraggableSyntheticListeners | undefined;
   setActivatorNodeRef: (node: HTMLElement | null) => void;
-  isDragging?: boolean;
-  disabled?: boolean;
 }
 
 const SortableItemContext =
@@ -386,10 +386,10 @@ function useSortableItemContext(consumerName: string) {
 }
 
 interface SortableItemProps extends React.ComponentProps<"div"> {
-  value: UniqueIdentifier;
-  asHandle?: boolean;
   asChild?: boolean;
+  asHandle?: boolean;
   disabled?: boolean;
+  value: UniqueIdentifier;
 }
 
 function SortableItem(props: SortableItemProps) {
@@ -549,10 +549,10 @@ const dropAnimation: DropAnimation = {
 
 interface SortableOverlayProps
   extends Omit<React.ComponentProps<typeof DragOverlay>, "children"> {
-  container?: Element | DocumentFragment | null;
   children?:
     | ((params: { value: UniqueIdentifier }) => React.ReactNode)
     | React.ReactNode;
+  container?: Element | DocumentFragment | null;
 }
 
 function OverlayChildren({

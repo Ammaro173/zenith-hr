@@ -16,10 +16,11 @@ import type { Route } from "next";
 export type UserRole =
   | "EMPLOYEE"
   | "MANAGER"
-  | "HR"
-  | "FINANCE"
+  | "HOD"
+  | "HOD_HR"
+  | "HOD_FINANCE"
+  | "HOD_IT"
   | "CEO"
-  | "IT"
   | "ADMIN";
 
 export const protectedNavigationItems: {
@@ -40,35 +41,36 @@ export const protectedNavigationItems: {
     href: "/requests",
     icon: FileText,
     description: "Create, update, and track requests",
-    allowedRoles: ["MANAGER", "HR", "FINANCE", "CEO", "ADMIN"],
+    allowedRoles: ["MANAGER", "HOD", "HOD_HR", "HOD_FINANCE", "CEO", "ADMIN"],
   },
   {
     title: "Approvals",
     href: "/approvals",
     icon: Users,
     description: "Inbox for pending approvals",
-    allowedRoles: ["MANAGER", "HR", "FINANCE", "CEO", "ADMIN"],
+    allowedRoles: ["MANAGER", "HOD", "HOD_HR", "HOD_FINANCE", "CEO", "ADMIN"],
   },
   {
     title: "User Directory",
     href: "/users",
     icon: UsersRound,
     description: "View organization users",
-    allowedRoles: ["ADMIN", "HR", "CEO", "FINANCE", "MANAGER"],
+    allowedRoles: ["ADMIN", "HOD_HR", "CEO", "HOD_FINANCE", "HOD", "MANAGER"],
   },
   {
     title: "Departments",
     href: "/departments",
     icon: Building2,
     description: "Manage organization departments",
-    allowedRoles: ["ADMIN", "HR"],
+    allowedRoles: ["ADMIN", "HOD_HR"],
   },
   {
-    title: "Job Descriptions",
-    href: "/job-descriptions",
+    title: "Positions",
+    href: "/positions",
     icon: ClipboardList,
-    description: "Manage role and department defaults for positions",
-    allowedRoles: ["ADMIN", "HR", "MANAGER", "CEO"],
+    description:
+      "Manage positions, hierarchy levels, and department assignments",
+    allowedRoles: ["ADMIN", "HOD_HR", "HOD", "MANAGER", "CEO"],
   },
   {
     title: "Organization Chart",
@@ -99,7 +101,7 @@ export const protectedNavigationItems: {
     href: "/imports",
     icon: Settings,
     description: "Import users and departments",
-    allowedRoles: ["ADMIN", "HR"],
+    allowedRoles: ["ADMIN", "HOD_HR"],
   },
 ] as const;
 
@@ -116,10 +118,11 @@ export function getRoleFromSessionUser(user: unknown): UserRole | null {
   if (
     role === "EMPLOYEE" ||
     role === "MANAGER" ||
-    role === "HR" ||
-    role === "FINANCE" ||
+    role === "HOD" ||
+    role === "HOD_HR" ||
+    role === "HOD_FINANCE" ||
+    role === "HOD_IT" ||
     role === "CEO" ||
-    role === "IT" ||
     role === "ADMIN"
   ) {
     return role;
@@ -158,12 +161,14 @@ export function getDefaultRouteForRole(role: UserRole | null): string {
   }
   if (
     role === "CEO" ||
-    role === "FINANCE" ||
-    role === "HR" ||
+    role === "HOD_FINANCE" ||
+    role === "HOD_HR" ||
+    role === "HOD_IT" ||
+    role === "HOD" ||
     role === "MANAGER"
   ) {
     return "/dashboard";
   }
-  // EMPLOYEE, IT, and unknown roles go to dashboard
+  // EMPLOYEE and unknown roles go to dashboard
   return "/dashboard";
 }

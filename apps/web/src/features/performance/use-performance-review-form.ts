@@ -14,10 +14,10 @@ const defaultFormValues: ReviewFormValues = {
 };
 
 interface UsePerformanceReviewFormProps {
-  reviewId?: string;
-  onSuccess?: () => void;
-  onCancel?: () => void;
   autoSaveEnabled?: boolean;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+  reviewId?: string;
 }
 
 export function usePerformanceReviewForm({

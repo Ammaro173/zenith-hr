@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Banknote,
@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Hotel,
   MapPin,
+  MessageSquare,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -21,6 +22,7 @@ import type { BusinessTrip } from "@/types/business-trips";
 import { STATUS_VARIANTS } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { ApprovalActionDialog } from "../approval-action-dialog";
+import { WorkflowProgress } from "../workflow-progress";
 
 export type TripWithRequester = BusinessTrip & {
   requester?: {
@@ -32,8 +34,8 @@ export type TripWithRequester = BusinessTrip & {
 };
 
 interface TripInboxDetailViewProps {
-  trip: TripWithRequester;
   onActionComplete: () => void;
+  trip: TripWithRequester;
 }
 
 export function TripInboxDetailView({
@@ -41,8 +43,17 @@ export function TripInboxDetailView({
   onActionComplete,
 }: TripInboxDetailViewProps) {
   const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [comment, setComment] = useState("");
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approveComment, setApproveComment] = useState("");
+  const [rejectComment, setRejectComment] = useState("");
+
+  // Fetch approval history for this trip
+  const { data: approvalHistory } = useQuery(
+    orpc.businessTrips.getApprovalHistory.queryOptions({
+      input: { tripId: trip.id },
+    }),
+  );
 
   const { mutateAsync: transitionTrip, isPending } = useMutation(
     orpc.businessTrips.transition.mutationOptions({
@@ -62,23 +73,33 @@ export function TripInboxDetailView({
     }),
   );
 
-  const approve = useCallback(async () => {
-    await transitionTrip({ tripId: trip.id, action: "APPROVE" });
-  }, [transitionTrip, trip.id]);
+  const openApproveDialog = useCallback(() => {
+    setApproveComment("");
+    setApproveDialogOpen(true);
+  }, []);
+
+  const confirmApprove = useCallback(async () => {
+    await transitionTrip({
+      tripId: trip.id,
+      action: "APPROVE",
+      comment: approveComment.trim() || undefined,
+    });
+    setApproveDialogOpen(false);
+  }, [trip.id, approveComment, transitionTrip]);
 
   const openRejectDialog = useCallback(() => {
-    setComment("");
-    setDialogOpen(true);
+    setRejectComment("");
+    setRejectDialogOpen(true);
   }, []);
 
   const confirmReject = useCallback(async () => {
     await transitionTrip({
       tripId: trip.id,
       action: "REJECT",
-      comment: comment.trim() || undefined,
+      comment: rejectComment.trim() || undefined,
     });
-    setDialogOpen(false);
-  }, [trip.id, comment, transitionTrip]);
+    setRejectDialogOpen(false);
+  }, [trip.id, rejectComment, transitionTrip]);
 
   const status = STATUS_VARIANTS[trip.status] || {
     variant: "secondary" as const,
@@ -92,18 +113,35 @@ export function TripInboxDetailView({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {/* Reject Dialog - Requires comment */}
       <ApprovalActionDialog
-        comment={comment}
+        comment={rejectComment}
         confirmLabel="Reject"
         confirmVariant="destructive"
-        description="This will notify the requester and update the trip status."
+        description="Please provide a reason for rejecting this trip request. This will be shared with the requester."
         isPending={isPending}
-        onCommentChange={setComment}
+        onCommentChange={setRejectComment}
         onConfirm={confirmReject}
-        onOpenChange={setDialogOpen}
-        open={dialogOpen}
-        requireComment={false}
+        onOpenChange={setRejectDialogOpen}
+        open={rejectDialogOpen}
+        requireComment={true}
         title="Reject trip"
+      />
+
+      {/* Approve Dialog - Optional comment */}
+      <ApprovalActionDialog
+        comment={approveComment}
+        commentLabel="Approval Note"
+        commentPlaceholder="Add an optional note for the requester..."
+        confirmLabel="Approve"
+        description="Add an optional note before approving this trip request."
+        isPending={isPending}
+        onCommentChange={setApproveComment}
+        onConfirm={confirmApprove}
+        onOpenChange={setApproveDialogOpen}
+        open={approveDialogOpen}
+        requireComment={false}
+        title="Approve trip"
       />
 
       {/* Header */}
@@ -247,6 +285,67 @@ export function TripInboxDetailView({
           </section>
         ) : null}
 
+        {/* Approval Workflow Progress */}
+        <section className="space-y-3">
+          <h3 className="flex items-center gap-2 font-medium text-sm">
+            <Check className="h-4 w-4 text-muted-foreground" />
+            Approval Workflow
+          </h3>
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <WorkflowProgress currentStatus={trip.status} />
+          </div>
+        </section>
+
+        {/* Approval History */}
+        {approvalHistory && approvalHistory.length > 0 ? (
+          <section className="space-y-3">
+            <h3 className="flex items-center gap-2 font-medium text-sm">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              Approval History
+            </h3>
+            <div className="space-y-3">
+              {approvalHistory.map((log) => (
+                <div
+                  className="rounded-lg border bg-muted/30 p-4 text-sm"
+                  key={log.id}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className="text-xs"
+                        variant={getActionBadgeVariant(log.action)}
+                      >
+                        {log.action}
+                      </Badge>
+                      <span className="font-medium">
+                        {log.actor?.name || "Unknown"}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {format(new Date(log.performedAt), "dd MMM yyyy, HH:mm")}
+                    </span>
+                  </div>
+                  {log.stepName ? (
+                    <p className="mt-1 text-muted-foreground text-xs">
+                      Step: {log.stepName}
+                    </p>
+                  ) : null}
+                  {log.comment ? (
+                    <div className="mt-2 rounded bg-background p-2 text-sm">
+                      <p className="mb-1 text-muted-foreground text-xs">
+                        {log.action === "REJECT"
+                          ? "Rejection Reason:"
+                          : "Note:"}
+                      </p>
+                      <p>{log.comment}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-sm">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -269,7 +368,7 @@ export function TripInboxDetailView({
             <X className="mr-2 h-4 w-4" />
             Reject
           </Button>
-          <Button disabled={isPending} onClick={approve}>
+          <Button disabled={isPending} onClick={openApproveDialog}>
             <Check className="mr-2 h-4 w-4" />
             Approve
           </Button>
@@ -292,4 +391,17 @@ function DetailField({
       <dd className="mt-0.5 font-medium">{value || "—"}</dd>
     </div>
   );
+}
+
+function getActionBadgeVariant(
+  action: string,
+): "default" | "destructive" | "secondary" {
+  switch (action) {
+    case "REJECT":
+      return "destructive";
+    case "APPROVE":
+      return "default";
+    default:
+      return "secondary";
+  }
 }

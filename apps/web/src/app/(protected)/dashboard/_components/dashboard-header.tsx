@@ -25,8 +25,8 @@ export function DashboardHeader() {
     "MANAGER",
     "ADMIN",
     "CEO",
-    "HR",
-    "FINANCE",
+    "HOD_HR",
+    "HOD_FINANCE",
   ].includes(session?.user.role ?? "");
 
   return (

@@ -6,12 +6,12 @@ import {
   department,
   importHistory,
   importHistoryItem,
-  jobDescription,
   jobPosition,
   user,
   userPositionAssignment,
 } from "@zenith-hr/db/schema";
 import { desc, eq, inArray } from "drizzle-orm";
+import { AppError } from "../../shared/errors";
 import {
   type DepartmentImportRow,
   departmentImportRowSchema,
@@ -134,38 +134,23 @@ export const createImportsService = (db = defaultDb) => ({
             updatedAt: new Date(),
           };
 
-          // If a jobDescriptionId is provided, derive role and department and create a position
-          if (row.jobDescriptionId) {
-            const [jdData] = await db
+          // If a positionId is provided, validate it exists and assign user to it
+          if (row.positionId) {
+            const [pos] = await db
               .select({
-                id: jobDescription.id,
-                title: jobDescription.title,
-                departmentId: jobDescription.departmentId,
-                reportsToPositionId: jobDescription.reportsToPositionId,
-                assignedRole: jobDescription.assignedRole,
+                id: jobPosition.id,
+                role: jobPosition.role,
+                departmentId: jobPosition.departmentId,
               })
-              .from(jobDescription)
-              .where(eq(jobDescription.id, row.jobDescriptionId))
+              .from(jobPosition)
+              .where(eq(jobPosition.id, row.positionId))
               .limit(1);
-            if (jdData) {
-              updateData.role = jdData.assignedRole ?? row.role;
+            if (pos) {
+              updateData.role = pos.role ?? row.role;
               updateData.departmentId =
-                jdData.departmentId ?? updateData.departmentId ?? null;
+                pos.departmentId ?? updateData.departmentId ?? null;
 
-              // Create a new position for this user
-              const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
-              const positionId = randomUUID();
-              await db.insert(jobPosition).values({
-                id: positionId,
-                code: positionCode,
-                name: `${row.name} — ${jdData.title}`,
-                departmentId: jdData.departmentId,
-                jobDescriptionId: jdData.id,
-                reportsToPositionId: jdData.reportsToPositionId,
-                active: true,
-              });
-
-              // Reassign position
+              // Reassign to existing position
               const [existingAssignment] = await db
                 .select({ id: userPositionAssignment.id })
                 .from(userPositionAssignment)
@@ -176,14 +161,14 @@ export const createImportsService = (db = defaultDb) => ({
                 await db
                   .update(userPositionAssignment)
                   .set({
-                    positionId,
+                    positionId: pos.id,
                     updatedAt: new Date(),
                   })
                   .where(eq(userPositionAssignment.id, existingAssignment.id));
               } else {
                 await db.insert(userPositionAssignment).values({
                   userId: existingUserId,
-                  positionId,
+                  positionId: pos.id,
                   createdAt: new Date(),
                   updatedAt: new Date(),
                 });
@@ -230,38 +215,24 @@ export const createImportsService = (db = defaultDb) => ({
         const userId = randomUUID();
         const now = new Date();
 
-        // Derive role and department from job description if provided
+        // Derive role and department from position if provided
         let derivedRole = row.role;
         let derivedDepartmentId = row.departmentId ?? null;
         let newPositionId: string | null = null;
-        if (row.jobDescriptionId) {
-          const [jdData] = await db
+        if (row.positionId) {
+          const [pos] = await db
             .select({
-              id: jobDescription.id,
-              title: jobDescription.title,
-              departmentId: jobDescription.departmentId,
-              reportsToPositionId: jobDescription.reportsToPositionId,
-              assignedRole: jobDescription.assignedRole,
+              id: jobPosition.id,
+              role: jobPosition.role,
+              departmentId: jobPosition.departmentId,
             })
-            .from(jobDescription)
-            .where(eq(jobDescription.id, row.jobDescriptionId))
+            .from(jobPosition)
+            .where(eq(jobPosition.id, row.positionId))
             .limit(1);
-          if (jdData) {
-            derivedRole = jdData.assignedRole ?? row.role;
-            derivedDepartmentId = jdData.departmentId ?? derivedDepartmentId;
-
-            // Auto-create position
-            const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
-            newPositionId = randomUUID();
-            await db.insert(jobPosition).values({
-              id: newPositionId,
-              code: positionCode,
-              name: `${row.name} — ${jdData.title}`,
-              departmentId: jdData.departmentId,
-              jobDescriptionId: jdData.id,
-              reportsToPositionId: jdData.reportsToPositionId,
-              active: true,
-            });
+          if (pos) {
+            derivedRole = pos.role ?? row.role;
+            derivedDepartmentId = pos.departmentId ?? derivedDepartmentId;
+            newPositionId = pos.id;
           }
         }
 
@@ -534,10 +505,10 @@ export const createImportsService = (db = defaultDb) => ({
           .filter((id): id is string => id != null && id !== ""),
       ),
     ];
-    const jobDescriptionIds = [
+    const positionIds = [
       ...new Set(
         rows
-          .map((row) => row.jobDescriptionId)
+          .map((row) => row.positionId)
           .filter((id): id is string => id != null && id !== ""),
       ),
     ];
@@ -556,13 +527,13 @@ export const createImportsService = (db = defaultDb) => ({
         : [];
     const validDepartmentIds = new Set(existingDepartments.map((d) => d.id));
 
-    // Fetch existing job descriptions (for jobDescriptionId validation)
-    const existingJobDescriptions =
-      jobDescriptionIds.length > 0
+    // Fetch existing positions (for positionId validation)
+    const existingPositions =
+      positionIds.length > 0
         ? await db
-            .select({ id: jobDescription.id })
-            .from(jobDescription)
-            .where(inArray(jobDescription.id, jobDescriptionIds))
+            .select({ id: jobPosition.id })
+            .from(jobPosition)
+            .where(inArray(jobPosition.id, positionIds))
         : [];
 
     // Also fetch users by email for willUpdate check
@@ -574,9 +545,7 @@ export const createImportsService = (db = defaultDb) => ({
             .where(inArray(user.email, emails))
         : [];
 
-    const validJobDescriptionIds = new Set(
-      existingJobDescriptions.map((jd) => jd.id),
-    );
+    const validPositionIds = new Set(existingPositions.map((p) => p.id));
     const existingEmailSet = new Set(existingUsersByEmail.map((u) => u.email));
 
     // Validate each row
@@ -615,15 +584,15 @@ export const createImportsService = (db = defaultDb) => ({
         });
       }
 
-      const jobDescriptionId = row.jobDescriptionId;
+      const positionId = row.positionId;
       if (
-        jobDescriptionId != null &&
-        jobDescriptionId !== "" &&
-        !validJobDescriptionIds.has(jobDescriptionId)
+        positionId != null &&
+        positionId !== "" &&
+        !validPositionIds.has(positionId)
       ) {
         errors.push({
-          field: "jobDescriptionId",
-          message: "Job description does not exist",
+          field: "positionId",
+          message: "Position does not exist",
         });
       }
 
@@ -794,7 +763,7 @@ export const createImportsService = (db = defaultDb) => ({
       .where(eq(importHistory.id, id));
 
     if (!historyRecord) {
-      throw new Error(`Import history record not found: ${id}`);
+      throw AppError.notFound(`Import history record not found: ${id}`);
     }
 
     // Fetch all items for this import history

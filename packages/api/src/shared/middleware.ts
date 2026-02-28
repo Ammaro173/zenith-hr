@@ -1,8 +1,10 @@
 import type { ORPCErrorCode } from "@orpc/client";
 import { ORPCError, os } from "@orpc/server";
+import { db } from "@zenith-hr/db";
 import type { Context } from "../context";
 import { AppError } from "./errors";
 import type { UserRole } from "./types";
+import { getActorPositionInfo } from "./utils";
 
 export const o = os.$context<Context>();
 
@@ -39,19 +41,32 @@ export const protectedProcedure = publicProcedure.use(requireAuth);
 
 export const requireRoles = (roles: UserRole[]) =>
   protectedProcedure.use(
-    o.middleware(({ context, next }) => {
-      const role = context.session?.user.role as UserRole;
+    o.middleware(async ({ context, next }) => {
+      const systemRole = context.session?.user.role as UserRole;
 
-      if (!(role && roles.includes(role))) {
-        throw new ORPCError("FORBIDDEN");
+      if (systemRole === "ADMIN" && roles.includes("ADMIN")) {
+        return next({
+          context: {
+            ...(context as Context),
+            session: context.session as NonNullable<Context["session"]>,
+          },
+        });
       }
 
-      //TODO i dont like the as types override here
-      return next({
-        context: {
-          ...(context as Context),
-          session: context.session as NonNullable<Context["session"]>,
-        },
-      });
+      // Live position-role check
+      const posInfo = await getActorPositionInfo(
+        db,
+        context.session?.user.id as string,
+      );
+      if (posInfo && roles.includes(posInfo.positionRole as UserRole)) {
+        return next({
+          context: {
+            ...(context as Context),
+            session: context.session as NonNullable<Context["session"]>,
+          },
+        });
+      }
+
+      throw new ORPCError("FORBIDDEN");
     }),
   );

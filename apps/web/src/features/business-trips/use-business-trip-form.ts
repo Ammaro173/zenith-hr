@@ -10,8 +10,8 @@ import { client } from "@/utils/orpc";
 import type { CreateTripInput } from "./types";
 
 interface UseBusinessTripFormProps {
-  onSuccess?: () => void;
   onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 export function useBusinessTripForm({

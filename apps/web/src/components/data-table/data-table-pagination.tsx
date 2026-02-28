@@ -17,8 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface DataTablePaginationProps<TData> extends React.ComponentProps<"div"> {
-  table: Table<TData>;
   pageSizeOptions?: number[];
+  table: Table<TData>;
 }
 
 export function DataTablePagination<TData>({

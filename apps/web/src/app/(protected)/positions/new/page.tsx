@@ -1,24 +1,23 @@
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { CreateJobDescriptionContent } from "./_components/create-content";
+import { CreatePositionContent } from "./_components/create-content";
 
 export const metadata: Metadata = {
-  title: "Create Job Description",
+  title: "Create Position",
   description:
-    "Create a template that defines assigned role and default department for positions.",
+    "Create a position that defines hierarchy level and department assignment.",
 };
 
-export default function CreateJobDescriptionPage() {
+export default function CreatePositionPage() {
   return (
     <div className="mx-auto flex max-w-(--breakpoint-lg) flex-col gap-8 p-8">
       <div>
         <h1 className="font-bold text-3xl text-black tracking-tight dark:text-white">
-          Create Job Description
+          Create Position
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Create a template that sets assigned role and default department for
-          linked positions.
+          Create a position with hierarchy level and department assignment.
         </p>
       </div>
 
@@ -29,7 +28,7 @@ export default function CreateJobDescriptionPage() {
           </div>
         }
       >
-        <CreateJobDescriptionContent />
+        <CreatePositionContent />
       </Suspense>
     </div>
   );

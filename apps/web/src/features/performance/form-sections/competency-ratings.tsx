@@ -16,12 +16,12 @@ import { cn } from "@/lib/utils";
 import { usePerformanceReviewFormContext } from "../performance-review-form-context";
 
 interface Competency {
-  id: string;
-  name: string;
   description: string | null;
-  weight: number;
-  rating: number | null;
+  id: string;
   justification: string | null;
+  name: string;
+  rating: number | null;
+  weight: number;
 }
 
 interface CompetencyRatingsSectionProps {

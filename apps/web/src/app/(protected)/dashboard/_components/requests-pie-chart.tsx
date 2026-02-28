@@ -17,9 +17,9 @@ import {
 } from "@/components/ui/card";
 
 interface RequestsPieChartProps {
-  pending: number;
   approved: number;
   hiring: number;
+  pending: number;
 }
 
 export function RequestsPieChart({

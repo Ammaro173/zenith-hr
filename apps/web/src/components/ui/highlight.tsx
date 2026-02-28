@@ -4,19 +4,19 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 interface HighlightPart {
-  text: string;
   highlight: boolean;
   id: string;
+  text: string;
 }
 
 interface HighlightProps {
-  text: string;
-  query: string | string[];
+  className?: string;
   exactMatch?: boolean;
   ignoreCase?: boolean;
-  matchAll?: boolean;
-  className?: string;
   markClassName?: string;
+  matchAll?: boolean;
+  query: string | string[];
+  text: string;
 }
 
 function buildPattern(queries: string[], exactMatch: boolean): string {

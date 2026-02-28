@@ -168,15 +168,15 @@ const ITEM_HANDLE_NAME = "KanbanItemHandle";
 const OVERLAY_NAME = "KanbanOverlay";
 
 interface KanbanContextValue<T> {
+  activeId: UniqueIdentifier | null;
+  flatCursor: boolean;
+  getItemValue: (item: T) => UniqueIdentifier;
   id: string;
   items: Record<UniqueIdentifier, T[]>;
   modifiers: DndContextProps["modifiers"];
-  strategy: SortableContextProps["strategy"];
   orientation: "horizontal" | "vertical";
-  activeId: UniqueIdentifier | null;
   setActiveId: (id: UniqueIdentifier | null) => void;
-  getItemValue: (item: T) => UniqueIdentifier;
-  flatCursor: boolean;
+  strategy: SortableContextProps["strategy"];
 }
 
 const KanbanContext = React.createContext<KanbanContextValue<unknown> | null>(
@@ -684,8 +684,8 @@ function Kanban<T>(props: KanbanProps<T>) {
 const KanbanBoardContext = React.createContext<boolean>(false);
 
 interface KanbanBoardProps extends React.ComponentProps<"div"> {
-  children: React.ReactNode;
   asChild?: boolean;
+  children: React.ReactNode;
 }
 
 function KanbanBoard(props: KanbanBoardProps) {
@@ -727,12 +727,12 @@ function KanbanBoard(props: KanbanBoardProps) {
 }
 
 interface KanbanColumnContextValue {
-  id: string;
   attributes: DraggableAttributes;
+  disabled?: boolean;
+  id: string;
+  isDragging?: boolean;
   listeners: DraggableSyntheticListeners | undefined;
   setActivatorNodeRef: (node: HTMLElement | null) => void;
-  isDragging?: boolean;
-  disabled?: boolean;
 }
 
 const KanbanColumnContext =
@@ -752,11 +752,11 @@ const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   defaultAnimateLayoutChanges({ ...args, wasDragging: true });
 
 interface KanbanColumnProps extends React.ComponentProps<"div"> {
-  value: UniqueIdentifier;
-  children: React.ReactNode;
   asChild?: boolean;
   asHandle?: boolean;
+  children: React.ReactNode;
   disabled?: boolean;
+  value: UniqueIdentifier;
 }
 
 function KanbanColumn(props: KanbanColumnProps) {
@@ -917,12 +917,12 @@ function KanbanColumnHandle(props: KanbanColumnHandleProps) {
 }
 
 interface KanbanItemContextValue {
-  id: string;
   attributes: DraggableAttributes;
+  disabled?: boolean;
+  id: string;
+  isDragging?: boolean;
   listeners: DraggableSyntheticListeners | undefined;
   setActivatorNodeRef: (node: HTMLElement | null) => void;
-  isDragging?: boolean;
-  disabled?: boolean;
 }
 
 const KanbanItemContext = React.createContext<KanbanItemContextValue | null>(
@@ -938,10 +938,10 @@ function useKanbanItemContext(consumerName: string) {
 }
 
 interface KanbanItemProps extends React.ComponentProps<"div"> {
-  value: UniqueIdentifier;
-  asHandle?: boolean;
   asChild?: boolean;
+  asHandle?: boolean;
   disabled?: boolean;
+  value: UniqueIdentifier;
 }
 
 function KanbanItem(props: KanbanItemProps) {
@@ -1095,13 +1095,13 @@ const dropAnimation: DropAnimation = {
 
 interface KanbanOverlayProps
   extends Omit<React.ComponentProps<typeof DragOverlay>, "children"> {
-  container?: Element | DocumentFragment | null;
   children?:
     | React.ReactNode
     | ((params: {
         value: UniqueIdentifier;
         variant: "column" | "item";
       }) => React.ReactNode);
+  container?: Element | DocumentFragment | null;
 }
 
 function KanbanOverlay(props: KanbanOverlayProps) {

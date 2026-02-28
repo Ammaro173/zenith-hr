@@ -17,7 +17,16 @@ export const listUsersSchema = z.object({
     .default(null),
   role: z
     .array(
-      z.enum(["EMPLOYEE", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
+      z.enum([
+        "EMPLOYEE",
+        "MANAGER",
+        "HOD",
+        "HOD_HR",
+        "HOD_FINANCE",
+        "CEO",
+        "HOD_IT",
+        "ADMIN",
+      ]),
     )
     .nullable()
     .optional()
@@ -39,18 +48,18 @@ export type GetHierarchyInput = z.infer<typeof getHierarchySchema>;
 
 // Hierarchical node structure for org chart
 export interface HierarchyNode {
-  id: string;
-  name: string;
-  email: string;
-  sapNo: string;
-  role: string;
-  status: string;
-  departmentName: string | null;
-  /** The name of the job position this node occupies (or the vacant position name). */
-  positionName?: string | null;
   children: HierarchyNode[];
+  departmentName: string | null;
+  email: string;
+  id: string;
   /** True when this node represents an unoccupied position slot (no real user). */
   isVacancy?: boolean;
+  name: string;
+  /** The name of the job position this node occupies (or the vacant position name). */
+  positionName?: string | null;
+  role: string;
+  sapNo: string;
+  status: string;
 }
 
 // ============================================
@@ -61,10 +70,11 @@ export interface HierarchyNode {
 export const userRoleSchema = z.enum([
   "EMPLOYEE",
   "MANAGER",
-  "HR",
-  "FINANCE",
+  "HOD",
+  "HOD_HR",
+  "HOD_FINANCE",
+  "HOD_IT",
   "CEO",
-  "IT",
   "ADMIN",
 ]);
 
@@ -77,7 +87,7 @@ export const createUserSchema = z.object({
   password: z.string().min(8).max(128),
   sapNo: z.string().min(1).max(50),
   status: userStatusSchema,
-  jobDescriptionId: z.string().uuid(),
+  positionId: z.string().uuid(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -88,7 +98,7 @@ export const createUserDefaults: CreateUserInput = {
   password: "",
   sapNo: "",
   status: "ACTIVE",
-  jobDescriptionId: "",
+  positionId: "",
 };
 
 // Update User Input
@@ -98,7 +108,7 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   sapNo: z.string().min(1).max(50).optional(),
   status: userStatusSchema.optional(),
-  jobDescriptionId: z.string().uuid().optional(),
+  positionId: z.string().uuid().optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
@@ -169,30 +179,29 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 // User Session Response
 export interface UserSession {
-  id: string;
   createdAt: Date;
   expiresAt: Date;
+  id: string;
   ipAddress: string | null;
   userAgent: string | null;
 }
 
 // User Response (without sensitive data)
 export interface UserResponse {
-  id: string;
-  name: string;
-  email: string;
-  sapNo: string;
-  role: string;
-  status: string;
+  createdAt: Date;
   departmentId: string | null;
   departmentName: string | null;
-  positionId: string | null;
+  email: string;
+  id: string;
+  managerName: string | null;
+  name: string;
   positionCode: string | null;
+  positionId: string | null;
   positionName: string | null;
   reportsToPositionId: string | null;
-  jobDescriptionTitle: string | null;
-  managerName: string | null;
-  createdAt: Date;
+  role: string;
+  sapNo: string;
+  status: string;
   updatedAt: Date;
 }
 
@@ -206,16 +215,16 @@ export type OffboardingBlockerModule =
 
 export interface OffboardingBlockerDetail {
   id: string;
-  status: string | null;
   reason: string;
+  status: string | null;
 }
 
 export interface OffboardingPrecheckResult {
-  userId: string;
-  counts: Record<OffboardingBlockerModule, number>;
-  details: Record<OffboardingBlockerModule, OffboardingBlockerDetail[]>;
-  hasOperationalBlockers: boolean;
-  hasDeleteBlockers: boolean;
   canDeactivate: boolean;
   canDelete: boolean;
+  counts: Record<OffboardingBlockerModule, number>;
+  details: Record<OffboardingBlockerModule, OffboardingBlockerDetail[]>;
+  hasDeleteBlockers: boolean;
+  hasOperationalBlockers: boolean;
+  userId: string;
 }

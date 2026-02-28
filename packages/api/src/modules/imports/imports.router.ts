@@ -9,13 +9,13 @@ import {
 } from "./imports.schema";
 
 export const importsRouter = o.router({
-  importUsers: requireRoles(["ADMIN", "HR"])
+  importUsers: requireRoles(["ADMIN", "HOD_HR"])
     .input(importUsersInputSchema)
     .handler(async ({ input, context }) =>
       context.services.imports.importUsers(input, context.session.user.id),
     ),
 
-  importDepartments: requireRoles(["ADMIN", "HR"])
+  importDepartments: requireRoles(["ADMIN", "HOD_HR"])
     .input(importDepartmentsInputSchema)
     .handler(async ({ input, context }) =>
       context.services.imports.importDepartments(
@@ -25,13 +25,13 @@ export const importsRouter = o.router({
     ),
 
   // New endpoints
-  validateUsers: requireRoles(["ADMIN", "HR"])
+  validateUsers: requireRoles(["ADMIN", "HOD_HR"])
     .input(validateUsersInputSchema)
     .handler(async ({ input, context }) =>
       context.services.imports.validateUserRows(input.rows, input.upsertMode),
     ),
 
-  validateDepartments: requireRoles(["ADMIN", "HR"])
+  validateDepartments: requireRoles(["ADMIN", "HOD_HR"])
     .input(validateDepartmentsInputSchema)
     .handler(async ({ input, context }) =>
       context.services.imports.validateDepartmentRows(
@@ -40,13 +40,13 @@ export const importsRouter = o.router({
       ),
     ),
 
-  getHistory: requireRoles(["ADMIN", "HR"])
+  getHistory: requireRoles(["ADMIN", "HOD_HR"])
     .input(getHistoryInputSchema)
     .handler(async ({ input, context }) =>
       context.services.imports.getImportHistory(input),
     ),
 
-  getHistoryDetails: requireRoles(["ADMIN", "HR"])
+  getHistoryDetails: requireRoles(["ADMIN", "HOD_HR"])
     .input(getHistoryDetailsInputSchema)
     .handler(async ({ input, context }) =>
       context.services.imports.getImportHistoryDetails(input.id),

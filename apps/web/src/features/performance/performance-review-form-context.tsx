@@ -5,18 +5,18 @@ import type { PerformanceReviewFormType } from "./types";
 
 interface PerformanceReviewFormContextValue {
   form: PerformanceReviewFormType;
-  reviewId?: string;
   isEditing: boolean;
+  reviewId?: string;
 }
 
 const PerformanceReviewFormContext =
   createContext<PerformanceReviewFormContextValue | null>(null);
 
 interface PerformanceReviewFormProviderProps {
-  form: PerformanceReviewFormType;
-  reviewId?: string;
-  isEditing?: boolean;
   children: React.ReactNode;
+  form: PerformanceReviewFormType;
+  isEditing?: boolean;
+  reviewId?: string;
 }
 
 export function PerformanceReviewFormProvider({

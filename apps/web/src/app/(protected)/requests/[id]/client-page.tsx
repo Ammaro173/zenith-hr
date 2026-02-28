@@ -84,14 +84,14 @@ export function RequestDetailClientPage({
   }
 
   const isApprover =
-    request.currentApproverId === currentUserId &&
+    request.currentApprover?.id === currentUserId &&
     !["APPROVED_OPEN", "REJECTED", "ARCHIVED", "DRAFT", "COMPLETED"].includes(
       request.status,
     );
 
   const canCompleteHiring =
     request.status === "HIRING_IN_PROGRESS" &&
-    (currentUserRole === "HR" || currentUserRole === "ADMIN");
+    (currentUserRole === "HOD_HR" || currentUserRole === "ADMIN");
 
   const positionDetails = request.positionDetails as {
     title?: string;
@@ -103,7 +103,7 @@ export function RequestDetailClientPage({
   const budgetDetails = request.budgetDetails as {
     currency: string;
   };
-  const jd = request.jobDescription;
+  const position = request.position;
 
   const getApproverNameForStep = (stepName: string): string | undefined => {
     return history
@@ -139,12 +139,12 @@ export function RequestDetailClientPage({
             </Badge>
           </div>
           <h1 className="font-bold text-3xl tracking-tight">
-            {jd?.title || positionDetails.title || "Untitled Position"}
+            {position?.name || positionDetails.title || "Untitled Position"}
           </h1>
           <div className="flex items-center gap-4 text-muted-foreground text-sm">
             <span>
-              {jd?.departmentName ||
-                positionDetails.department ||
+              {position?.departmentName ??
+                positionDetails.department ??
                 "No Department"}{" "}
               Department
             </span>
@@ -186,7 +186,7 @@ export function RequestDetailClientPage({
               <DetailItem
                 label="DEPARTMENT"
                 value={
-                  jd?.departmentName ??
+                  position?.departmentName ??
                   positionDetails.department ??
                   "Not specified"
                 }
@@ -197,9 +197,12 @@ export function RequestDetailClientPage({
               />
               <DetailItem
                 label="ASSIGNED ROLE"
-                value={jd?.assignedRole?.replace("_", " ") || "Not specified"}
+                value={position?.role?.replace("_", " ") || "Not specified"}
               />
-              <DetailItem label="GRADE" value={jd?.grade || "Not specified"} />
+              <DetailItem
+                label="GRADE"
+                value={position?.grade || "Not specified"}
+              />
               <DetailItem
                 label="HEADCOUNT"
                 value={String(request.headcount ?? 1)}
@@ -240,24 +243,24 @@ export function RequestDetailClientPage({
                 }
               />
 
-              {jd?.description && (
+              {position?.description && (
                 <div className="space-y-2 md:col-span-2">
                   <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
                     JOB DESCRIPTION
                   </span>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    {jd.description}
+                    {position.description}
                   </p>
                 </div>
               )}
 
-              {jd?.responsibilities && (
+              {position?.responsibilities && (
                 <div className="space-y-2 md:col-span-2">
                   <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
                     RESPONSIBILITIES
                   </span>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    {jd.responsibilities}
+                    {position.responsibilities}
                   </p>
                 </div>
               )}
@@ -341,7 +344,7 @@ export function RequestDetailClientPage({
                   Pending Your Action
                 </CardTitle>
                 <p className="text-muted-foreground text-xs">
-                  As {request.currentApproverRole} Approver, please review the
+                  As {request.requiredApproverRole} Approver, please review the
                   budget impact.
                 </p>
               </CardHeader>

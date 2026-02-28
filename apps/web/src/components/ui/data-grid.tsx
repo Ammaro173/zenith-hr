@@ -15,11 +15,11 @@ import type { FilterVariant } from "@/types/data-table";
 
 declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
-    headerTitle?: string;
-    headerClassName?: string;
     cellClassName?: string;
-    skeleton?: ReactNode;
     expandedContent?: (row: TData) => ReactNode;
+    headerClassName?: string;
+    headerTitle?: string;
+    skeleton?: ReactNode;
     variant?: FilterVariant;
   }
 }
@@ -42,10 +42,10 @@ export type DataGridApiResponse<T> = {
 };
 
 export interface DataGridContextProps<TData extends object> {
-  props: DataGridProps<TData>;
-  table: Table<TData>;
-  recordCount: number;
   isLoading: boolean;
+  props: DataGridProps<TData>;
+  recordCount: number;
+  table: Table<TData>;
 }
 
 export type DataGridRequestParams = {
@@ -56,15 +56,25 @@ export type DataGridRequestParams = {
 };
 
 export interface DataGridProps<TData extends object> {
-  className?: string;
-  table?: Table<TData>;
-  recordCount: number;
   children?: ReactNode;
-  onRowClick?: (row: TData) => void;
-  isLoading?: boolean;
-  loadingMode?: "skeleton" | "spinner";
-  loadingMessage?: ReactNode | string;
+  className?: string;
   emptyMessage?: ReactNode | string;
+  isLoading?: boolean;
+  loadingMessage?: ReactNode | string;
+  loadingMode?: "skeleton" | "spinner";
+  onRowClick?: (row: TData) => void;
+  recordCount: number;
+  table?: Table<TData>;
+  tableClassNames?: {
+    base?: string;
+    header?: string;
+    headerRow?: string;
+    headerSticky?: string;
+    body?: string;
+    bodyRow?: string;
+    footer?: string;
+    edgeCell?: string;
+  };
   tableLayout?: {
     dense?: boolean;
     cellBorder?: boolean;
@@ -81,16 +91,6 @@ export interface DataGridProps<TData extends object> {
     columnsMovable?: boolean;
     columnsDraggable?: boolean;
     rowsDraggable?: boolean;
-  };
-  tableClassNames?: {
-    base?: string;
-    header?: string;
-    headerRow?: string;
-    headerSticky?: string;
-    body?: string;
-    bodyRow?: string;
-    footer?: string;
-    edgeCell?: string;
   };
 }
 

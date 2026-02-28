@@ -11,10 +11,19 @@ export const userImportRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email format"),
   sapNo: z.string().min(1, "SAP number is required"),
-  role: z.enum(["EMPLOYEE", "MANAGER", "HR", "FINANCE", "CEO", "IT", "ADMIN"]),
+  role: z.enum([
+    "EMPLOYEE",
+    "MANAGER",
+    "HOD",
+    "HOD_HR",
+    "HOD_FINANCE",
+    "CEO",
+    "HOD_IT",
+    "ADMIN",
+  ]),
   status: z.enum(["ACTIVE", "INACTIVE", "ON_LEAVE"]).default("ACTIVE"),
   departmentId: z.string().uuid().optional().nullable(),
-  jobDescriptionId: z.string().uuid().optional().nullable(),
+  positionId: z.string().uuid().optional().nullable(),
   password: z.string().min(8).optional(), // Optional - will be generated if not provided
 });
 
