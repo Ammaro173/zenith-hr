@@ -34,13 +34,13 @@ export function PositionsDataGrid() {
   const [deleteItem, setDeleteItem] = useState<PositionListItem | null>(null);
 
   const columns: ColumnDef<PositionListItem>[] = [
-    {
-      accessorKey: "code",
-      header: "Code",
-      cell: ({ row }) => (
-        <span className="font-mono text-sm">{row.original.code}</span>
-      ),
-    },
+    // {
+    //   accessorKey: "code",
+    //   header: "Code",
+    //   cell: ({ row }) => (
+    //     <span className="font-mono text-sm">{row.original.code}</span>
+    //   ),
+    // },
     {
       accessorKey: "name",
       header: "Name",
