@@ -13,6 +13,13 @@ export type {
 
 // Form values type for the performance review form
 export interface ReviewFormValues {
+  competencyRatings: {
+    competencyId: string;
+    rating: number | undefined;
+    justification: string;
+  }[];
+  managerComment: string;
+  selfComment: string;
   status:
     | "DRAFT"
     | "SELF_REVIEW"
@@ -22,13 +29,6 @@ export interface ReviewFormValues {
     | "ACKNOWLEDGED"
     | "COMPLETED"
     | undefined;
-  managerComment: string;
-  selfComment: string;
-  competencyRatings: {
-    competencyId: string;
-    rating: number | undefined;
-    justification: string;
-  }[];
 }
 
 // Form type for context - inferred from the hook's return type

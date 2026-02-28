@@ -30,21 +30,21 @@ import type { ImportResult } from "../_hooks/use-import-mutation";
  */
 interface ImportResultsDialogProps {
   /**
-   * Whether the dialog is open
+   * The type of import (users or departments)
    */
-  open: boolean;
+  importType: "users" | "departments";
   /**
    * Callback when the dialog open state changes
    */
   onOpenChange: (open: boolean) => void;
   /**
+   * Whether the dialog is open
+   */
+  open: boolean;
+  /**
    * The import result data to display
    */
   result: ImportResult | null;
-  /**
-   * The type of import (users or departments)
-   */
-  importType: "users" | "departments";
 }
 
 /**
@@ -286,10 +286,10 @@ export function ImportResultsDialog({
  * Props for SummaryBadge component
  */
 interface SummaryBadgeProps {
-  label: string;
   count: number;
-  variant: "success" | "info" | "warning" | "destructive" | "secondary";
   icon: React.ComponentType<{ className?: string }> | null;
+  label: string;
+  variant: "success" | "info" | "warning" | "destructive" | "secondary";
 }
 
 /**

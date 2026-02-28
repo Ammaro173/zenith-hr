@@ -4,7 +4,6 @@ import { db } from "./index";
 import {
   account,
   department,
-  jobDescription,
   jobPosition,
   separationChecklistTemplate,
   user,
@@ -115,7 +114,7 @@ async function seed() {
       name: "Fatima Al-Mansour",
       email: "cfo@q-auto.com",
       emailVerified: true,
-      role: "FINANCE" as const,
+      role: "HOD_FINANCE" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0005",
       departmentId: financeDeptId,
@@ -130,7 +129,7 @@ async function seed() {
       name: "Omar Hassan",
       email: "chro@q-auto.com",
       emailVerified: true,
-      role: "HR" as const,
+      role: "HOD_HR" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0006",
       departmentId: hrDeptId,
@@ -160,7 +159,7 @@ async function seed() {
       name: "Sara Al-Fahd",
       email: "cto@q-auto.com",
       emailVerified: true,
-      role: "IT" as const,
+      role: "HOD_IT" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0008",
       departmentId: itDeptId,
@@ -280,7 +279,7 @@ async function seed() {
       name: "Noor Al-Said",
       email: "it.manager@q-auto.com",
       emailVerified: true,
-      role: "IT" as const,
+      role: "HOD_IT" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0016",
       departmentId: itDeptId,
@@ -466,103 +465,15 @@ async function seed() {
   const hrManagerSlotId = randomUUID();
   const hrStaffSlotId = randomUUID();
 
-  const jobDescriptions = [
-    {
-      id: randomUUID(),
-      title: "Chief Executive Officer",
-      description: "Leads company strategy and executive decision-making.",
-      responsibilities: "Strategic direction, executive approvals, governance",
-      departmentId: adminDeptId,
-      reportsToPositionId: null,
-      assignedRole: "CEO" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "Head of Human Resources",
-      description: "Owns HR operations, policy, and talent strategy.",
-      responsibilities: "HR governance, workforce planning, policy approvals",
-      departmentId: hrDeptId,
-      reportsToPositionId: ceoSlotId,
-      assignedRole: "HR" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "Head of Finance",
-      description: "Owns finance operations, controls, and approvals.",
-      responsibilities: "Budget controls, financial approvals, reporting",
-      departmentId: financeDeptId,
-      reportsToPositionId: ceoSlotId,
-      assignedRole: "FINANCE" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "Head of IT",
-      description: "Leads IT systems, security, and support operations.",
-      responsibilities: "Infrastructure, security, service operations",
-      departmentId: itDeptId,
-      reportsToPositionId: ceoSlotId,
-      assignedRole: "IT" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "Head of Administration",
-      description: "Leads administrative and facilities operations.",
-      responsibilities: "Admin governance, facilities, shared services",
-      departmentId: adminDeptId,
-      reportsToPositionId: ceoSlotId,
-      assignedRole: "ADMIN" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "HR Line Manager",
-      description: "Manages HR team execution and day-to-day operations.",
-      responsibilities: "Team management, execution, coaching",
-      departmentId: hrDeptId,
-      reportsToPositionId: hrHodSlotId,
-      assignedRole: "MANAGER" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "HR Staff",
-      description: "Supports HR operations and employee lifecycle tasks.",
-      responsibilities: "HR support, records, process execution",
-      departmentId: hrDeptId,
-      reportsToPositionId: hrManagerSlotId,
-      assignedRole: "EMPLOYEE" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-
-  const [
-    ceoJobDescription,
-    hrHodJobDescription,
-    financeHodJobDescription,
-    itHodJobDescription,
-    adminHodJobDescription,
-    hrManagerJobDescription,
-    hrStaffJobDescription,
-  ] = jobDescriptions;
-
   const positions = [
     {
       id: ceoSlotId,
       code: "CEO",
       name: "Chief Executive Officer",
+      description: "Leads company strategy and executive decision-making.",
+      responsibilities: "Strategic direction, executive approvals, governance",
       departmentId: adminDeptId,
-      jobDescriptionId: ceoJobDescription?.id ?? null,
+      role: "CEO" as const,
       reportsToPositionId: null,
       active: true,
       createdAt: now,
@@ -572,8 +483,10 @@ async function seed() {
       id: hrHodSlotId,
       code: "HOD_HR",
       name: "Head of Human Resources",
+      description: "Owns HR operations, policy, and talent strategy.",
+      responsibilities: "HR governance, workforce planning, policy approvals",
       departmentId: hrDeptId,
-      jobDescriptionId: hrHodJobDescription?.id ?? null,
+      role: "HOD_HR" as const,
       reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
@@ -583,8 +496,10 @@ async function seed() {
       id: financeHodSlotId,
       code: "HOD_FINANCE",
       name: "Head of Finance",
+      description: "Owns finance operations, controls, and approvals.",
+      responsibilities: "Budget controls, financial approvals, reporting",
       departmentId: financeDeptId,
-      jobDescriptionId: financeHodJobDescription?.id ?? null,
+      role: "HOD_FINANCE" as const,
       reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
@@ -594,8 +509,10 @@ async function seed() {
       id: itHodSlotId,
       code: "HOD_IT",
       name: "Head of IT",
+      description: "Leads IT systems, security, and support operations.",
+      responsibilities: "Infrastructure, security, service operations",
       departmentId: itDeptId,
-      jobDescriptionId: itHodJobDescription?.id ?? null,
+      role: "HOD_IT" as const,
       reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
@@ -605,8 +522,10 @@ async function seed() {
       id: adminHodSlotId,
       code: "HOD_ADMIN",
       name: "Head of Administration",
+      description: "Leads administrative and facilities operations.",
+      responsibilities: "Admin governance, facilities, shared services",
       departmentId: adminDeptId,
-      jobDescriptionId: adminHodJobDescription?.id ?? null,
+      role: "HOD" as const,
       reportsToPositionId: ceoSlotId,
       active: true,
       createdAt: now,
@@ -616,8 +535,10 @@ async function seed() {
       id: hrManagerSlotId,
       code: "MANAGER_HR",
       name: "HR Line Manager",
+      description: "Manages HR team execution and day-to-day operations.",
+      responsibilities: "Team management, execution, coaching",
       departmentId: hrDeptId,
-      jobDescriptionId: hrManagerJobDescription?.id ?? null,
+      role: "MANAGER" as const,
       reportsToPositionId: hrHodSlotId,
       active: true,
       createdAt: now,
@@ -627,8 +548,10 @@ async function seed() {
       id: hrStaffSlotId,
       code: "STAFF_HR_1",
       name: "HR Staff",
+      description: "Supports HR operations and employee lifecycle tasks.",
+      responsibilities: "HR support, records, process execution",
       departmentId: hrDeptId,
-      jobDescriptionId: hrStaffJobDescription?.id ?? null,
+      role: "EMPLOYEE" as const,
       reportsToPositionId: hrManagerSlotId,
       active: true,
       createdAt: now,
@@ -689,97 +612,78 @@ async function seed() {
     [adminDeptId]: adminHodSlotId,
   };
 
-  // Shared job descriptions for auto-generated positions (one per role+department)
-  const sharedJobDescriptions = [
-    {
-      id: randomUUID(),
-      title: "Finance Staff",
-      description: "Supports financial operations and reporting.",
-      responsibilities: "Financial processing, reconciliation, reporting",
-      departmentId: financeDeptId,
-      reportsToPositionId: financeHodSlotId,
-      assignedRole: "EMPLOYEE" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "Finance Manager",
-      description: "Manages finance team and financial operations.",
-      responsibilities: "Financial oversight, team management, budget control",
-      departmentId: financeDeptId,
-      reportsToPositionId: financeHodSlotId,
-      assignedRole: "MANAGER" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "IT Staff",
-      description: "Supports IT systems and infrastructure.",
-      responsibilities:
-        "Technical support, system maintenance, troubleshooting",
-      departmentId: itDeptId,
-      reportsToPositionId: itHodSlotId,
-      assignedRole: "EMPLOYEE" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "IT Specialist",
-      description: "Leads IT systems, security, and support operations.",
-      responsibilities: "Infrastructure, security, service operations",
-      departmentId: itDeptId,
-      reportsToPositionId: itHodSlotId,
-      assignedRole: "IT" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "IT Manager",
-      description: "Manages IT team and technology operations.",
-      responsibilities: "IT operations, team management, project delivery",
-      departmentId: itDeptId,
-      reportsToPositionId: itHodSlotId,
-      assignedRole: "MANAGER" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "Admin Staff",
-      description: "Supports administrative operations.",
-      responsibilities: "Administrative support, coordination, documentation",
-      departmentId: adminDeptId,
-      reportsToPositionId: adminHodSlotId,
-      assignedRole: "ADMIN" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: randomUUID(),
-      title: "HR Manager",
-      description: "Manages HR team execution and day-to-day operations.",
-      responsibilities: "Team management, execution, coaching",
-      departmentId: hrDeptId,
-      reportsToPositionId: hrManagerSlotId,
-      assignedRole: "MANAGER" as const,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-
-  // Build a lookup: "role:departmentId" → shared job description id
-  const sharedJdLookup = new Map<string, string>();
-  for (const jd of sharedJobDescriptions) {
-    sharedJdLookup.set(`${jd.assignedRole}:${jd.departmentId}`, jd.id);
-  }
-  // The predefined HR Staff JD can also be reused for auto-generated HR employees
-  if (hrStaffJobDescription) {
-    sharedJdLookup.set(`EMPLOYEE:${hrDeptId}`, hrStaffJobDescription.id);
-  }
+  // Shared position templates for auto-generated positions (one per role+department)
+  const sharedTemplates = new Map<
+    string,
+    { name: string; description: string; responsibilities: string }
+  >([
+    [
+      `EMPLOYEE:${financeDeptId}`,
+      {
+        name: "Finance Staff",
+        description: "Supports financial operations and reporting.",
+        responsibilities: "Financial processing, reconciliation, reporting",
+      },
+    ],
+    [
+      `MANAGER:${financeDeptId}`,
+      {
+        name: "Finance Manager",
+        description: "Manages finance team and financial operations.",
+        responsibilities:
+          "Financial oversight, team management, budget control",
+      },
+    ],
+    [
+      `EMPLOYEE:${itDeptId}`,
+      {
+        name: "IT Staff",
+        description: "Supports IT systems and infrastructure.",
+        responsibilities:
+          "Technical support, system maintenance, troubleshooting",
+      },
+    ],
+    [
+      `HOD_IT:${itDeptId}`,
+      {
+        name: "IT Specialist",
+        description: "Leads IT systems, security, and support operations.",
+        responsibilities: "Infrastructure, security, service operations",
+      },
+    ],
+    [
+      `MANAGER:${itDeptId}`,
+      {
+        name: "IT Manager",
+        description: "Manages IT team and technology operations.",
+        responsibilities: "IT operations, team management, project delivery",
+      },
+    ],
+    [
+      `HOD:${adminDeptId}`,
+      {
+        name: "Admin Staff",
+        description: "Supports administrative operations.",
+        responsibilities: "Administrative support, coordination, documentation",
+      },
+    ],
+    [
+      `MANAGER:${hrDeptId}`,
+      {
+        name: "HR Manager",
+        description: "Manages HR team execution and day-to-day operations.",
+        responsibilities: "Team management, execution, coaching",
+      },
+    ],
+    [
+      `EMPLOYEE:${hrDeptId}`,
+      {
+        name: "HR Staff",
+        description: "Supports HR operations and employee lifecycle tasks.",
+        responsibilities: "HR support, records, process execution",
+      },
+    ],
+  ]);
 
   const generatedPositions = users
     .filter((seedUser) => !assignedUserIds.has(seedUser.id))
@@ -788,15 +692,22 @@ async function seed() {
       const reportsToPositionId =
         reportsToByDepartment[departmentKey] ?? adminHodSlotId;
 
-      const jobDescriptionId =
-        sharedJdLookup.get(`${seedUser.role}:${departmentKey}`) ?? null;
+      const template = sharedTemplates.get(
+        `${seedUser.role}:${departmentKey}`,
+      ) ?? {
+        name: `${seedUser.name} Position`,
+        description: "",
+        responsibilities: "",
+      };
 
       return {
         id: randomUUID(),
         code: `AUTO_${seedUser.sapNo.replace(/[^A-Z0-9]/g, "_")}`,
         name: `${seedUser.name} Position`,
+        description: template.description || null,
+        responsibilities: template.responsibilities || null,
         departmentId: seedUser.departmentId,
-        jobDescriptionId,
+        role: seedUser.role,
         reportsToPositionId,
         active: true,
         createdAt: now,
@@ -836,7 +747,7 @@ async function seed() {
     },
     // IT
     {
-      lane: "IT" as const,
+      lane: "HOD_IT" as const,
       title: "Disable email account",
       description: "Disable corporate email + forward if required.",
       required: true,
@@ -847,7 +758,7 @@ async function seed() {
       updatedAt: now,
     },
     {
-      lane: "IT" as const,
+      lane: "HOD_IT" as const,
       title: "Disable SAP account",
       description: "Disable SAP / ERP access.",
       required: true,
@@ -858,7 +769,7 @@ async function seed() {
       updatedAt: now,
     },
     {
-      lane: "IT" as const,
+      lane: "HOD_IT" as const,
       title: "Return laptop / computer",
       description: "Return issued laptop and accessories.",
       required: true,
@@ -870,7 +781,7 @@ async function seed() {
     },
     // Finance
     {
-      lane: "FINANCE" as const,
+      lane: "HOD_FINANCE" as const,
       title: "Outstanding expenses",
       description: "Submit receipts / settle outstanding claims.",
       required: true,
@@ -881,7 +792,7 @@ async function seed() {
       updatedAt: now,
     },
     {
-      lane: "FINANCE" as const,
+      lane: "HOD_FINANCE" as const,
       title: "Tax clearance",
       description: "Finalize tax clearance requirements.",
       required: true,
@@ -976,14 +887,10 @@ async function seed() {
   await db.transaction(async (tx) => {
     await tx.delete(userPositionAssignment);
     await tx.delete(jobPosition);
-    await tx.delete(jobDescription);
     await tx.delete(user);
     await tx.delete(department);
 
     await tx.insert(department).values(departments);
-    await tx
-      .insert(jobDescription)
-      .values([...jobDescriptions, ...sharedJobDescriptions]);
     await tx.insert(user).values(users);
     await tx.insert(account).values(accounts);
     await tx.insert(jobPosition).values(allPositions);
@@ -997,8 +904,8 @@ async function seed() {
 
     await tx.delete(userClearanceLane);
     await tx.insert(userClearanceLane).values([
-      { userId: "seed-it", lane: "IT", createdAt: now },
-      { userId: "seed-finance", lane: "FINANCE", createdAt: now },
+      { userId: "seed-it", lane: "HOD_IT", createdAt: now },
+      { userId: "seed-finance", lane: "HOD_FINANCE", createdAt: now },
       { userId: "seed-admin-dept", lane: "ADMIN_ASSETS", createdAt: now },
       { userId: "seed-hr", lane: "HR_PAYROLL", createdAt: now },
     ]);

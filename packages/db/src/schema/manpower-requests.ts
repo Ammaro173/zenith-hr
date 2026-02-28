@@ -9,9 +9,9 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { user, userRoleEnum } from "./auth";
-import { jobDescription } from "./job-descriptions";
+import { user } from "./auth";
 import { jobPosition } from "./position-slots";
+import { positionRoleEnum } from "./users";
 
 export const manpowerRequestSeq = pgSequence("manpower_requests_seq", {
   startWith: 1,
@@ -76,10 +76,9 @@ export const manpowerRequest = pgTable("manpower_request", {
     .notNull()
     .default("FULL_TIME"),
   headcount: integer("headcount").notNull().default(1),
-  jobDescriptionId: uuid("job_description_id").references(
-    () => jobDescription.id,
-    { onDelete: "set null" },
-  ),
+  positionId: uuid("position_id").references(() => jobPosition.id, {
+    onDelete: "set null",
+  }),
   justificationText: text("justification_text").notNull(),
   salaryRangeMin: decimal("salary_range_min", {
     precision: 12,
@@ -89,16 +88,13 @@ export const manpowerRequest = pgTable("manpower_request", {
     precision: 12,
     scale: 2,
   }).notNull(),
-  currentApproverId: text("current_approver_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
   currentApproverPositionId: uuid("current_approver_position_id").references(
     () => jobPosition.id,
     {
       onDelete: "set null",
     },
   ),
-  currentApproverRole: userRoleEnum("current_approver_role"),
+  requiredApproverRole: positionRoleEnum("required_approver_role"),
   positionDetails: jsonb("position_details").notNull(),
   budgetDetails: jsonb("budget_details").notNull(),
   revisionVersion: integer("revision_version").notNull().default(0),

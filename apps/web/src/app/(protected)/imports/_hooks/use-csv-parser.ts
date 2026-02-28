@@ -17,9 +17,9 @@ const SUPPORTED_MIME_TYPES = [
  * Return type for the useCSVParser hook
  */
 export interface UseCSVParserReturn {
-  parsedData: ParsedCSVData | null;
-  isLoading: boolean;
   error: string | null;
+  isLoading: boolean;
+  parsedData: ParsedCSVData | null;
   parseFile: (file: File) => Promise<void>;
   parseText: (text: string, filename?: string) => void;
   reset: () => void;

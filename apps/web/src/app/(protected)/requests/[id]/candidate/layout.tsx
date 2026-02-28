@@ -7,6 +7,6 @@ export default async function CandidateLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRoles(["HR", "ADMIN"]);
+  await requireRoles(["HOD_HR", "ADMIN"]);
   return children;
 }

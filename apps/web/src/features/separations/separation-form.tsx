@@ -25,8 +25,8 @@ import { useSeparationForm } from "./use-separation-form";
 
 interface SeparationFormProps {
   mode?: "page" | "sheet";
-  onSuccess?: () => void;
   onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 export function SeparationForm({

@@ -17,7 +17,8 @@ import { CreateDepartmentDialog } from "./create-department-dialog";
 export function DepartmentsDataGrid() {
   const { data: session } = authClient.useSession();
   const currentRole = getRoleFromSessionUser(session?.user);
-  const canCreateDepartment = currentRole === "ADMIN" || currentRole === "HR";
+  const canCreateDepartment =
+    currentRole === "ADMIN" || currentRole === "HOD_HR";
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 

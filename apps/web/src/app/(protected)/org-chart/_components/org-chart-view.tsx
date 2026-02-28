@@ -5,8 +5,8 @@ import type { HierarchyNode } from "@/types/users";
 import { UserCard } from "./user-card";
 
 interface OrgChartViewProps {
-  nodes: HierarchyNode[];
   isExpanded: (nodeId: string) => boolean;
+  nodes: HierarchyNode[];
   onToggle: (nodeId: string) => void;
 }
 

@@ -26,7 +26,7 @@ export const performanceRouter = o.router({
   /**
    * Create a new performance cycle (HR/Admin only)
    */
-  createCycle: requireRoles(["HR", "ADMIN"])
+  createCycle: requireRoles(["HOD_HR", "ADMIN"])
     .input(createCycleSchema)
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -56,7 +56,7 @@ export const performanceRouter = o.router({
   /**
    * Update a cycle (HR/Admin only)
    */
-  updateCycle: requireRoles(["HR", "ADMIN"])
+  updateCycle: requireRoles(["HOD_HR", "ADMIN"])
     .input(updateCycleSchema)
     .handler(async ({ input, context }) => {
       try {
@@ -76,7 +76,7 @@ export const performanceRouter = o.router({
   /**
    * Create a review for an employee (HR/Admin/Manager)
    */
-  createReview: requireRoles(["HR", "ADMIN", "MANAGER"])
+  createReview: requireRoles(["HOD_HR", "ADMIN", "MANAGER"])
     .input(createReviewSchema)
     .handler(async ({ input, context }) => {
       return await context.services.performance.createReview(input);
@@ -209,7 +209,7 @@ export const performanceRouter = o.router({
   /**
    * Add a competency to a review
    */
-  createCompetency: requireRoles(["HR", "ADMIN"])
+  createCompetency: requireRoles(["HOD_HR", "ADMIN"])
     .input(createCompetencySchema)
     .handler(async ({ input, context }) => {
       return await context.services.performance.createCompetency(input);
@@ -309,7 +309,7 @@ export const performanceRouter = o.router({
   /**
    * Create a competency template (HR/Admin only)
    */
-  createCompetencyTemplate: requireRoles(["HR", "ADMIN"])
+  createCompetencyTemplate: requireRoles(["HOD_HR", "ADMIN"])
     .input(createCompetencyTemplateSchema)
     .handler(async ({ input, context }) => {
       return await context.services.performance.createCompetencyTemplate(input);

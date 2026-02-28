@@ -3,150 +3,737 @@ import { approvalLog } from "@zenith-hr/db/schema/approval-logs";
 import { auditLog } from "@zenith-hr/db/schema/audit-logs";
 import { user } from "@zenith-hr/db/schema/auth";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
-import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
+import {
+  jobPosition,
+  userPositionAssignment,
+} from "@zenith-hr/db/schema/position-slots";
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
 import type {
   ApprovalAction,
+  PositionRole,
   RequestStatus,
   UserRole,
 } from "../../shared/types";
+import { getActorPositionInfo } from "../../shared/utils";
 
-type TransitionResult = RequestStatus;
-type TransitionFn = (actorRole: UserRole) => TransitionResult;
-type TransitionTarget = TransitionResult | TransitionFn;
-type InitiatorRouteKey =
-  | "HR"
-  | "FINANCE"
-  | "CEO"
-  | "MANAGER"
-  | "EMPLOYEE"
-  | "OTHER";
-
-const WORKFLOW_TRANSITIONS: Partial<
-  Record<RequestStatus, Partial<Record<ApprovalAction, TransitionTarget>>>
+// MPR routing matrix based on requester's PositionRole
+const MPR_ROUTES: Record<
+  PositionRole,
+  {
+    initialStatus: RequestStatus;
+    sequence: RequestStatus[];
+  }
 > = {
-  DRAFT: {
-    SUBMIT: "PENDING_HR",
+  EMPLOYEE: {
+    initialStatus: "PENDING_MANAGER",
+    sequence: [
+      "PENDING_MANAGER",
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "HIRING_IN_PROGRESS",
+      "COMPLETED",
+    ],
   },
-  PENDING_MANAGER: {
-    APPROVE: "PENDING_HR",
-    REJECT: "REJECTED",
-    REQUEST_CHANGE: "DRAFT",
+  MANAGER: {
+    initialStatus: "PENDING_HR",
+    sequence: [
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "HIRING_IN_PROGRESS",
+      "COMPLETED",
+    ],
   },
-  PENDING_HR: {
-    APPROVE: "PENDING_FINANCE",
-    REJECT: "REJECTED",
-    HOLD: "PENDING_HR",
-    REQUEST_CHANGE: "DRAFT",
+  HOD: {
+    initialStatus: "PENDING_HR",
+    sequence: [
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "HIRING_IN_PROGRESS",
+      "COMPLETED",
+    ],
   },
-  PENDING_FINANCE: {
-    APPROVE: "PENDING_CEO",
-    REJECT: "DRAFT",
-    REQUEST_CHANGE: "DRAFT",
+  HOD_HR: {
+    initialStatus: "PENDING_FINANCE",
+    sequence: [
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "HIRING_IN_PROGRESS",
+      "COMPLETED",
+    ],
   },
-  PENDING_CEO: {
-    APPROVE: "HIRING_IN_PROGRESS",
-    REJECT: "REJECTED",
+  HOD_FINANCE: {
+    initialStatus: "PENDING_HR",
+    sequence: ["PENDING_HR", "PENDING_CEO", "HIRING_IN_PROGRESS", "COMPLETED"],
   },
-  HIRING_IN_PROGRESS: {
-    APPROVE: "COMPLETED",
+  HOD_IT: {
+    initialStatus: "PENDING_HR",
+    sequence: [
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "PENDING_CEO",
+      "HIRING_IN_PROGRESS",
+      "COMPLETED",
+    ],
+  },
+  CEO: {
+    initialStatus: "PENDING_HR",
+    sequence: [
+      "PENDING_HR",
+      "PENDING_FINANCE",
+      "HIRING_IN_PROGRESS",
+      "COMPLETED",
+    ],
   },
 };
 
+// Shared role queues - these statuses can be handled by any user with matching role
+const SHARED_ROLE_QUEUES: Record<string, PositionRole[]> = {
+  PENDING_HR: ["HOD_HR"],
+  PENDING_FINANCE: ["HOD_FINANCE"],
+  PENDING_CEO: ["CEO"],
+};
+
 export const createWorkflowService = (db: DbOrTx) => {
-  const getStepName = (status: RequestStatus): string => {
-    const stepMap: Record<RequestStatus, string> = {
-      DRAFT: "Draft",
-      PENDING_MANAGER: "Manager Review",
-      PENDING_HR: "HR Review",
-      PENDING_FINANCE: "Finance Review",
-      PENDING_CEO: "CEO Review",
-      APPROVED_OPEN: "Approved",
-      HIRING_IN_PROGRESS: "Hiring",
-      REJECTED: "Rejected",
-      ARCHIVED: "Archived",
-      APPROVED: "Approved",
-      COMPLETED: "Completed",
-      CANCELLED: "Cancelled",
-    };
-    return stepMap[status] || status;
-  };
-
-  const getApproverForStatus = (status: RequestStatus): UserRole | null => {
-    const mapping: Partial<Record<RequestStatus, UserRole>> = {
-      PENDING_MANAGER: "MANAGER",
-      PENDING_HR: "HR",
-      PENDING_FINANCE: "FINANCE",
-      PENDING_CEO: "CEO",
-    };
-    return mapping[status] ?? null;
-  };
-
-  const getApprovalSequenceForInitiator = (
-    routeKey: InitiatorRouteKey,
-    terminalStatus: RequestStatus = "HIRING_IN_PROGRESS",
-  ): RequestStatus[] => {
-    switch (routeKey) {
-      case "HR":
-        return ["PENDING_FINANCE", "PENDING_CEO", terminalStatus];
-      case "FINANCE":
-        return ["PENDING_HR", "PENDING_CEO", terminalStatus];
-      case "CEO":
-        return ["PENDING_HR", "PENDING_FINANCE", terminalStatus];
-      case "MANAGER":
-        return ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO", terminalStatus];
-      case "EMPLOYEE":
-        return [
-          "PENDING_MANAGER",
-          "PENDING_HR",
-          "PENDING_FINANCE",
-          "PENDING_CEO",
-          terminalStatus,
-        ];
-      default:
-        return ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO", terminalStatus];
-    }
-  };
-
-  const hasActivePositionAssignment = async (
-    requesterId: string,
-    txOrDb: DbOrTx,
-  ): Promise<boolean> => {
+  /**
+   * Get manager chain using recursive CTE starting from a position
+   * Returns positions ordered by depth (closest manager first)
+   */
+  const getManagerChain = async (
+    startPositionId: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<
+    Array<{
+      positionId: string;
+      positionRole: PositionRole;
+      depth: number;
+    }>
+  > => {
     const result = await txOrDb.execute(sql`
-      SELECT 1
-      FROM user_position_assignment upa
-      WHERE upa.user_id = ${requesterId}
-      LIMIT 1
+      WITH RECURSIVE manager_chain AS (
+        -- Base case: start position
+        SELECT 
+          jp.id AS position_id,
+          jp.role::text AS position_role,
+          0 AS depth
+        FROM job_position jp
+        WHERE jp.id = ${startPositionId}
+        
+        UNION ALL
+        
+        -- Recursive case: walk up reports_to chain
+        SELECT 
+          parent_jp.id AS position_id,
+          parent_jp.role::text AS position_role,
+          mc.depth + 1 AS depth
+        FROM manager_chain mc
+        INNER JOIN job_position jp ON jp.id = mc.position_id
+        INNER JOIN job_position parent_jp ON parent_jp.id = jp.reports_to_position_id
+        WHERE jp.reports_to_position_id IS NOT NULL
+      )
+      SELECT 
+        position_id,
+        position_role,
+        depth
+      FROM manager_chain
+      WHERE depth > 0  -- Exclude the starting position itself
+      ORDER BY depth ASC
     `);
-    return result.rows.length > 0;
+
+    return result.rows.map((row) => ({
+      positionId: row.position_id as string,
+      positionRole: row.position_role as PositionRole,
+      depth: row.depth as number,
+    }));
   };
 
-  const getInitiatorRouteKey = async (
-    requesterId: string,
-    txOrDb: DbOrTx,
-  ): Promise<InitiatorRouteKey> => {
-    const [requester] = await txOrDb
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, requesterId))
-      .limit(1);
+  /**
+   * Find executive positions (HOD_HR, HOD_FINANCE, CEO) in the chain
+   */
+  const findExecutivePositions = async (
+    startPositionId: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<
+    Array<{
+      positionId: string;
+      positionRole: PositionRole;
+    }>
+  > => {
+    const result = await txOrDb.execute(sql`
+      WITH RECURSIVE manager_chain AS (
+        SELECT 
+          jp.id AS position_id,
+          jp.role::text AS position_role,
+          0 AS depth
+        FROM job_position jp
+        WHERE jp.id = ${startPositionId}
+        
+        UNION ALL
+        
+        SELECT 
+          parent_jp.id AS position_id,
+          parent_jp.role::text AS position_role,
+          mc.depth + 1 AS depth
+        FROM manager_chain mc
+        INNER JOIN job_position jp ON jp.id = mc.position_id
+        INNER JOIN job_position parent_jp ON parent_jp.id = jp.reports_to_position_id
+        WHERE jp.reports_to_position_id IS NOT NULL
+      )
+      SELECT 
+        position_id,
+        position_role
+      FROM manager_chain
+      WHERE position_role IN ('HOD_HR', 'HOD_FINANCE', 'CEO')
+      ORDER BY depth ASC
+    `);
 
-    if (requester?.role === "CEO") {
-      return "CEO";
-    }
-    if (requester?.role === "FINANCE") {
-      return "FINANCE";
-    }
-    if (requester?.role === "HR") {
-      return "HR";
-    }
-    if (requester?.role === "MANAGER") {
-      return "MANAGER";
+    return result.rows.map((row) => ({
+      positionId: row.position_id as string,
+      positionRole: row.position_role as PositionRole,
+    }));
+  };
+
+  /**
+   * Get users assigned to a position (for vacancy check)
+   */
+  const getPositionUsers = async (
+    positionId: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<Array<{ userId: string }>> => {
+    const result = await txOrDb
+      .select({ userId: userPositionAssignment.userId })
+      .from(userPositionAssignment)
+      .innerJoin(user, eq(userPositionAssignment.userId, user.id))
+      .where(
+        and(
+          eq(userPositionAssignment.positionId, positionId),
+          eq(user.status, "ACTIVE"),
+        ),
+      );
+
+    return result.map((r) => ({ userId: r.userId }));
+  };
+
+  /**
+   * Get next approver position for a given status based on requester's position
+   */
+  const getNextApproverPositionForStatus = async (
+    requesterPositionId: string,
+    status: RequestStatus,
+    txOrDb: DbOrTx = db,
+  ): Promise<{
+    positionId: string | null;
+    positionRole: PositionRole | null;
+  }> => {
+    // For shared role queues, find any position with matching role
+    if (
+      status === "PENDING_HR" ||
+      status === "PENDING_FINANCE" ||
+      status === "PENDING_CEO"
+    ) {
+      const targetRoles = SHARED_ROLE_QUEUES[status] || [];
+      if (targetRoles.length === 0) {
+        return { positionId: null, positionRole: null };
+      }
+
+      // Find first active position with matching role
+      const [position] = await txOrDb
+        .select({
+          id: jobPosition.id,
+          role: jobPosition.role,
+        })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, targetRoles as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+
+      if (position) {
+        // Vacancy guard: check if position has assigned users
+        const users = await getPositionUsers(position.id, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `Position ${position.id} (${position.role}) has no assigned users. Cannot route approval.`,
+            500,
+          );
+        }
+        return {
+          positionId: null, // Shared queues don't assign to a specific positionId
+          positionRole: position.role as PositionRole,
+        };
+      }
+
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        `No active position found for ${status}. Please configure ${targetRoles.join(" or ")} positions.`,
+        500,
+      );
     }
 
-    return "EMPLOYEE";
+    // For PENDING_MANAGER, walk up the manager chain
+    if (status === "PENDING_MANAGER") {
+      const chain = await getManagerChain(requesterPositionId, txOrDb);
+      if (chain.length === 0) {
+        // Fallback to HR if no manager chain
+        const [hrPosition] = await txOrDb
+          .select({ id: jobPosition.id, role: jobPosition.role })
+          .from(jobPosition)
+          .where(
+            and(
+              inArray(jobPosition.role, ["HOD_HR"] as PositionRole[]),
+              eq(jobPosition.active, true),
+            ),
+          )
+          .limit(1);
+
+        if (hrPosition) {
+          const users = await getPositionUsers(hrPosition.id, txOrDb);
+          if (users.length === 0) {
+            throw new AppError(
+              "CONFIGURATION_ERROR",
+              `HR position ${hrPosition.id} has no assigned users. Cannot route approval.`,
+              500,
+            );
+          }
+          return {
+            positionId: hrPosition.id,
+            positionRole: hrPosition.role as PositionRole,
+          };
+        }
+
+        throw new AppError(
+          "CONFIGURATION_ERROR",
+          "No manager chain found and no HR position available. Cannot route approval.",
+          500,
+        );
+      }
+
+      // Use first manager in chain
+      const firstManager = chain[0];
+      if (!firstManager) {
+        throw new AppError(
+          "CONFIGURATION_ERROR",
+          "Manager chain is empty",
+          500,
+        );
+      }
+      const users = await getPositionUsers(firstManager.positionId, txOrDb);
+      if (users.length === 0) {
+        throw new AppError(
+          "CONFIGURATION_ERROR",
+          `Manager position ${firstManager.positionId} has no assigned users. Cannot route approval.`,
+          500,
+        );
+      }
+
+      return {
+        positionId: firstManager.positionId,
+        positionRole: firstManager.positionRole,
+      };
+    }
+
+    return { positionId: null, positionRole: null };
+  };
+
+  /**
+   * Compute next step dynamically based on current status and action
+   */
+  const computeNextStep = async (
+    requesterPositionId: string,
+    requesterPositionRole: PositionRole,
+    currentStatus: RequestStatus,
+    action: ApprovalAction,
+    txOrDb: DbOrTx = db,
+  ): Promise<{
+    nextStatus: RequestStatus;
+    nextApproverPositionId: string | null;
+    nextApproverRole: PositionRole | null;
+  }> => {
+    // Handle SUBMIT action
+    if (action === "SUBMIT" && currentStatus === "DRAFT") {
+      const route = MPR_ROUTES[requesterPositionRole] || MPR_ROUTES.EMPLOYEE;
+      const nextStatus = route.initialStatus;
+      const approver = await getNextApproverPositionForStatus(
+        requesterPositionId,
+        nextStatus,
+        txOrDb,
+      );
+      return {
+        nextStatus,
+        nextApproverPositionId: approver.positionId,
+        nextApproverRole: approver.positionRole,
+      };
+    }
+
+    // Handle REJECT action
+    if (action === "REJECT") {
+      return {
+        nextStatus: "REJECTED",
+        nextApproverPositionId: null,
+        nextApproverRole: null,
+      };
+    }
+
+    // Handle REQUEST_CHANGE action
+    if (action === "REQUEST_CHANGE") {
+      return {
+        nextStatus: "DRAFT",
+        nextApproverPositionId: null,
+        nextApproverRole: null,
+      };
+    }
+
+    // Handle APPROVE action - walk through sequence
+    if (action === "APPROVE") {
+      const route = MPR_ROUTES[requesterPositionRole] || MPR_ROUTES.EMPLOYEE;
+      const currentIndex = route.sequence.indexOf(currentStatus);
+
+      if (currentIndex === -1) {
+        // Status not in sequence, check terminal states
+        if (currentStatus === "APPROVED_OPEN") {
+          return {
+            nextStatus: "HIRING_IN_PROGRESS",
+            nextApproverPositionId: null,
+            nextApproverRole: null,
+          };
+        }
+        if (currentStatus === "HIRING_IN_PROGRESS") {
+          return {
+            nextStatus: "COMPLETED",
+            nextApproverPositionId: null,
+            nextApproverRole: null,
+          };
+        }
+
+        throw new AppError(
+          "BAD_REQUEST",
+          `Invalid status ${currentStatus} for position role ${requesterPositionRole}`,
+          400,
+        );
+      }
+
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= route.sequence.length) {
+        // Already at terminal state
+        return {
+          nextStatus: currentStatus,
+          nextApproverPositionId: null,
+          nextApproverRole: null,
+        };
+      }
+
+      const nextStatus = route.sequence[nextIndex] || currentStatus;
+      const approver = await getNextApproverPositionForStatus(
+        requesterPositionId,
+        nextStatus,
+        txOrDb,
+      );
+
+      return {
+        nextStatus,
+        nextApproverPositionId: approver.positionId,
+        nextApproverRole: approver.positionRole,
+      };
+    }
+
+    // Handle HOLD action
+    if (action === "HOLD") {
+      return {
+        nextStatus: currentStatus,
+        nextApproverPositionId: null,
+        nextApproverRole: null,
+      };
+    }
+
+    throw new AppError(
+      "BAD_REQUEST",
+      `Unsupported action ${action} from status ${currentStatus}`,
+      400,
+    );
+  };
+
+  /**
+   * Trip routing: walk up manager chain, then hit executive chain
+   */
+  const getNextTripApprover = async (
+    requesterPositionId: string,
+    currentStatus: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<{
+    approverPositionId: string | null;
+    approverRole: PositionRole | null;
+    nextStatus: string;
+  }> => {
+    if (currentStatus === "DRAFT") {
+      // Start with manager chain
+      const chain = await getManagerChain(requesterPositionId, txOrDb);
+      if (chain.length > 0) {
+        const firstManager = chain[0];
+        if (!firstManager) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            "Manager chain is empty",
+            500,
+          );
+        }
+        const users = await getPositionUsers(firstManager.positionId, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `Manager position ${firstManager.positionId} has no assigned users. Cannot route trip approval.`,
+            500,
+          );
+        }
+        return {
+          approverPositionId: firstManager.positionId,
+          approverRole: firstManager.positionRole,
+          nextStatus: "PENDING_MANAGER",
+        };
+      }
+
+      // No manager chain, go to HR
+      const [hrPosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, ["HOD_HR"] as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+
+      if (hrPosition) {
+        const users = await getPositionUsers(hrPosition.id, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `HR position ${hrPosition.id} has no assigned users. Cannot route trip approval.`,
+            500,
+          );
+        }
+        return {
+          approverPositionId: null,
+          approverRole: hrPosition.role as PositionRole,
+          nextStatus: "PENDING_HR",
+        };
+      }
+
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        "No manager or HR position available for trip approval.",
+        500,
+      );
+    }
+
+    if (currentStatus === "PENDING_MANAGER") {
+      // After manager, check if there's a different HOD in chain, then go to HR
+      const executives = await findExecutivePositions(
+        requesterPositionId,
+        txOrDb,
+      );
+      const hodPosition = executives.find((e) => e.positionRole === "HOD");
+
+      if (hodPosition) {
+        const users = await getPositionUsers(hodPosition.positionId, txOrDb);
+        if (users.length > 0) {
+          return {
+            approverPositionId: hodPosition.positionId,
+            approverRole: hodPosition.positionRole,
+            nextStatus: "PENDING_HOD",
+          };
+        }
+      }
+
+      // Go to HR
+      const [hrPosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, ["HOD_HR"] as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+
+      if (hrPosition) {
+        const users = await getPositionUsers(hrPosition.id, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `HR position ${hrPosition.id} has no assigned users. Cannot route trip approval.`,
+            500,
+          );
+        }
+        return {
+          approverPositionId: null,
+          approverRole: hrPosition.role as PositionRole,
+          nextStatus: "PENDING_HR",
+        };
+      }
+
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        "No HR position available for trip approval.",
+        500,
+      );
+    }
+
+    if (currentStatus === "PENDING_HOD" || currentStatus === "PENDING_HR") {
+      // Go to Finance
+      const [financePosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, ["HOD_FINANCE"] as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+
+      if (financePosition) {
+        const users = await getPositionUsers(financePosition.id, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `Finance position ${financePosition.id} has no assigned users. Cannot route trip approval.`,
+            500,
+          );
+        }
+        return {
+          approverPositionId: null,
+          approverRole: financePosition.role as PositionRole,
+          nextStatus: "PENDING_FINANCE",
+        };
+      }
+
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        "No Finance position available for trip approval.",
+        500,
+      );
+    }
+
+    if (currentStatus === "PENDING_FINANCE") {
+      // Go to CEO
+      const [ceoPosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(and(eq(jobPosition.role, "CEO"), eq(jobPosition.active, true)))
+        .limit(1);
+
+      if (ceoPosition) {
+        const users = await getPositionUsers(ceoPosition.id, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `CEO position ${ceoPosition.id} has no assigned users. Cannot route trip approval.`,
+            500,
+          );
+        }
+        return {
+          approverPositionId: null,
+          approverRole: ceoPosition.role as PositionRole,
+          nextStatus: "PENDING_CEO",
+        };
+      }
+
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        "No CEO position available for trip approval.",
+        500,
+      );
+    }
+
+    if (currentStatus === "PENDING_CEO") {
+      return {
+        approverPositionId: null,
+        approverRole: null,
+        nextStatus: "APPROVED",
+      };
+    }
+
+    throw new AppError(
+      "BAD_REQUEST",
+      `Invalid trip status ${currentStatus} for approval`,
+      400,
+    );
+  };
+
+  /**
+   * Check if actor can perform action on request (position-based auth)
+   */
+  const canActorTransition = async (
+    actorId: string,
+    currentApproverPositionId: string | null,
+    requiredApproverRole: PositionRole | null,
+    currentStatus: RequestStatus,
+    _action: ApprovalAction,
+    txOrDb: DbOrTx = db,
+  ): Promise<boolean> => {
+    // Get actor's position info
+    const actorPosInfo = await getActorPositionInfo(txOrDb, actorId);
+    if (!actorPosInfo) {
+      return false;
+    }
+
+    const actorPositionRole = actorPosInfo.positionRole as PositionRole;
+    const actorSystemRole = (
+      await txOrDb
+        .select({ role: user.role })
+        .from(user)
+        .where(eq(user.id, actorId))
+        .limit(1)
+    )[0]?.role as UserRole;
+
+    // ADMIN override
+    if (actorSystemRole === "ADMIN") {
+      return true;
+    }
+
+    // HOD_HR override for HR-related statuses
+    if (
+      actorPositionRole === "HOD_HR" &&
+      (currentStatus === "PENDING_HR" || currentStatus === "HIRING_IN_PROGRESS")
+    ) {
+      return true;
+    }
+
+    // Check if actor's position matches current approver position
+    if (
+      currentApproverPositionId &&
+      actorPosInfo.positionId === currentApproverPositionId
+    ) {
+      return true;
+    }
+
+    // Check shared role queue access
+    if (
+      (currentStatus === "PENDING_HR" &&
+        (actorPositionRole === "HOD" || actorPositionRole === "HOD_HR")) ||
+      (currentStatus === "PENDING_FINANCE" &&
+        actorPositionRole === "HOD_FINANCE") ||
+      (currentStatus === "PENDING_CEO" && actorPositionRole === "CEO")
+    ) {
+      return true;
+    }
+
+    // Check required role match
+    if (requiredApproverRole && actorPositionRole === requiredApproverRole) {
+      return true;
+    }
+
+    return false;
   };
 
   const createApprovalLog = async (
@@ -204,331 +791,212 @@ export const createWorkflowService = (db: DbOrTx) => {
     });
   };
 
-  return {
-    getApproverForStatus,
-    getInitiatorRouteKey,
-    getApprovalSequenceForInitiator,
+  const getStepName = (status: RequestStatus): string => {
+    const stepMap: Record<RequestStatus, string> = {
+      DRAFT: "Draft",
+      PENDING_MANAGER: "Manager Review",
+      PENDING_HR: "HR Review",
+      PENDING_FINANCE: "Finance Review",
+      PENDING_CEO: "CEO Review",
+      APPROVED_OPEN: "Approved",
+      HIRING_IN_PROGRESS: "Hiring",
+      REJECTED: "Rejected",
+      ARCHIVED: "Archived",
+      APPROVED: "Approved",
+      COMPLETED: "Completed",
+      CANCELLED: "Cancelled",
+    };
+    return stepMap[status] || status;
+  };
 
-    async getInitialStatusForRequester(
-      requesterId: string,
-      txOrDb: DbOrTx = db,
-      _actorRole?: UserRole,
-    ): Promise<RequestStatus> {
-      const hasActivePosition = await hasActivePositionAssignment(
-        requesterId,
-        txOrDb,
-      );
-      if (!hasActivePosition) {
-        return "PENDING_HR";
+  /**
+   * Get initial status for requester based on their position role
+   */
+  const getInitialStatusForRequester = async (
+    requesterId: string,
+    txOrDb: DbOrTx = db,
+  ): Promise<RequestStatus> => {
+    const posInfo = await getActorPositionInfo(txOrDb, requesterId);
+    if (!posInfo) {
+      // No position assignment, default to PENDING_HR
+      return "PENDING_HR";
+    }
+
+    const route =
+      MPR_ROUTES[posInfo.positionRole as PositionRole] || MPR_ROUTES.EMPLOYEE;
+    return route.initialStatus;
+  };
+
+  /**
+   * Transition MPR request
+   */
+  const transitionRequest = async (
+    requestId: string,
+    actorId: string,
+    action: ApprovalAction,
+    comment?: string,
+    ipAddress?: string,
+  ): Promise<{
+    previousStatus: RequestStatus;
+    newStatus: RequestStatus;
+  }> => {
+    return await db.transaction(async (tx) => {
+      const [request] = await tx
+        .select()
+        .from(manpowerRequest)
+        .where(eq(manpowerRequest.id, requestId))
+        .limit(1);
+
+      if (!request) {
+        throw AppError.notFound("Request not found");
       }
 
-      const routeKey = await getInitiatorRouteKey(requesterId, txOrDb);
-      const sequence = getApprovalSequenceForInitiator(routeKey);
-      return sequence[0] ?? "PENDING_HR";
-    },
+      const [actor] = await tx
+        .select()
+        .from(user)
+        .where(eq(user.id, actorId))
+        .limit(1);
 
-    async getNextApprover(requesterId: string): Promise<string | null> {
-      const result = await db.execute(sql`
-        WITH RECURSIVE requester_position AS (
-          SELECT upa.position_id AS position_id
-          FROM user_position_assignment upa
-          WHERE upa.user_id = ${requesterId}
-          LIMIT 1
-        ),
-        ancestor_positions AS (
-          SELECT jp.reports_to_position_id AS position_id, 1 AS depth
-          FROM job_position jp
-          INNER JOIN requester_position rp ON rp.position_id = jp.id
-
-          UNION ALL
-
-          SELECT jp.reports_to_position_id AS position_id, ap.depth + 1 AS depth
-          FROM job_position jp
-          INNER JOIN ancestor_positions ap ON ap.position_id = jp.id
-          WHERE ap.position_id IS NOT NULL
-        )
-        SELECT u.id, u.role, ap.depth
-        FROM ancestor_positions ap
-        INNER JOIN user_position_assignment upa ON upa.position_id = ap.position_id
-        INNER JOIN "user" u ON u.id = upa.user_id
-        WHERE ap.position_id IS NOT NULL
-          AND u.status = 'ACTIVE'
-          AND u.role IN ('MANAGER', 'HR', 'FINANCE', 'CEO')
-        ORDER BY
-          ap.depth ASC,
-          CASE u.role
-            WHEN 'MANAGER' THEN 1
-            WHEN 'HR' THEN 2
-            WHEN 'FINANCE' THEN 3
-            WHEN 'CEO' THEN 4
-          END
-        LIMIT 1
-      `);
-
-      if (result.rows.length > 0 && result.rows[0]) {
-        return result.rows[0].id as string;
-      }
-      return null;
-    },
-
-    shouldSkipStep(
-      requesterRole: UserRole,
-      currentStatus: RequestStatus,
-    ): boolean {
-      if (requesterRole === "MANAGER" && currentStatus === "PENDING_MANAGER") {
-        return true;
-      }
-      if (requesterRole === "HR" && currentStatus === "PENDING_HR") {
-        return true;
-      }
-      return false;
-    },
-
-    async getNextApproverIdForStatus(
-      requesterId: string,
-      status: RequestStatus,
-      txOrDb?: DbOrTx,
-    ): Promise<string | null> {
-      const queryDb = txOrDb || db;
-
-      const targetRole = getApproverForStatus(status);
-      if (!targetRole) {
-        return null;
+      if (!actor) {
+        throw AppError.notFound("Actor not found");
       }
 
-      if (status === "PENDING_MANAGER") {
-        const managerId = await this.getNextApprover(requesterId);
-        if (managerId) {
-          return managerId;
-        }
-
-        const [hrUser] = await queryDb
-          .select({ id: user.id })
-          .from(user)
-          .where(and(eq(user.role, "HR"), eq(user.status, "ACTIVE")))
-          .limit(1);
-
-        if (hrUser?.id) {
-          return hrUser.id;
-        }
-
+      const actorPosInfo = await getActorPositionInfo(tx, actorId);
+      if (!actorPosInfo) {
         throw new AppError(
-          "CONFLICT",
-          "No ACTIVE approver available for manager step. Reassign reporting lines or activate an approver.",
-          409,
+          "FORBIDDEN",
+          "Actor has no position assignment",
+          403,
         );
       }
 
-      const [targetUser] = await queryDb
-        .select({ id: user.id })
-        .from(user)
-        .where(and(eq(user.role, targetRole), eq(user.status, "ACTIVE")))
-        .limit(1);
-
-      if (targetUser?.id) {
-        return targetUser.id;
+      const requesterPosInfo = await getActorPositionInfo(
+        tx,
+        request.requesterId,
+      );
+      if (!requesterPosInfo) {
+        throw new AppError(
+          "CONFIGURATION_ERROR",
+          "Requester has no position assignment",
+          500,
+        );
       }
 
-      throw new AppError(
-        "CONFLICT",
-        `No ACTIVE approver available for ${status}. Reassign role ownership or activate an approver.`,
-        409,
-      );
-    },
+      const currentStatus = request.status as RequestStatus;
 
-    async transitionRequest(
-      requestId: string,
-      actorId: string,
-      action: ApprovalAction,
-      comment?: string,
-      ipAddress?: string,
-    ): Promise<{
-      previousStatus: RequestStatus;
-      newStatus: RequestStatus;
-    }> {
-      return await db.transaction(async (tx) => {
-        const [request] = await tx
-          .select()
-          .from(manpowerRequest)
-          .where(eq(manpowerRequest.id, requestId))
-          .limit(1);
-
-        if (!request) {
-          throw AppError.notFound("Request not found");
+      // Auth check
+      if (currentStatus === "DRAFT" && action === "SUBMIT") {
+        if (request.requesterId !== actorId) {
+          throw new AppError("FORBIDDEN", "Only requester can submit", 403);
         }
-
-        const [actor] = await tx
-          .select()
-          .from(user)
-          .where(eq(user.id, actorId))
-          .limit(1);
-
-        if (!actor) {
-          throw AppError.notFound("Actor not found");
-        }
-
-        const actorRole = (actor.role || "EMPLOYEE") as UserRole;
-        const currentStatus = request.status as RequestStatus;
-
-        const requiresActiveApprover =
-          currentStatus !== "DRAFT" && action !== "REQUEST_CHANGE";
-        if (requiresActiveApprover) {
-          const isAssignedUser = request.currentApproverId === actorId;
-          const isAssignedRole =
-            request.currentApproverRole === actorRole &&
-            ["HR", "FINANCE", "CEO"].includes(actorRole);
-          const isAdmin = actorRole === "ADMIN";
-
-          if (
-            request.currentApproverId &&
-            !isAssignedUser &&
-            !isAssignedRole &&
-            !isAdmin
-          ) {
-            throw new AppError(
-              "FORBIDDEN",
-              "Not authorized for this action",
-              403,
-            );
-          }
-
-          if (!request.currentApproverId) {
-            const requiredRole = getApproverForStatus(currentStatus);
-            // HIRING_IN_PROGRESS can only be completed by HR or ADMIN
-            const hiringRole =
-              currentStatus === "HIRING_IN_PROGRESS" ? "HR" : null;
-            const effectiveRole = requiredRole ?? hiringRole;
-            if (
-              effectiveRole &&
-              actorRole !== effectiveRole &&
-              actorRole !== "ADMIN"
-            ) {
-              throw new AppError(
-                "FORBIDDEN",
-                "Not authorized for this action",
-                403,
-              );
-            }
-          }
-        }
-
-        const statusTransitions = WORKFLOW_TRANSITIONS[currentStatus];
-        if (!statusTransitions) {
-          throw AppError.badRequest(`Invalid status ${currentStatus}`);
-        }
-
-        const transition = statusTransitions[action];
-        if (!transition) {
-          throw AppError.badRequest(
-            `Invalid action ${action} from ${currentStatus}`,
-          );
-        }
-
-        let newStatus: RequestStatus;
-        if (currentStatus === "DRAFT" && action === "SUBMIT") {
-          newStatus = await this.getInitialStatusForRequester(
-            request.requesterId,
-            tx,
-            actorRole,
-          );
-        } else if (
-          action === "APPROVE" &&
-          ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO"].includes(
-            currentStatus,
-          )
-        ) {
-          const hasActivePosition = await hasActivePositionAssignment(
-            request.requesterId,
-            tx,
-          );
-          if (hasActivePosition) {
-            const routeKey = await getInitiatorRouteKey(
-              request.requesterId,
-              tx,
-            );
-            const sequence = getApprovalSequenceForInitiator(routeKey);
-            const currentIndex = sequence.indexOf(currentStatus);
-            if (currentIndex < 0 || !sequence[currentIndex + 1]) {
-              throw AppError.badRequest(
-                `Invalid action ${action} from ${currentStatus}`,
-              );
-            }
-            newStatus = sequence[currentIndex + 1] as RequestStatus;
-          } else if (typeof transition === "function") {
-            newStatus = transition(actorRole);
-          } else {
-            newStatus = transition;
-          }
-        } else if (typeof transition === "function") {
-          newStatus = transition(actorRole);
-        } else {
-          newStatus = transition;
-        }
-
-        const nextApproverId = await this.getNextApproverIdForStatus(
-          request.requesterId,
-          newStatus,
+      } else {
+        const canTransition = await canActorTransition(
+          actorId,
+          request.currentApproverPositionId,
+          request.requiredApproverRole as PositionRole | null,
+          currentStatus,
+          action,
           tx,
         );
 
-        let nextApproverPositionId: string | null = null;
-        if (nextApproverId) {
-          const [nextAssignee] = await tx
-            .select({ positionId: userPositionAssignment.positionId })
-            .from(userPositionAssignment)
-            .where(eq(userPositionAssignment.userId, nextApproverId))
-            .limit(1);
-          nextApproverPositionId = nextAssignee?.positionId ?? null;
+        if (!canTransition) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Not authorized for this action",
+            403,
+          );
         }
+      }
 
-        const [actorPosition] = await tx
-          .select({ positionId: userPositionAssignment.positionId })
-          .from(userPositionAssignment)
-          .where(eq(userPositionAssignment.userId, actorId))
-          .limit(1);
-
-        await tx
-          .update(manpowerRequest)
-          .set({
-            status: newStatus,
-            currentApproverId: nextApproverId,
-            currentApproverPositionId: nextApproverPositionId,
-            currentApproverRole: getApproverForStatus(newStatus),
-            revisionVersion:
-              newStatus === "DRAFT" && currentStatus !== "DRAFT"
-                ? request.revisionVersion + 1
-                : request.revisionVersion,
-            updatedAt: new Date(),
-          })
-          .where(eq(manpowerRequest.id, requestId));
-
-        const stepName =
-          action === "SUBMIT" ? "Submission" : getStepName(currentStatus);
-        await createApprovalLog(tx, requestId, actorId, action, stepName, {
-          comment,
-          ipAddress,
-          actorPositionId: actorPosition?.positionId,
-        });
-
-        await createAuditLog(tx, requestId, actorId, action, {
-          from: currentStatus,
-          to: newStatus,
-          comment,
-        });
-
-        if (newStatus === "DRAFT" && currentStatus !== "DRAFT") {
-          await archiveVersion(tx, requestId, request.revisionVersion + 1, {
-            status: currentStatus,
-            positionDetails: request.positionDetails,
-            budgetDetails: request.budgetDetails,
-          });
+      // Vacancy guard: check if current approver position has users
+      if (request.currentApproverPositionId) {
+        const users = await getPositionUsers(
+          request.currentApproverPositionId,
+          tx,
+        );
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `Current approver position ${request.currentApproverPositionId} has no assigned users. Cannot proceed.`,
+            500,
+          );
         }
+      }
 
-        return {
-          previousStatus: currentStatus,
-          newStatus,
-        };
+      // Compute next step
+      const nextStep = await computeNextStep(
+        requesterPosInfo.positionId,
+        requesterPosInfo.positionRole as PositionRole,
+        currentStatus,
+        action,
+        tx,
+      );
+
+      await tx
+        .update(manpowerRequest)
+        .set({
+          status: nextStep.nextStatus,
+          currentApproverPositionId: nextStep.nextApproverPositionId,
+          requiredApproverRole: nextStep.nextApproverRole,
+          revisionVersion:
+            nextStep.nextStatus === "DRAFT" && currentStatus !== "DRAFT"
+              ? request.revisionVersion + 1
+              : request.revisionVersion,
+          updatedAt: new Date(),
+        })
+        .where(eq(manpowerRequest.id, requestId));
+
+      const stepName =
+        action === "SUBMIT" ? "Submission" : getStepName(currentStatus);
+      await createApprovalLog(tx, requestId, actorId, action, stepName, {
+        comment,
+        ipAddress,
+        actorPositionId: actorPosInfo.positionId,
       });
+
+      await createAuditLog(tx, requestId, actorId, action, {
+        from: currentStatus,
+        to: nextStep.nextStatus,
+        comment,
+      });
+
+      if (nextStep.nextStatus === "DRAFT" && currentStatus !== "DRAFT") {
+        await archiveVersion(tx, requestId, request.revisionVersion + 1, {
+          status: currentStatus,
+          positionDetails: request.positionDetails,
+          budgetDetails: request.budgetDetails,
+        });
+      }
+
+      return {
+        previousStatus: currentStatus,
+        newStatus: nextStep.nextStatus,
+      };
+    });
+  };
+
+  return {
+    // Core workflow functions
+    computeNextStep,
+    getManagerChain,
+    getNextApproverPositionForStatus,
+    getInitialStatusForRequester,
+    canActorTransition,
+    transitionRequest,
+
+    // Trip-specific helpers
+    getNextTripApprover,
+    findExecutivePositions,
+
+    // Legacy helpers (for backward compatibility)
+    getApproverForStatus: (status: RequestStatus): PositionRole | null => {
+      const mapping: Partial<Record<RequestStatus, PositionRole>> = {
+        PENDING_MANAGER: "MANAGER",
+        PENDING_HR: "HOD_HR",
+        PENDING_FINANCE: "HOD_FINANCE",
+        PENDING_CEO: "CEO",
+      };
+      return mapping[status] ?? null;
     },
 
     async getRequest(id: string) {

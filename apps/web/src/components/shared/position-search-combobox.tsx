@@ -15,19 +15,18 @@ import { cn } from "@/lib/utils";
 import { client } from "@/utils/orpc";
 
 interface PositionOption {
-  id: string;
   code: string;
-  name: string;
   departmentName: string | null;
-  jobTitle: string | null;
+  id: string;
+  name: string;
 }
 
 interface PositionSearchComboboxProps {
-  value?: string | null;
+  disabled?: boolean;
+  nullable?: boolean;
   onChange: (val?: string) => void;
   placeholder?: string;
-  nullable?: boolean;
-  disabled?: boolean;
+  value?: string | null;
 }
 
 export function PositionSearchCombobox({
@@ -176,10 +175,7 @@ export function PositionSearchCombobox({
                           {item.name} ({item.code})
                         </span>
                         <span className="line-clamp-1 text-muted-foreground text-xs">
-                          {item.jobTitle ?? "No job linked"}
-                          {item.departmentName
-                            ? ` • ${item.departmentName}`
-                            : ""}
+                          {item.departmentName ?? "No department"}
                         </span>
                       </div>
                     </CommandItem>

@@ -46,17 +46,17 @@ export type DeleteDepartmentInput = z.infer<typeof deleteDepartmentSchema>;
 
 // Department response type (with head of department info)
 export interface DepartmentResponse {
+  createdAt: Date;
   id: string;
   name: string;
-  createdAt: Date;
   updatedAt: Date;
 }
 
 // Paginated result type
 export interface PaginatedDepartmentsResult {
   data: DepartmentResponse[];
-  total: number;
   page: number;
-  pageSize: number;
   pageCount: number;
+  pageSize: number;
+  total: number;
 }

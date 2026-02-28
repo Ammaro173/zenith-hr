@@ -10,6 +10,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import type { PendingRequestApprovalsResult } from "@zenith-hr/api/modules/requests/requests.service";
 import { format } from "date-fns";
 import { FunnelX, MoreHorizontal } from "lucide-react";
 import type { Route } from "next";
@@ -36,14 +37,21 @@ import { Filters } from "@/components/ui/filters";
 import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ManpowerRequest } from "@/types/requests";
 import { STATUS_OPTIONS, STATUS_VARIANTS } from "@/types/requests";
 import { orpc } from "@/utils/orpc";
 import { ApprovalActionDialog } from "./approval-action-dialog";
 
 type RequestApprovalAction = "APPROVE" | "REJECT" | "REQUEST_CHANGE";
 
-const columnHelper = createColumnHelper<ManpowerRequest>();
+type PendingRequestItem = PendingRequestApprovalsResult[number];
+
+/** positionDetails is jsonb from API; narrow for grid display (title/department). */
+interface PositionDetailsForDisplay {
+  department?: string;
+  title?: string;
+}
+
+const columnHelper = createColumnHelper<PendingRequestItem>();
 
 const filterFields: FilterFieldConfig[] = [
   {
@@ -63,7 +71,7 @@ export function PendingRequestApprovalsGrid() {
     orpc.requests.getPendingApprovals.queryOptions(),
   );
 
-  const requests = (data ?? []) as ManpowerRequest[];
+  const requests: PendingRequestApprovalsResult = data ?? [];
 
   const [globalFilter, setGlobalFilter] = useState("");
   const [filters, setFilters] = useState<Filter[]>([]);
@@ -90,8 +98,9 @@ export function PendingRequestApprovalsGrid() {
       if (!q) {
         return true;
       }
-      const title = r.positionDetails?.title ?? "";
-      const department = r.positionDetails?.department ?? "";
+      const pd = r.positionDetails as PositionDetailsForDisplay | undefined;
+      const title = pd?.title ?? "";
+      const department = pd?.department ?? "";
       return (
         r.requestCode.toLowerCase().includes(q) ||
         title.toLowerCase().includes(q) ||
@@ -168,32 +177,41 @@ export function PendingRequestApprovalsGrid() {
         enableSorting: false,
         enableHiding: false,
       }),
-      columnHelper.accessor((row) => row.positionDetails?.title, {
-        id: "title",
-        header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Title" />
-        ),
-        cell: ({ getValue }) => (
-          <span className="font-medium text-black dark:text-white">
-            {getValue() || "-"}
-          </span>
-        ),
-        size: 260,
-        enableSorting: false,
-      }),
-      columnHelper.accessor((row) => row.positionDetails?.department, {
-        id: "department",
-        header: ({ column }) => (
-          <DataGridColumnHeader column={column} title="Department" />
-        ),
-        cell: ({ getValue }) => (
-          <span className="text-muted-foreground text-sm">
-            {getValue() || "-"}
-          </span>
-        ),
-        size: 220,
-        enableSorting: false,
-      }),
+      columnHelper.accessor(
+        (row) =>
+          (row.positionDetails as PositionDetailsForDisplay | undefined)?.title,
+        {
+          id: "title",
+          header: ({ column }) => (
+            <DataGridColumnHeader column={column} title="Title" />
+          ),
+          cell: ({ getValue }) => (
+            <span className="font-medium text-black dark:text-white">
+              {getValue() || "-"}
+            </span>
+          ),
+          size: 260,
+          enableSorting: false,
+        },
+      ),
+      columnHelper.accessor(
+        (row) =>
+          (row.positionDetails as PositionDetailsForDisplay | undefined)
+            ?.department,
+        {
+          id: "department",
+          header: ({ column }) => (
+            <DataGridColumnHeader column={column} title="Department" />
+          ),
+          cell: ({ getValue }) => (
+            <span className="text-muted-foreground text-sm">
+              {getValue() || "-"}
+            </span>
+          ),
+          size: 220,
+          enableSorting: false,
+        },
+      ),
       columnHelper.accessor("status", {
         header: ({ column }) => (
           <DataGridColumnHeader column={column} title="Status" />

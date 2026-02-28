@@ -20,25 +20,25 @@ import { For, If, Show } from "@/utils";
 import { Image } from "@/utils/image";
 
 export interface Step {
-  id: string;
-  title: string;
-  subtitle?: string;
-  label?: string;
-  render: () => ReactNode;
   canNext?: boolean;
   hideContent?: boolean;
   hideSubtitle?: boolean;
+  id: string;
+  label?: string;
+  render: () => ReactNode;
+  subtitle?: string;
+  title: string;
 }
 
 interface StepperProps {
-  steps: Step[];
-  onSubmit: () => Promise<void> | void;
-  isSubmitting?: boolean;
-  nextLabel?: string;
-  submitLabel?: string;
   backLabel?: string;
+  isSubmitting?: boolean;
   logo?: string;
+  nextLabel?: string;
+  onSubmit: () => Promise<void> | void;
   startLabel?: string;
+  steps: Step[];
+  submitLabel?: string;
 }
 
 export function Stepper({

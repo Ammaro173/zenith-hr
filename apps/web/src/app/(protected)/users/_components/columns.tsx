@@ -74,16 +74,16 @@ export const columns = [
   columnHelper.display({
     id: "currentJob",
     header: ({ column }) => (
-      <DataGridColumnHeader column={column} title="Current Job" />
+      <DataGridColumnHeader column={column} title="Position" />
     ),
     cell: ({ row }) => {
-      const { jobDescriptionTitle } = row.original;
+      const { positionName } = row.original;
 
-      if (!jobDescriptionTitle) {
+      if (!positionName) {
         return <span className="text-muted-foreground">Unassigned</span>;
       }
 
-      return <span className="font-medium">{jobDescriptionTitle}</span>;
+      return <span className="font-medium">{positionName}</span>;
     },
     size: 220,
     enableSorting: false,

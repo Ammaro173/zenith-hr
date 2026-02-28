@@ -8,7 +8,7 @@ import {
 } from "@zenith-hr/api/modules/users/users.schema";
 import { Loader2 } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
-import { JobDescriptionCombobox } from "@/components/shared/job-description-combobox";
+import { PositionCombobox } from "@/components/shared/position-combobox";
 import { StatusSelect } from "@/components/shared/status-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,29 +20,29 @@ import {
 type UserStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE";
 
 export interface UserFormProps {
-  mode: "create" | "edit";
   initialData?: UserResponse;
-  onSubmit: (data: CreateUserFormData | UpdateUserFormData) => Promise<void>;
-  onCancel: () => void;
   isPending?: boolean;
+  mode: "create" | "edit";
+  onCancel: () => void;
+  onSubmit: (data: CreateUserFormData | UpdateUserFormData) => Promise<void>;
 }
 
 export interface CreateUserFormData {
-  name: string;
   email: string;
+  name: string;
   password: string;
+  positionId: string;
   sapNo: string;
   status: UserStatus;
-  jobDescriptionId: string;
 }
 
 export interface UpdateUserFormData {
+  email?: string;
   id: string;
   name?: string;
-  email?: string;
+  positionId?: string;
   sapNo?: string;
   status?: UserStatus;
-  jobDescriptionId?: string;
 }
 
 export function UserForm({
@@ -61,6 +61,7 @@ export function UserForm({
       email: initialData?.email ?? "",
       sapNo: initialData?.sapNo ?? "",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
+      positionId: initialData?.positionId ?? "",
     },
     validators: {
       onChange: createUserSchema,
@@ -82,8 +83,8 @@ export function UserForm({
         if (value.status !== initialData.status) {
           updateData.status = value.status;
         }
-        if (value.jobDescriptionId) {
-          updateData.jobDescriptionId = value.jobDescriptionId;
+        if (value.positionId) {
+          updateData.positionId = value.positionId;
         }
 
         await onSubmit(updateData);
@@ -185,13 +186,13 @@ export function UserForm({
           )}
         </form.Field>
 
-        {/* Job Description Field */}
-        <form.Field name="jobDescriptionId">
+        {/* Position Field */}
+        <form.Field name="positionId">
           {(field) => (
-            <FormField field={field} label="Job Description" required>
-              <JobDescriptionCombobox
+            <FormField field={field} label="Position" required>
+              <PositionCombobox
                 onChange={(val) => field.handleChange(val ?? "")}
-                placeholder="Search and select job description"
+                placeholder="Search and select position"
                 value={field.state.value}
               />
             </FormField>

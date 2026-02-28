@@ -1,9 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronDown, Loader2, Plus, Search, X } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
+import { Check, ChevronDown, Loader2, Search, X } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
@@ -16,51 +14,48 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { cn } from "@/lib/utils";
 import { client } from "@/utils/orpc";
 
-interface JobDescriptionOption {
+interface PositionOption {
+  code: string;
+  departmentName: string | null;
   id: string;
-  title: string;
-  description: string;
-  responsibilities: string | null;
+  name: string;
 }
 
-interface JobDescriptionComboboxProps {
-  value?: string | null;
-  onChange: (
-    id?: string,
-    details?: { description: string; responsibilities: string | null },
-  ) => void;
-  placeholder?: string;
+interface PositionComboboxProps {
   disabled?: boolean;
+  onChange: (id?: string) => void;
+  placeholder?: string;
+  value?: string | null;
 }
 
-export function JobDescriptionCombobox({
+export function PositionCombobox({
   value,
   onChange,
-  placeholder = "Search job descriptions...",
+  placeholder = "Search positions...",
   disabled = false,
-}: JobDescriptionComboboxProps) {
+}: PositionComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [selectedCache, setSelectedCache] =
-    React.useState<JobDescriptionOption | null>(null);
+    React.useState<PositionOption | null>(null);
   const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["jobDescriptions", "search", debouncedSearch],
+    queryKey: ["positions", "search", debouncedSearch],
     queryFn: () =>
-      client.jobDescriptions.search({ search: debouncedSearch, pageSize: 10 }),
+      client.positions.search({ query: debouncedSearch, limit: 10 }),
     enabled: open,
   });
 
-  const jobDescriptions = data?.data;
+  const positions = data as PositionOption[] | undefined;
 
-  // Find selected job description - first check cache, then check current results
+  // Find selected position - first check cache, then check current results
   const selectedItem = React.useMemo(() => {
     if (!value) {
       return null;
     }
     // First try to find in current results
-    const fromResults = jobDescriptions?.find((jd) => jd.id === value);
+    const fromResults = positions?.find((pos) => pos.id === value);
     if (fromResults) {
       return fromResults;
     }
@@ -69,16 +64,12 @@ export function JobDescriptionCombobox({
       return selectedCache;
     }
     return null;
-  }, [value, jobDescriptions, selectedCache]);
+  }, [value, positions, selectedCache]);
 
-  const handleSelect = (item: JobDescriptionOption) => {
+  const handleSelect = (item: PositionOption) => {
     // Cache the selected item so we can display its name even when not in results
     setSelectedCache(item);
-    // Pass both the id and the details for auto-population
-    onChange(item.id, {
-      description: item.description,
-      responsibilities: item.responsibilities,
-    });
+    onChange(item.id);
     setOpen(false);
     setSearch("");
   };
@@ -87,7 +78,7 @@ export function JobDescriptionCombobox({
     e.stopPropagation();
     e.preventDefault();
     setSelectedCache(null);
-    onChange(undefined, undefined);
+    onChange(undefined);
     setSearch("");
   };
 
@@ -105,7 +96,7 @@ export function JobDescriptionCombobox({
           variant="outline"
         >
           <span className="truncate">
-            {selectedItem ? selectedItem.title : placeholder}
+            {selectedItem ? selectedItem.name : placeholder}
           </span>
           <div className="flex shrink-0 items-center gap-1 pl-2">
             {value && (
@@ -151,25 +142,24 @@ export function JobDescriptionCombobox({
                 <Loader2 className="size-4 animate-spin text-muted-foreground" />
               </div>
             )}
-            {!isLoading &&
-              (!jobDescriptions || jobDescriptions.length === 0) && (
-                <div className="py-6 text-center text-muted-foreground text-sm">
-                  No job descriptions found.
-                </div>
-              )}
-            {!isLoading && jobDescriptions && jobDescriptions.length > 0 && (
+            {!isLoading && (!positions || positions.length === 0) && (
+              <div className="py-6 text-center text-muted-foreground text-sm">
+                No positions found.
+              </div>
+            )}
+            {!isLoading && positions && positions.length > 0 && (
               <CommandGroup className="p-1">
-                {jobDescriptions.map((jd) => {
-                  const isSelected = value === jd.id;
+                {positions.map((pos) => {
+                  const isSelected = value === pos.id;
                   return (
                     <CommandItem
                       className={cn(
                         "flex cursor-pointer items-center gap-3 rounded-md px-2 py-2",
                         isSelected && "bg-accent",
                       )}
-                      key={jd.id}
-                      onSelect={() => handleSelect(jd)}
-                      value={jd.id}
+                      key={pos.id}
+                      onSelect={() => handleSelect(pos)}
+                      value={pos.id}
                     >
                       <div
                         className={cn(
@@ -183,10 +173,10 @@ export function JobDescriptionCombobox({
                       </div>
                       <div className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate font-medium text-sm">
-                          {jd.title}
+                          {pos.name}
                         </span>
                         <span className="line-clamp-1 text-muted-foreground text-xs">
-                          {jd.description}
+                          {pos.departmentName ?? "No Department"}
                         </span>
                       </div>
                     </CommandItem>
@@ -194,19 +184,6 @@ export function JobDescriptionCombobox({
                 })}
               </CommandGroup>
             )}
-          </div>
-          <div className="border-t p-1">
-            <Button
-              asChild
-              className="w-full justify-start gap-2"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href={"/job-descriptions/new" as Route}>
-                <Plus className="size-4" />
-                Create New Job Description
-              </Link>
-            </Button>
           </div>
         </Command>
       </PopoverContent>

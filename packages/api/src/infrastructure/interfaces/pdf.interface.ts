@@ -12,12 +12,12 @@ export interface PdfService {
 }
 
 export interface GenerateContractParams {
-  requestCode: string;
-  positionTitle: string;
-  salary: number;
-  currency: string;
-  candidateName: string;
-  candidateEmail: string;
   candidateAddress?: string;
+  candidateEmail: string;
+  candidateName: string;
+  currency: string;
+  positionTitle: string;
+  requestCode: string;
+  salary: number;
   startDate: string;
 }

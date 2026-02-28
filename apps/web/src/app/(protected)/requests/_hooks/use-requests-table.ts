@@ -31,6 +31,12 @@ const validSortFields: SortByField[] = [
 ];
 
 export function useRequestsTable() {
+  // Tab state: "all-related" (default) or "my-requests"
+  const [viewTab, setViewTab] = useQueryState("view", {
+    defaultValue: "all-related",
+    shallow: false,
+  });
+
   // URL-synced search state
   const [globalFilter, setGlobalFilter] = useQueryState("q", {
     defaultValue: "",
@@ -100,10 +106,16 @@ export function useRequestsTable() {
     [pagination, debouncedSearch, statusFilter, requestTypeFilter, sorting],
   );
 
+  const isAllRelatedView = viewTab === "all-related";
+
   const { data, isLoading, isFetching } = useQuery({
-    ...orpc.requests.getMyRequests.queryOptions({
-      input: queryInput,
-    }),
+    ...(isAllRelatedView
+      ? orpc.requests.getAllRelated.queryOptions({
+          input: queryInput,
+        })
+      : orpc.requests.getMyRequests.queryOptions({
+          input: queryInput,
+        })),
     placeholderData: (previousData) => previousData,
   });
 
@@ -148,5 +160,7 @@ export function useRequestsTable() {
     totalCount,
     handleFiltersChange,
     handleClearFilters,
+    viewTab,
+    setViewTab,
   };
 }

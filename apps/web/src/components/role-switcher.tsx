@@ -26,7 +26,7 @@ const roles = [
     label: "Super Admin",
   },
   {
-    value: "HR",
+    value: "HOD_HR",
     label: "HR Admin",
   },
   {
@@ -48,7 +48,7 @@ export function RoleSwitcher() {
       <PopoverTrigger asChild>
         <Button
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className="w-50 justify-between"
           role="combobox"
           variant="outline"
         >
@@ -56,7 +56,7 @@ export function RoleSwitcher() {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="w-50 p-0">
         <Command>
           <CommandInput placeholder="Search role..." />
           <CommandList>

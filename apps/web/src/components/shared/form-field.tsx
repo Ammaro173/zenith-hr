@@ -4,11 +4,11 @@ import { Label } from "@/components/ui/label";
 import FieldInfo from "./field-info";
 
 interface FormFieldProps {
-  field: AnyFieldApi;
-  label?: string;
-  description?: string;
-  required?: boolean;
   children: ReactNode;
+  description?: string;
+  field: AnyFieldApi;
+  label?: ReactNode;
+  required?: boolean;
 }
 
 export function FormField({

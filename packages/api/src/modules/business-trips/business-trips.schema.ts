@@ -42,7 +42,6 @@ const baseTripSchema = z.object({
 
   startDate: z.date(),
   endDate: z.date(),
-  delegatedUserId: z.string().min(1).optional(),
   visaRequired: z.boolean(),
   needsFlightBooking: z.boolean(),
   needsHotelBooking: z.boolean(),
@@ -117,7 +116,6 @@ export const createTripDefaults: z.input<typeof baseTripSchema> = {
   purposeDetails: "",
   startDate: new Date(),
   endDate: new Date(),
-  delegatedUserId: undefined,
   visaRequired: false,
   needsFlightBooking: false,
   needsHotelBooking: false,

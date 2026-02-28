@@ -11,10 +11,10 @@ import { USER_STATUS_OPTIONS } from "@/types/users";
 import { For } from "@/utils/For";
 
 interface StatusSelectProps {
-  value?: string;
+  disabled?: boolean;
   onChange: (val: string) => void;
   placeholder?: string;
-  disabled?: boolean;
+  value?: string;
 }
 
 export function StatusSelect({

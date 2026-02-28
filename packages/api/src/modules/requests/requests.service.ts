@@ -1,7 +1,6 @@
 import type { DbOrTx } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
-import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import {
   jobPosition,
@@ -21,7 +20,7 @@ import {
 } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
-import { getActorRole } from "../../shared/utils";
+import { getActorPositionInfo, getActorRole } from "../../shared/utils";
 import type { WorkflowService } from "../workflow/workflow.service";
 import type {
   createRequestSchema,
@@ -77,49 +76,43 @@ export const createRequestsService = (
         db,
       );
 
-      const [requesterPosition] = await db
-        .select({ positionId: userPositionAssignment.positionId })
-        .from(userPositionAssignment)
-        .where(eq(userPositionAssignment.userId, requesterId))
-        .limit(1);
-
-      // Use provided approverId or auto-determine from hierarchy
-      const initialApproverId =
-        input.approverId ||
-        (await workflowService.getNextApproverIdForStatus(
-          requesterId,
-          initialStatus,
-        ));
-
-      let initialApproverPositionId: string | null = null;
-      if (initialApproverId) {
-        const [approverPosition] = await db
-          .select({ positionId: userPositionAssignment.positionId })
-          .from(userPositionAssignment)
-          .where(eq(userPositionAssignment.userId, initialApproverId))
-          .limit(1);
-        initialApproverPositionId = approverPosition?.positionId ?? null;
+      // Get requester position info using shared utility
+      const requesterPosInfo = await getActorPositionInfo(db, requesterId);
+      if (!requesterPosInfo?.positionId) {
+        throw new AppError(
+          "BAD_REQUEST",
+          "Requester must have an assigned position",
+          400,
+        );
       }
 
-      // Enrich positionDetails from job description
+      // Get next approver position for initial status
+      const nextApprover =
+        await workflowService.getNextApproverPositionForStatus(
+          requesterPosInfo.positionId,
+          initialStatus,
+          db,
+        );
+
+      // Enrich positionDetails from position
       const enrichedPositionDetails = { ...input.positionDetails };
-      if (input.jobDescriptionId) {
-        const [jd] = await db
+      if (input.positionId) {
+        const [pos] = await db
           .select({
-            title: jobDescription.title,
-            departmentId: jobDescription.departmentId,
+            name: jobPosition.name,
+            departmentId: jobPosition.departmentId,
             departmentName: department.name,
-            description: jobDescription.description,
+            description: jobPosition.description,
           })
-          .from(jobDescription)
-          .leftJoin(department, eq(jobDescription.departmentId, department.id))
-          .where(eq(jobDescription.id, input.jobDescriptionId))
+          .from(jobPosition)
+          .leftJoin(department, eq(jobPosition.departmentId, department.id))
+          .where(eq(jobPosition.id, input.positionId))
           .limit(1);
-        if (jd) {
-          enrichedPositionDetails.title = jd.title;
-          enrichedPositionDetails.department = jd.departmentName ?? undefined;
+        if (pos) {
+          enrichedPositionDetails.title = pos.name;
+          enrichedPositionDetails.department = pos.departmentName ?? undefined;
           if (!enrichedPositionDetails.description) {
-            enrichedPositionDetails.description = jd.description;
+            enrichedPositionDetails.description = pos.description ?? undefined;
           }
         }
       }
@@ -128,21 +121,19 @@ export const createRequestsService = (
         .insert(manpowerRequest)
         .values({
           requesterId,
-          requesterPositionId: requesterPosition?.positionId ?? null,
+          requesterPositionId: requesterPosInfo.positionId,
           requestCode,
           requestType: input.requestType,
           replacementForUserId: input.replacementForUserId || null,
           contractDuration: input.contractDuration,
           employmentType: input.employmentType,
           headcount: input.headcount,
-          jobDescriptionId: input.jobDescriptionId || null,
+          positionId: input.positionId || null,
           justificationText: input.justificationText,
           salaryRangeMin: input.salaryRangeMin.toString(),
           salaryRangeMax: input.salaryRangeMax.toString(),
-          currentApproverId: initialApproverId,
-          currentApproverPositionId: initialApproverPositionId,
-          currentApproverRole:
-            workflowService.getApproverForStatus(initialStatus),
+          currentApproverPositionId: nextApprover.positionId,
+          requiredApproverRole: nextApprover.positionRole,
           positionDetails: enrichedPositionDetails,
           budgetDetails: input.budgetDetails,
           status: initialStatus,
@@ -170,12 +161,11 @@ export const createRequestsService = (
           justificationText: manpowerRequest.justificationText,
           salaryRangeMin: manpowerRequest.salaryRangeMin,
           salaryRangeMax: manpowerRequest.salaryRangeMax,
-          currentApproverId: manpowerRequest.currentApproverId,
           currentApproverPositionId: manpowerRequest.currentApproverPositionId,
-          currentApproverRole: manpowerRequest.currentApproverRole,
+          requiredApproverRole: manpowerRequest.requiredApproverRole,
           positionDetails: manpowerRequest.positionDetails,
           budgetDetails: manpowerRequest.budgetDetails,
-          jobDescriptionId: manpowerRequest.jobDescriptionId,
+          positionId: manpowerRequest.positionId,
           revisionVersion: manpowerRequest.revisionVersion,
           version: manpowerRequest.version,
           createdAt: manpowerRequest.createdAt,
@@ -207,59 +197,74 @@ export const createRequestsService = (
         replacementForUser = u || null;
       }
 
-      // Fetch current approver if exists
+      // Fetch current approver position users if exists
       let currentApprover: { id: string; name: string | null } | null = null;
-      if (request.currentApproverId) {
-        const [u] = await db
-          .select({ id: user.id, name: user.name })
-          .from(user)
-          .where(eq(user.id, request.currentApproverId))
+      if (request.currentApproverPositionId) {
+        const [assignment] = await db
+          .select({
+            userId: userPositionAssignment.userId,
+            userName: user.name,
+          })
+          .from(userPositionAssignment)
+          .innerJoin(user, eq(userPositionAssignment.userId, user.id))
+          .where(
+            eq(
+              userPositionAssignment.positionId,
+              request.currentApproverPositionId,
+            ),
+          )
           .limit(1);
-        currentApprover = u || null;
+        if (assignment) {
+          currentApprover = {
+            id: assignment.userId,
+            name: assignment.userName,
+          };
+        }
       }
 
-      // Fetch linked job description details
-      let jobDescriptionDetails: {
+      // Fetch linked position details
+      let positionDetails: {
         id: string;
-        title: string;
-        description: string;
+        name: string;
+        description: string | null;
         responsibilities: string | null;
         departmentName: string | null;
         grade: string | null;
-        minSalary: number | null;
-        maxSalary: number | null;
-        assignedRole: string;
+        role: string;
         reportsToPositionId: string | null;
       } | null = null;
-      if (request.jobDescriptionId) {
-        const [jd] = await db
+      if (request.positionId) {
+        const [pos] = await db
           .select({
-            id: jobDescription.id,
-            title: jobDescription.title,
-            description: jobDescription.description,
-            responsibilities: jobDescription.responsibilities,
+            id: jobPosition.id,
+            name: jobPosition.name,
+            description: jobPosition.description,
+            responsibilities: jobPosition.responsibilities,
             departmentName: department.name,
-            grade: jobDescription.grade,
-            minSalary: jobDescription.minSalary,
-            maxSalary: jobDescription.maxSalary,
-            assignedRole: jobDescription.assignedRole,
-            reportsToPositionId: jobDescription.reportsToPositionId,
+            grade: jobPosition.grade,
+            role: jobPosition.role,
+            reportsToPositionId: jobPosition.reportsToPositionId,
           })
-          .from(jobDescription)
-          .leftJoin(department, eq(jobDescription.departmentId, department.id))
-          .where(eq(jobDescription.id, request.jobDescriptionId))
+          .from(jobPosition)
+          .leftJoin(department, eq(jobPosition.departmentId, department.id))
+          .where(eq(jobPosition.id, request.positionId))
           .limit(1);
-        jobDescriptionDetails = jd || null;
+        positionDetails = pos
+          ? {
+              ...pos,
+              departmentName: pos.departmentName ?? null,
+            }
+          : null;
       }
 
-      // Resolve reporting position info from job description
+      // Resolve reporting position info from position
       let reportingPosition: {
         id: string;
         name: string;
         code: string;
         incumbentName: string | null;
       } | null = null;
-      if (jobDescriptionDetails?.reportsToPositionId) {
+      if (positionDetails?.reportsToPositionId) {
         const [pos] = await db
           .select({
             id: jobPosition.id,
@@ -267,7 +272,7 @@ export const createRequestsService = (
             code: jobPosition.code,
           })
           .from(jobPosition)
-          .where(eq(jobPosition.id, jobDescriptionDetails.reportsToPositionId))
+          .where(eq(jobPosition.id, positionDetails.reportsToPositionId))
           .limit(1);
 
         if (pos) {
@@ -290,7 +295,7 @@ export const createRequestsService = (
         ...request,
         replacementForUser,
         currentApprover,
-        jobDescription: jobDescriptionDetails,
+        position: positionDetails,
         reportingPosition,
       };
     },
@@ -367,23 +372,57 @@ export const createRequestsService = (
     },
 
     /**
-     * Get pending approvals based on user role
+     * Get pending approvals based on user role and position
      */
     async getPendingApprovals(userId: string) {
+      const actorPosInfo = await getActorPositionInfo(db, userId);
+      if (!actorPosInfo) {
+        return [];
+      }
+
       const actorRole = await getActorRole(db, userId);
-      const isSharedQueueRole = ["HR", "FINANCE", "CEO"].includes(actorRole);
+      const isSharedQueueRole = ["HOD_HR", "HOD_FINANCE", "CEO"].includes(
+        actorRole,
+      );
 
       // Map roles to the statuses they are responsible for.
-      // This acts as a fallback when currentApproverRole is NULL
-      // (e.g. data created before the field was populated).
+      // This acts as a fallback when requiredApproverRole is NULL
       const ROLE_STATUS_MAP = {
-        HR: ["PENDING_HR"],
-        FINANCE: ["PENDING_FINANCE"],
+        HOD_HR: ["PENDING_HR"],
+        HOD_FINANCE: ["PENDING_FINANCE"],
         CEO: ["PENDING_CEO"],
       } as const;
 
       const statusesForRole =
         ROLE_STATUS_MAP[actorRole as keyof typeof ROLE_STATUS_MAP];
+
+      const visibilityConditions: SQL[] = [];
+
+      // Check if actor's position matches current approver position
+      if (actorPosInfo.positionId) {
+        visibilityConditions.push(
+          eq(
+            manpowerRequest.currentApproverPositionId,
+            actorPosInfo.positionId,
+          ),
+        );
+      }
+
+      // For shared queue roles, check by required role
+      if (isSharedQueueRole) {
+        visibilityConditions.push(
+          eq(manpowerRequest.requiredApproverRole, actorPosInfo.positionRole),
+        );
+        if (statusesForRole) {
+          visibilityConditions.push(
+            inArray(manpowerRequest.status, statusesForRole),
+          );
+        }
+      }
+
+      if (visibilityConditions.length === 0) {
+        return [];
+      }
 
       const items = await db
         .select({
@@ -397,17 +436,7 @@ export const createRequestsService = (
         })
         .from(manpowerRequest)
         .innerJoin(user, eq(manpowerRequest.requesterId, user.id))
-        .where(
-          isSharedQueueRole
-            ? or(
-                eq(manpowerRequest.currentApproverRole, actorRole),
-                eq(manpowerRequest.currentApproverId, userId),
-                ...(statusesForRole
-                  ? [inArray(manpowerRequest.status, statusesForRole)]
-                  : []),
-              )
-            : eq(manpowerRequest.currentApproverId, userId),
-        )
+        .where(or(...visibilityConditions))
         .orderBy(desc(manpowerRequest.createdAt));
 
       // Enrich each item with replacement user, job description, and reporting position
@@ -429,45 +458,44 @@ export const createRequestsService = (
             replacementForUser = u || null;
           }
 
-          // Fetch linked job description
-          let jd: {
-            title: string;
-            description: string;
+          // Fetch linked position
+          let posData: {
+            name: string;
+            description: string | null;
             responsibilities: string | null;
             departmentName: string | null;
             grade: string | null;
-            assignedRole: string;
+            role: string;
             reportsToPositionId: string | null;
           } | null = null;
-          if (req.jobDescriptionId) {
+          if (req.positionId) {
             const [row] = await db
               .select({
-                title: jobDescription.title,
-                description: jobDescription.description,
-                responsibilities: jobDescription.responsibilities,
+                name: jobPosition.name,
+                description: jobPosition.description,
+                responsibilities: jobPosition.responsibilities,
                 departmentName: department.name,
-                grade: jobDescription.grade,
-                assignedRole: jobDescription.assignedRole,
-                reportsToPositionId: jobDescription.reportsToPositionId,
+                grade: jobPosition.grade,
+                role: jobPosition.role,
+                reportsToPositionId: jobPosition.reportsToPositionId,
               })
-              .from(jobDescription)
-              .leftJoin(
-                department,
-                eq(jobDescription.departmentId, department.id),
-              )
-              .where(eq(jobDescription.id, req.jobDescriptionId))
+              .from(jobPosition)
+              .leftJoin(department, eq(jobPosition.departmentId, department.id))
+              .where(eq(jobPosition.id, req.positionId))
               .limit(1);
-            jd = row || null;
+            posData = row
+              ? { ...row, departmentName: row.departmentName ?? null }
+              : null;
           }
 
-          // Resolve reporting position from job description
+          // Resolve reporting position from position
           let reportingPosition: {
             id: string;
             name: string;
             code: string;
             incumbentName: string | null;
           } | null = null;
-          if (jd?.reportsToPositionId) {
+          if (posData?.reportsToPositionId) {
             const [pos] = await db
               .select({
                 id: jobPosition.id,
@@ -475,7 +503,7 @@ export const createRequestsService = (
                 code: jobPosition.code,
               })
               .from(jobPosition)
-              .where(eq(jobPosition.id, jd.reportsToPositionId))
+              .where(eq(jobPosition.id, posData.reportsToPositionId))
               .limit(1);
 
             if (pos) {
@@ -497,13 +525,92 @@ export const createRequestsService = (
             ...req,
             requester: item.requester,
             replacementForUser,
-            jobDescription: jd,
+            position: posData,
             reportingPosition,
           };
         }),
       );
 
       return enriched;
+    },
+
+    /**
+     * Get all related requests and trips visible to the actor using dynamic CTE
+     * Shows visibility for all requested and involved workflows based on position hierarchy
+     */
+    async getAllRelated(actorId: string, params: GetMyRequestsInput) {
+      const { page, pageSize, search, status, requestType, sortBy, sortOrder } =
+        params;
+      const actorPosInfo = await getActorPositionInfo(db, actorId);
+
+      if (!actorPosInfo?.positionId) {
+        return { data: [], total: 0, page, pageSize, pageCount: 0 };
+      }
+
+      // We'll use Drizzle's relational querying with CTE for the IDs
+      const descendantsResult = await db.execute(sql`
+        WITH RECURSIVE descendants AS (
+          SELECT id AS position_id FROM job_position WHERE id = ${actorPosInfo.positionId}
+          UNION ALL
+          SELECT jp.id FROM job_position jp INNER JOIN descendants d ON jp.reports_to_position_id = d.position_id
+        )
+        SELECT position_id FROM descendants
+      `);
+      const descendantIds = descendantsResult.rows.map(
+        (r) => r.position_id as string,
+      );
+
+      const conditions: SQL[] = [
+        or(
+          eq(manpowerRequest.requesterId, actorId),
+          inArray(manpowerRequest.requesterPositionId, descendantIds),
+          inArray(manpowerRequest.currentApproverPositionId, descendantIds),
+          eq(manpowerRequest.requiredApproverRole, actorPosInfo.positionRole),
+        ) as SQL,
+      ];
+
+      if (status?.length) {
+        conditions.push(inArray(manpowerRequest.status, status));
+      }
+      if (requestType?.length) {
+        conditions.push(inArray(manpowerRequest.requestType, requestType));
+      }
+      if (search) {
+        conditions.push(
+          sql`(${manpowerRequest.requestCode} ILIKE ${`%${search}%`} OR ${manpowerRequest.positionDetails}->>'title' ILIKE ${`%${search}%`} OR ${manpowerRequest.positionDetails}->>'department' ILIKE ${`%${search}%`})`,
+        );
+      }
+
+      const offset = (page - 1) * pageSize;
+      const orderFn = sortOrder === "desc" ? desc : asc;
+      const orderBy =
+        sortBy === "title" || sortBy === "department"
+          ? orderFn(sql`${manpowerRequest.positionDetails}->>${sortBy}`)
+          : orderFn(
+              manpowerRequest[sortBy as keyof typeof manpowerRequest._.columns],
+            );
+
+      const [data, totalResult] = await Promise.all([
+        db
+          .select()
+          .from(manpowerRequest)
+          .where(and(...conditions))
+          .orderBy(orderBy)
+          .limit(pageSize)
+          .offset(offset),
+        db
+          .select({ count: count() })
+          .from(manpowerRequest)
+          .where(and(...conditions)),
+      ]);
+
+      return {
+        data,
+        total: totalResult[0]?.count ?? 0,
+        page,
+        pageSize,
+        pageCount: Math.ceil((totalResult[0]?.count ?? 0) / pageSize),
+      };
     },
 
     /**
@@ -575,7 +682,7 @@ export const createRequestsService = (
             justificationText: existing.justificationText,
             salaryRangeMin: existing.salaryRangeMin,
             salaryRangeMax: existing.salaryRangeMax,
-            currentApproverRole: existing.currentApproverRole,
+            requiredApproverRole: existing.requiredApproverRole,
           },
           createdAt: new Date(),
         });
@@ -645,3 +752,8 @@ export const createRequestsService = (
 };
 
 export type RequestsService = ReturnType<typeof createRequestsService>;
+
+/** Return type of getPendingApprovals; use for type-safe consumption on the frontend. */
+export type PendingRequestApprovalsResult = Awaited<
+  ReturnType<RequestsService["getPendingApprovals"]>
+>;

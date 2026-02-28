@@ -11,6 +11,12 @@ export function useCreateUser(options?: { onSuccess?: () => void }) {
     onSuccess: async () => {
       toast.success("User created successfully");
       await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      // Invalidate org chart queries to reflect new user
+      await queryClient.invalidateQueries({
+        queryKey: ["users", "getHierarchy"],
+      });
+      // Invalidate dashboard
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -27,7 +33,18 @@ export function useUpdateUser(options?: { onSuccess?: () => void }) {
       client.users.update(input),
     onSuccess: async () => {
       toast.success("User updated successfully");
+      // Invalidate user list
       await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      // Invalidate org chart queries to reflect position changes
+      await queryClient.invalidateQueries({
+        queryKey: ["users", "getHierarchy"],
+      });
+      // Invalidate approval-related queries
+      await queryClient.invalidateQueries({ queryKey: ["requests"] });
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      await queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      // Invalidate dashboard
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -44,6 +61,16 @@ export function useDeactivateUser(options?: { onSuccess?: () => void }) {
     onSuccess: async () => {
       toast.success("User deactivated successfully");
       await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      // Invalidate org chart queries to reflect user status change
+      await queryClient.invalidateQueries({
+        queryKey: ["users", "getHierarchy"],
+      });
+      // Invalidate approval-related queries
+      await queryClient.invalidateQueries({ queryKey: ["requests"] });
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      await queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      // Invalidate dashboard
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       options?.onSuccess?.();
     },
     onError: (error) => {
@@ -60,6 +87,16 @@ export function useDeleteUser(options?: { onSuccess?: () => void }) {
     onSuccess: async () => {
       toast.success("User deleted successfully");
       await queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      // Invalidate org chart queries to reflect user removal
+      await queryClient.invalidateQueries({
+        queryKey: ["users", "getHierarchy"],
+      });
+      // Invalidate approval-related queries
+      await queryClient.invalidateQueries({ queryKey: ["requests"] });
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      await queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      // Invalidate dashboard
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       options?.onSuccess?.();
     },
     onError: (error) => {

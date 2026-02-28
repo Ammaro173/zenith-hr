@@ -17,8 +17,8 @@ import {
 } from "./user-form";
 
 interface CreateUserDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
 export function CreateUserDialog({
@@ -35,7 +35,7 @@ export function CreateUserDialog({
         password: data.password,
         sapNo: data.sapNo,
         status: data.status,
-        jobDescriptionId: data.jobDescriptionId,
+        positionId: data.positionId,
       }),
     onSuccess: () => {
       toast.success("User created successfully");

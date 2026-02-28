@@ -8,15 +8,15 @@ import { RequestsPieChart } from "../requests-pie-chart";
 import { StatsCard } from "../stats-card";
 
 interface DashboardStats {
-  totalRequests: number;
-  pendingRequests: number;
-  approvedRequests: number;
-  hiringRequests: number;
-  totalCandidates: number;
   activeContracts: number;
+  approvedRequests: number;
   averageTimeToHire: number;
   companyHeadcount?: number;
+  hiringRequests: number;
+  pendingRequests: number;
+  totalCandidates: number;
   totalDepartmentExpenses?: number;
+  totalRequests: number;
 }
 
 export function CEOView({ stats }: { stats: DashboardStats }) {

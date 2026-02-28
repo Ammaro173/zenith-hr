@@ -9,15 +9,15 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface Dimensions extends TargetAndTransition {
-  width: string | number;
   height: string | number;
+  width: string | number;
 }
 
 interface DynamicContainerProps
   extends React.ComponentProps<typeof motion.div> {
-  width?: boolean;
-  height?: boolean;
   children?: React.ReactNode;
+  height?: boolean;
+  width?: boolean;
 }
 
 function DynamicContainer({

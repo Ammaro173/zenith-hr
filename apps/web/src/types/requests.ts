@@ -1,13 +1,26 @@
 import type { GetMyRequestsInput } from "@zenith-hr/api/modules/requests/requests.schema";
 
 export interface ManpowerRequest {
-  id: string;
-  requestCode: string;
-  requestType: "NEW_POSITION" | "REPLACEMENT";
-  status: string;
-  currentApproverId: string | null;
-  currentApproverRole: string | null;
+  budgetDetails: unknown;
+  contractDuration?: string;
   createdAt: string | Date;
+  currentApprover?: {
+    id: string;
+    name: string;
+  } | null;
+  currentApproverPositionId: string | null;
+  employmentType?: string;
+  headcount?: number;
+  id: string;
+  justificationText?: string;
+  position?: {
+    name: string;
+    description: string | null;
+    responsibilities: string | null;
+    departmentName: string | null;
+    grade: string | null;
+    role: string;
+  } | null;
   positionDetails: {
     title: string;
     department: string;
@@ -16,28 +29,9 @@ export interface ManpowerRequest {
     startDate?: string;
     reportingTo?: string;
   };
-  budgetDetails: unknown;
-  requester?: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string | null;
-  };
   replacementForUser?: {
     id: string;
     name: string;
-  } | null;
-  currentApprover?: {
-    id: string;
-    name: string;
-  } | null;
-  jobDescription?: {
-    title: string;
-    description: string;
-    responsibilities: string | null;
-    departmentName: string | null;
-    grade: string | null;
-    assignedRole: string;
   } | null;
   reportingPosition?: {
     id: string;
@@ -45,12 +39,18 @@ export interface ManpowerRequest {
     code: string;
     incumbentName: string | null;
   } | null;
-  headcount?: number;
-  salaryRangeMin?: string | number;
+  requestCode: string;
+  requester?: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+  };
+  requestType: "NEW_POSITION" | "REPLACEMENT";
+  requiredApproverRole: string | null;
   salaryRangeMax?: string | number;
-  contractDuration?: string;
-  employmentType?: string;
-  justificationText?: string;
+  salaryRangeMin?: string | number;
+  status: string;
 }
 
 export type RequestStatus = GetMyRequestsInput["status"] extends

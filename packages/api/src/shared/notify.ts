@@ -1,6 +1,6 @@
 export interface NotificationPayload {
-  userId: string;
   message: string;
+  userId: string;
 }
 
 // Placeholder notification hook - replace with email/in-app provider

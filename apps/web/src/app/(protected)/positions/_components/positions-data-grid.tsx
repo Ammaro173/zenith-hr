@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
-import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import {
   DropdownMenu,
@@ -20,28 +19,33 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getRoleFromSessionUser } from "@/config/navigation";
 import { authClient } from "@/lib/auth-client";
-import { useJobDescriptionsTable } from "../_hooks/use-job-descriptions-table";
-import { DeleteJobDescriptionDialog } from "./delete-job-description-dialog";
-import type { JobDescriptionListItem } from "./job-description-form";
+import { usePositionsTable } from "../_hooks/use-positions-table";
+import { DeletePositionDialog } from "./delete-position-dialog";
+import type { PositionListItem } from "./position-form";
 
-export function JobDescriptionsDataGrid() {
+export function PositionsDataGrid() {
   const { data: session } = authClient.useSession();
   const currentRole = getRoleFromSessionUser(session?.user);
   const canManage =
     currentRole === "ADMIN" ||
-    currentRole === "HR" ||
+    currentRole === "HOD_HR" ||
     currentRole === "MANAGER";
 
-  const [deleteItem, setDeleteItem] = useState<JobDescriptionListItem | null>(
-    null,
-  );
+  const [deleteItem, setDeleteItem] = useState<PositionListItem | null>(null);
 
-  const columns: ColumnDef<JobDescriptionListItem>[] = [
+  const columns: ColumnDef<PositionListItem>[] = [
     {
-      accessorKey: "title",
-      header: "Title",
+      accessorKey: "code",
+      header: "Code",
       cell: ({ row }) => (
-        <span className="font-medium">{row.original.title}</span>
+        <span className="font-mono text-sm">{row.original.code}</span>
+      ),
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name}</span>
       ),
     },
     {
@@ -49,15 +53,15 @@ export function JobDescriptionsDataGrid() {
       header: "Description",
       cell: ({ row }) => (
         <span className="line-clamp-2 text-muted-foreground text-sm">
-          {row.original.description}
+          {row.original.description ?? "—"}
         </span>
       ),
     },
     {
-      accessorKey: "assignedRole",
-      header: "Assigned Role",
+      accessorKey: "role",
+      header: "Role",
       cell: ({ row }) => (
-        <span className="font-medium text-sm">{row.original.assignedRole}</span>
+        <span className="font-medium text-sm">{row.original.role}</span>
       ),
     },
     {
@@ -68,7 +72,6 @@ export function JobDescriptionsDataGrid() {
         if (!departmentName) {
           return <span className="text-muted-foreground text-sm">None</span>;
         }
-
         return <span className="text-sm">{departmentName}</span>;
       },
     },
@@ -80,7 +83,6 @@ export function JobDescriptionsDataGrid() {
         if (!positionName) {
           return <span className="text-muted-foreground text-sm">None</span>;
         }
-
         return <span className="text-sm">{positionName}</span>;
       },
     },
@@ -101,9 +103,7 @@ export function JobDescriptionsDataGrid() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link
-                  href={`/job-descriptions/${row.original.id}/edit` as Route}
-                >
+                <Link href={`/positions/${row.original.id}/edit` as Route}>
                   <Pencil className="mr-2 size-4" />
                   Edit
                 </Link>
@@ -129,10 +129,10 @@ export function JobDescriptionsDataGrid() {
     isLoading,
     isFetching,
     totalCount,
-  } = useJobDescriptionsTable(columns);
+  } = usePositionsTable(columns);
 
   if (isLoading) {
-    return <JobDescriptionsTableSkeleton />;
+    return <PositionsTableSkeleton />;
   }
 
   return (
@@ -155,27 +155,27 @@ export function JobDescriptionsDataGrid() {
     >
       <div className="w-full space-y-4">
         <p className="text-muted-foreground text-sm">
-          Each template defines the assigned role and default department used
-          when a linked position is assigned to a user.
+          Positions define seats in the organization. Each position has a role,
+          department, and reporting structure.
         </p>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Input
-            aria-label="Search job descriptions"
+            aria-label="Search positions"
             className="h-9 w-full sm:max-w-xs"
             onChange={(e) => {
               setGlobalFilter(e.target.value);
               table.setPageIndex(0);
             }}
-            placeholder="Search job descriptions..."
+            placeholder="Search positions..."
             type="text"
             value={globalFilter}
           />
           <div className="flex items-center gap-2">
             {canManage && (
               <Button asChild size="sm">
-                <Link href={"/job-descriptions/new" as Route}>
+                <Link href={"/positions/new" as Route}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Job Description
+                  Create Position
                 </Link>
               </Button>
             )}
@@ -188,19 +188,18 @@ export function JobDescriptionsDataGrid() {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </DataGridContainer>
-        <DataGridPagination />
       </div>
 
-      <DeleteJobDescriptionDialog
-        jobDescription={deleteItem}
+      <DeletePositionDialog
         onOpenChange={(open) => !open && setDeleteItem(null)}
         open={!!deleteItem}
+        position={deleteItem}
       />
     </DataGrid>
   );
 }
 
-function JobDescriptionsTableSkeleton() {
+function PositionsTableSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">

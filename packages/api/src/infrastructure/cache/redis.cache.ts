@@ -1,11 +1,12 @@
+import { AppError } from "../../shared/errors";
 import type { CacheService } from "../interfaces/cache.interface";
 
 /**
  * Redis configuration options
  */
 export interface RedisCacheConfig {
-  url: string;
   token?: string;
+  url: string;
 }
 
 /**
@@ -13,20 +14,20 @@ export interface RedisCacheConfig {
  * This allows us to use dynamic imports without TypeScript errors
  */
 interface UpstashRedisClient {
-  get: <T>(key: string) => Promise<T | null>;
-  set: (
-    key: string,
-    value: unknown,
-    options?: { ex?: number },
-  ) => Promise<unknown>;
   del: (key: string) => Promise<number>;
-  keys: (pattern: string) => Promise<string[]>;
   exists: (key: string) => Promise<number>;
+  get: <T>(key: string) => Promise<T | null>;
+  keys: (pattern: string) => Promise<string[]>;
   mget: <T>(...keys: string[]) => Promise<(T | null)[]>;
   pipeline: () => {
     set: (key: string, value: unknown, options?: { ex?: number }) => unknown;
     exec: () => Promise<unknown>;
   };
+  set: (
+    key: string,
+    value: unknown,
+    options?: { ex?: number },
+  ) => Promise<unknown>;
 }
 
 /**
@@ -96,7 +97,7 @@ export async function createRedisCache(
       },
     };
   } catch {
-    throw new Error(
+    throw AppError.badRequest(
       "Failed to create Redis cache. Make sure @upstash/redis is installed: bun add @upstash/redis",
     );
   }

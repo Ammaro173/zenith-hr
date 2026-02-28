@@ -26,7 +26,14 @@ export const usersRouter = o.router({
     ),
 
   // List users with pagination and filtering (role-restricted)
-  list: requireRoles(["ADMIN", "HR", "CEO", "IT", "FINANCE", "MANAGER"])
+  list: requireRoles([
+    "ADMIN",
+    "HOD_HR",
+    "CEO",
+    "HOD_IT",
+    "HOD_FINANCE",
+    "MANAGER",
+  ])
     .input(listUsersSchema)
     .handler(async ({ input, context }) => {
       const currentUser = {
@@ -39,10 +46,10 @@ export const usersRouter = o.router({
   // Get departments for filter dropdown (redirects to departments service)
   getDepartments: requireRoles([
     "ADMIN",
-    "HR",
+    "HOD_HR",
     "CEO",
-    "IT",
-    "FINANCE",
+    "HOD_IT",
+    "HOD_FINANCE",
     "MANAGER",
   ]).handler(
     async ({ context }) => await context.services.departments.getAll(),
@@ -63,35 +70,35 @@ export const usersRouter = o.router({
     }),
 
   // Create user (ADMIN, HR only)
-  create: requireRoles(["ADMIN", "HR"])
+  create: requireRoles(["ADMIN", "HOD_HR"])
     .input(createUserSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.create(input);
     }),
 
   // Update user (ADMIN, HR only)
-  update: requireRoles(["ADMIN", "HR"])
+  update: requireRoles(["ADMIN", "HOD_HR"])
     .input(updateUserSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.update(input);
     }),
 
   // Get user by ID (ADMIN, HR only)
-  getById: requireRoles(["ADMIN", "HR"])
+  getById: requireRoles(["ADMIN", "HOD_HR"])
     .input(getUserByIdSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.getById(input.id);
     }),
 
   // Deactivate user (ADMIN, HR only)
-  deactivate: requireRoles(["ADMIN", "HR"])
+  deactivate: requireRoles(["ADMIN", "HOD_HR"])
     .input(deactivateUserSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.deactivate(input.id);
     }),
 
   // Offboarding precheck (ADMIN, HR)
-  offboardingPrecheck: requireRoles(["ADMIN", "HR"])
+  offboardingPrecheck: requireRoles(["ADMIN", "HOD_HR"])
     .input(offboardingPrecheckSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.offboardingPrecheck(input.id);
@@ -133,7 +140,7 @@ export const usersRouter = o.router({
     }),
 
   // Reset password (ADMIN, HR only)
-  resetPassword: requireRoles(["ADMIN", "HR"])
+  resetPassword: requireRoles(["ADMIN", "HOD_HR"])
     .input(resetPasswordSchema)
     .handler(async ({ input, context }) => {
       return await context.services.users.resetPassword(

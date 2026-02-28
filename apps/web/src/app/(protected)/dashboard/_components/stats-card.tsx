@@ -5,16 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
-  title: string;
-  value: number | string;
-  icon?: LucideIcon;
+  className?: string; // Allow custom styling
   description?: string;
+  icon?: LucideIcon;
+  title: string;
   trend?: {
     value: number;
     label: string;
     positive?: boolean;
   };
-  className?: string; // Allow custom styling
+  value: number | string;
   variant?: "default" | "highlight";
 }
 

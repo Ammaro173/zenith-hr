@@ -7,8 +7,8 @@ export interface BadgeProps
   extends React.ComponentProps<"span">,
     VariantProps<typeof badgeVariants> {
   asChild?: boolean;
-  dotClassName?: string;
   disabled?: boolean;
+  dotClassName?: string;
 }
 
 export interface BadgeButtonProps

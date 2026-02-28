@@ -1,6 +1,11 @@
 import type { DbOrTx } from "@zenith-hr/db";
+import { user } from "@zenith-hr/db/schema/auth";
 import { department } from "@zenith-hr/db/schema/departments";
-import { and, asc, count, desc, eq, ilike } from "drizzle-orm";
+import {
+  jobPosition,
+  userPositionAssignment,
+} from "@zenith-hr/db/schema/position-slots";
+import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
 import type {
   CreateDepartmentInput,
@@ -194,6 +199,44 @@ export const createDepartmentsService = (db: DbOrTx) => ({
       })
       .from(department)
       .orderBy(asc(department.name));
+  },
+
+  /**
+   * Get Head of Department (HOD) for a department
+   * Finds the user assigned to a position with HOD role in the given department
+   */
+  async getHODForDepartment(departmentId: string): Promise<{
+    userId: string | null;
+    userName: string | null;
+    positionId: string | null;
+  }> {
+    const [hodAssignment] = await db
+      .select({
+        userId: userPositionAssignment.userId,
+        userName: user.name,
+        positionId: jobPosition.id,
+      })
+      .from(jobPosition)
+      .innerJoin(
+        userPositionAssignment,
+        eq(userPositionAssignment.positionId, jobPosition.id),
+      )
+      .innerJoin(user, eq(user.id, userPositionAssignment.userId))
+      .where(
+        and(
+          eq(jobPosition.departmentId, departmentId),
+          eq(jobPosition.active, true),
+          inArray(jobPosition.role, ["HOD", "HOD_HR", "HOD_FINANCE", "HOD_IT"]),
+          eq(user.status, "ACTIVE"),
+        ),
+      )
+      .limit(1);
+
+    return {
+      userId: hodAssignment?.userId ?? null,
+      userName: hodAssignment?.userName ?? null,
+      positionId: hodAssignment?.positionId ?? null,
+    };
   },
 });
 

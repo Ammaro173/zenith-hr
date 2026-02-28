@@ -8,16 +8,24 @@ import {
   type tripStatusEnum,
 } from "@zenith-hr/db/schema/business-trips";
 import { department } from "@zenith-hr/db/schema/departments";
-import { and, asc, count, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { userPositionAssignment } from "@zenith-hr/db/schema/position-slots";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { notifyUser } from "../../shared/notify";
-import type {
-  ApprovalAction,
-  RequestStatus,
-  UserRole,
-} from "../../shared/types";
-import { getActorRole } from "../../shared/utils";
+import type { ApprovalAction, PositionRole } from "../../shared/types";
+import { getActorPositionInfo, getActorRole } from "../../shared/utils";
 import type {
   addExpenseSchema,
   createTripSchema,
@@ -42,23 +50,28 @@ export const createBusinessTripsService = (
       throw AppError.badRequest("End date must be after start date");
     }
 
-    // Use the same dynamic routing as manpower requests
-    const initialStatus = await workflowService.getInitialStatusForRequester(
-      requesterId,
-      db,
-    );
+    // Get requester position info using shared utility
+    const requesterPosInfo = await getActorPositionInfo(db, requesterId);
+    if (!requesterPosInfo?.positionId) {
+      throw new AppError(
+        "BAD_REQUEST",
+        "Requester must have an assigned position",
+        400,
+      );
+    }
 
-    // Determine initial approver
-    const initialApproverId = await workflowService.getNextApproverIdForStatus(
-      requesterId,
-      initialStatus,
+    // Get initial approver using new trip workflow
+    const nextApprover = await workflowService.getNextTripApprover(
+      requesterPosInfo.positionId,
+      "DRAFT",
+      db,
     );
 
     const [trip] = await db
       .insert(businessTrip)
       .values({
         requesterId,
-        delegatedUserId: input.delegatedUserId,
+        requesterPositionId: requesterPosInfo.positionId,
         country: input.country,
         city: input.city,
         purposeType: input.purposeType,
@@ -77,10 +90,9 @@ export const createBusinessTripsService = (
         preferredArrivalDate: input.preferredArrivalDate,
         travelClass: input.travelClass,
         flightNotes: input.flightNotes,
-        status: initialStatus as BusinessTripStatus,
-        currentApproverId: initialApproverId,
-        currentApproverRole:
-          workflowService.getApproverForStatus(initialStatus),
+        status: nextApprover.nextStatus as BusinessTripStatus,
+        currentApproverPositionId: nextApprover.approverPositionId,
+        requiredApproverRole: nextApprover.approverRole,
       })
       .returning();
     if (!trip) {
@@ -94,7 +106,7 @@ export const createBusinessTripsService = (
       .select({
         id: businessTrip.id,
         requesterId: businessTrip.requesterId,
-        delegatedUserId: businessTrip.delegatedUserId,
+        requesterPositionId: businessTrip.requesterPositionId,
         country: businessTrip.country,
         city: businessTrip.city,
         purposeType: businessTrip.purposeType,
@@ -114,8 +126,8 @@ export const createBusinessTripsService = (
         travelClass: businessTrip.travelClass,
         flightNotes: businessTrip.flightNotes,
         status: businessTrip.status,
-        currentApproverId: businessTrip.currentApproverId,
-        currentApproverRole: businessTrip.currentApproverRole,
+        currentApproverPositionId: businessTrip.currentApproverPositionId,
+        requiredApproverRole: businessTrip.requiredApproverRole,
         revisionVersion: businessTrip.revisionVersion,
         version: businessTrip.version,
         createdAt: businessTrip.createdAt,
@@ -140,31 +152,27 @@ export const createBusinessTripsService = (
       return null;
     }
 
-    // Fetch delegated user if exists
-    let delegatedUser: { id: string; name: string | null } | null = null;
-    if (trip.delegatedUserId) {
-      const [u] = await db
-        .select({ id: user.id, name: user.name })
-        .from(user)
-        .where(eq(user.id, trip.delegatedUserId))
-        .limit(1);
-      delegatedUser = u || null;
-    }
-
-    // Fetch current approver if exists
+    // Fetch current approver position users if exists
     let currentApprover: { id: string; name: string | null } | null = null;
-    if (trip.currentApproverId) {
-      const [u] = await db
-        .select({ id: user.id, name: user.name })
-        .from(user)
-        .where(eq(user.id, trip.currentApproverId))
+    if (trip.currentApproverPositionId) {
+      const [assignment] = await db
+        .select({ userId: userPositionAssignment.userId, userName: user.name })
+        .from(userPositionAssignment)
+        .innerJoin(user, eq(userPositionAssignment.userId, user.id))
+        .where(
+          eq(userPositionAssignment.positionId, trip.currentApproverPositionId),
+        )
         .limit(1);
-      currentApprover = u || null;
+      if (assignment) {
+        currentApprover = {
+          id: assignment.userId,
+          name: assignment.userName,
+        };
+      }
     }
 
     return {
       ...trip,
-      delegatedUser,
       currentApprover,
     };
   },
@@ -220,19 +228,41 @@ export const createBusinessTripsService = (
   },
 
   async getPendingApprovals(userId: string) {
-    const actorRole = (await getActorRole(db, userId)) as UserRole;
-    const isSharedQueueRole = ["HR", "FINANCE", "CEO"].includes(actorRole);
+    const actorPosInfo = await getActorPositionInfo(db, userId);
+    if (!actorPosInfo) {
+      return [];
+    }
 
-    // Same visibility logic as requests.service.ts
-    const ROLE_STATUS_MAP = {
-      HR: ["PENDING_HR"],
-      FINANCE: ["PENDING_FINANCE"],
-      CEO: ["PENDING_CEO"],
-    } as const;
+    const actorRole = await getActorRole(db, userId);
+    const isSharedQueueRole = ["HOD_HR", "HOD_FINANCE", "CEO"].includes(
+      actorRole,
+    );
 
-    const statusesForRole =
-      ROLE_STATUS_MAP[actorRole as keyof typeof ROLE_STATUS_MAP];
+    // Build visibility conditions based on position
+    const visibilityConditions: ReturnType<typeof eq>[] = [];
 
+    // Check if actor's position matches current approver position
+    if (actorPosInfo.positionId) {
+      visibilityConditions.push(
+        eq(businessTrip.currentApproverPositionId, actorPosInfo.positionId),
+      );
+    }
+
+    // For shared queue roles, check by required role
+    if (isSharedQueueRole && actorPosInfo.positionRole) {
+      visibilityConditions.push(
+        eq(
+          businessTrip.requiredApproverRole,
+          actorPosInfo.positionRole as PositionRole,
+        ),
+      );
+    }
+
+    if (visibilityConditions.length === 0) {
+      return [];
+    }
+
+    // Get all trips visible to this user
     const items = await db
       .select({
         trip: businessTrip,
@@ -246,15 +276,18 @@ export const createBusinessTripsService = (
       .from(businessTrip)
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
       .where(
-        isSharedQueueRole
-          ? or(
-              eq(businessTrip.currentApproverRole, actorRole),
-              eq(businessTrip.currentApproverId, userId),
-              ...(statusesForRole
-                ? [inArray(businessTrip.status, statusesForRole)]
-                : []),
-            )
-          : eq(businessTrip.currentApproverId, userId),
+        and(
+          // Only show non-draft, non-cancelled trips in approvals
+          or(
+            eq(businessTrip.status, "PENDING_MANAGER"),
+            eq(businessTrip.status, "PENDING_HOD"),
+            eq(businessTrip.status, "PENDING_HR"),
+            eq(businessTrip.status, "PENDING_FINANCE"),
+            eq(businessTrip.status, "PENDING_CEO"),
+            eq(businessTrip.status, "REJECTED"),
+          ),
+          or(...visibilityConditions),
+        ),
       )
       .orderBy(desc(businessTrip.createdAt));
 
@@ -265,7 +298,8 @@ export const createBusinessTripsService = (
   },
 
   async transition(input: TripActionInput, actorId: string) {
-    return await db.transaction(async (tx) => {
+    // Execute transaction first to persist state changes
+    const result = await db.transaction(async (tx) => {
       const [trip] = await tx
         .select()
         .from(businessTrip)
@@ -276,11 +310,20 @@ export const createBusinessTripsService = (
         throw AppError.notFound("Trip not found");
       }
 
-      const actorRole = await getActorRole(tx, actorId);
+      const actorPosInfo = await getActorPositionInfo(tx, actorId);
+      if (!actorPosInfo) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Actor must have an assigned position",
+          403,
+        );
+      }
+
       const currentStatus = trip.status as BusinessTripStatus;
       let newStatus: BusinessTripStatus = currentStatus;
 
       const isRequester = trip.requesterId === actorId;
+      const actorRole = await getActorRole(tx, actorId);
 
       // Handle CANCEL
       if (input.action === "CANCEL") {
@@ -303,63 +346,119 @@ export const createBusinessTripsService = (
             `Invalid status transition from ${currentStatus}`,
           );
         }
-        newStatus = (await workflowService.getInitialStatusForRequester(
-          trip.requesterId,
+        // Use new trip workflow for initial status
+        if (!trip.requesterPositionId) {
+          throw new AppError(
+            "BAD_REQUEST",
+            "Trip requester position is missing",
+            400,
+          );
+        }
+        const nextApprover = await workflowService.getNextTripApprover(
+          trip.requesterPositionId,
+          "DRAFT",
           tx,
-        )) as BusinessTripStatus;
+        );
+        newStatus = nextApprover.nextStatus as BusinessTripStatus;
       }
       // Handle APPROVE / REJECT (Approval Flow)
       else {
-        // Validation: must be current approver or ADMIN
-        const isAssignedUser = trip.currentApproverId === actorId;
-        const isAssignedRole =
-          trip.currentApproverRole === actorRole &&
-          ["HR", "FINANCE", "CEO"].includes(actorRole as string);
-        const isAdmin = actorRole === "ADMIN";
+        // Use workflow service to check if actor can transition
+        const canTransition = await workflowService.canActorTransition(
+          actorId,
+          trip.currentApproverPositionId,
+          trip.requiredApproverRole as PositionRole | null,
+          currentStatus as
+            | "DRAFT"
+            | "PENDING_MANAGER"
+            | "PENDING_HR"
+            | "PENDING_FINANCE"
+            | "PENDING_CEO",
+          input.action,
+          tx,
+        );
 
-        if (!(isAssignedUser || isAssignedRole || isAdmin)) {
-          throw new AppError("FORBIDDEN", "Not authorized to approve", 403);
+        if (!canTransition) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Not authorized to perform this action",
+            403,
+          );
         }
 
         if (input.action === "REJECT") {
-          newStatus = "REJECTED";
-        } else if (input.action === "APPROVE") {
-          // Use dynamic sequence to determine next status
-          const routeKey = await workflowService.getInitiatorRouteKey(
-            trip.requesterId,
-            tx,
-          );
-          const sequence = workflowService.getApprovalSequenceForInitiator(
-            routeKey,
-            "APPROVED",
-          );
-          const currentIndex = sequence.indexOf(currentStatus as RequestStatus);
-          if (currentIndex < 0 || !sequence[currentIndex + 1]) {
-            throw AppError.badRequest(
-              `Invalid approval transition from status: ${currentStatus}`,
+          // Rejection reason is required - check if comment is provided
+          const trimmedComment = input.comment?.trim() ?? "";
+          if (trimmedComment.length === 0) {
+            throw new AppError(
+              "BAD_REQUEST",
+              "Rejection reason is required",
+              400,
             );
           }
-          newStatus = sequence[currentIndex + 1] as BusinessTripStatus;
+          // Enforce maximum comment length to prevent database bloat
+          const MAX_COMMENT_LENGTH = 2000;
+          if (trimmedComment.length > MAX_COMMENT_LENGTH) {
+            throw new AppError(
+              "BAD_REQUEST",
+              `Rejection reason exceeds maximum length of ${MAX_COMMENT_LENGTH} characters`,
+              400,
+            );
+          }
+          newStatus = "REJECTED";
+        } else if (input.action === "APPROVE") {
+          // Use new trip workflow to determine next status
+          if (!trip.requesterPositionId) {
+            throw new AppError(
+              "BAD_REQUEST",
+              "Trip requester position is missing",
+              400,
+            );
+          }
+          const nextApprover = await workflowService.getNextTripApprover(
+            trip.requesterPositionId,
+            currentStatus as
+              | "DRAFT"
+              | "PENDING_MANAGER"
+              | "PENDING_HR"
+              | "PENDING_FINANCE"
+              | "PENDING_CEO",
+            tx,
+          );
+          newStatus = nextApprover.nextStatus as BusinessTripStatus;
         }
       }
 
-      // Allow idempotent saves if status unchanged, except for submits
-      if (newStatus === currentStatus && input.action !== "SUBMIT") {
-        // allow idempotent saves if needed
+      // Determine next approver using new trip workflow
+      let nextApproverPositionId: string | null = null;
+      let nextApproverRole: PositionRole | null = null;
+
+      if (
+        newStatus !== "REJECTED" &&
+        newStatus !== "CANCELLED" &&
+        trip.requesterPositionId
+      ) {
+        const nextApprover = await workflowService.getNextTripApprover(
+          trip.requesterPositionId,
+          newStatus as
+            | "DRAFT"
+            | "PENDING_MANAGER"
+            | "PENDING_HR"
+            | "PENDING_FINANCE"
+            | "PENDING_CEO",
+          tx,
+        );
+        nextApproverPositionId = nextApprover.approverPositionId;
+        nextApproverRole = nextApprover.approverRole;
       }
 
-      // Determine next approver using WorkflowService
-      const nextApproverId = await workflowService.getNextApproverIdForStatus(
-        trip.requesterId,
-        newStatus,
-      );
-
+      // Update with optimistic locking
       const [updated] = await tx
         .update(businessTrip)
         .set({
           status: newStatus,
-          currentApproverId: nextApproverId,
-          currentApproverRole: workflowService.getApproverForStatus(newStatus),
+          currentApproverPositionId: nextApproverPositionId,
+          requiredApproverRole: nextApproverRole,
           updatedAt: new Date(),
           version: trip.version + 1,
         })
@@ -403,23 +502,124 @@ export const createBusinessTripsService = (
         performedAt: new Date(),
       });
 
-      // Notifications...
-      // Note: notifyUser is a side effect. Ideally run AFTER commit.
-      // But for simplicity/pattern matching, keeping here.
+      // Get next approver user ID for notifications
+      let nextApproverUserId: string | null = null;
+      if (nextApproverPositionId) {
+        const [assignment] = await tx
+          .select({ userId: userPositionAssignment.userId })
+          .from(userPositionAssignment)
+          .where(eq(userPositionAssignment.positionId, nextApproverPositionId))
+          .limit(1);
+        nextApproverUserId = assignment?.userId ?? null;
+      }
+
+      // Return data needed for notifications (outside transaction)
+      return {
+        updated,
+        trip,
+        newStatus,
+        nextApproverUserId,
+      };
+    });
+
+    // Send notifications outside transaction to avoid rollback on notification failure
+    const { trip, newStatus, nextApproverUserId } = result;
+
+    try {
       await notifyUser({
         userId: trip.requesterId,
         message: `Business trip to ${trip.city}, ${trip.country} updated to ${newStatus}`,
       });
 
-      if (nextApproverId && nextApproverId !== trip.requesterId) {
+      if (nextApproverUserId && nextApproverUserId !== trip.requesterId) {
         await notifyUser({
-          userId: nextApproverId,
+          userId: nextApproverUserId,
           message: `New Business Trip Approval Required: ${trip.city}, ${trip.country}`,
         });
       }
+    } catch (notifyError) {
+      // Log notification errors but don't fail the transaction
+      console.warn(
+        "[business-trips] Failed to send notifications:",
+        notifyError,
+      );
+    }
 
-      return updated;
-    });
+    return result.updated;
+  },
+
+  /**
+   * Get all related requests and trips visible to the actor using dynamic CTE
+   * Shows visibility for all requested and involved workflows based on position hierarchy
+   */
+  async getAllRelated(
+    actorId: string,
+    params: z.infer<typeof getMyTripsSchema>,
+  ) {
+    const { page, pageSize, search, status, sortBy, sortOrder } = params;
+    const actorPosInfo = await getActorPositionInfo(db, actorId);
+    if (!actorPosInfo?.positionId) {
+      return { data: [], total: 0, page, pageSize, pageCount: 0 };
+    }
+
+    const descendantsResult = await db.execute(sql`
+        WITH RECURSIVE descendants AS (
+          SELECT id AS position_id FROM job_position WHERE id = ${actorPosInfo.positionId}
+          UNION ALL
+          SELECT jp.id FROM job_position jp INNER JOIN descendants d ON jp.reports_to_position_id = d.position_id
+        )
+        SELECT position_id FROM descendants
+      `);
+    const descendantIds = descendantsResult.rows.map(
+      (r) => r.position_id as string,
+    );
+
+    const conditions: SQL[] = [
+      or(
+        eq(businessTrip.requesterId, actorId),
+        inArray(businessTrip.requesterPositionId, descendantIds),
+        inArray(businessTrip.currentApproverPositionId, descendantIds),
+        eq(
+          businessTrip.requiredApproverRole,
+          actorPosInfo.positionRole as PositionRole,
+        ),
+      ) as SQL,
+    ];
+
+    if (status?.length) {
+      conditions.push(inArray(businessTrip.status, status));
+    }
+    if (search) {
+      conditions.push(ilike(businessTrip.country, `%${search}%`));
+    }
+
+    const offset = (page - 1) * pageSize;
+    const orderFn = sortOrder === "desc" ? desc : asc;
+    const orderBy = orderFn(
+      businessTrip[sortBy as keyof typeof businessTrip._.columns],
+    );
+
+    const [data, totalResult] = await Promise.all([
+      db
+        .select()
+        .from(businessTrip)
+        .where(and(...conditions))
+        .orderBy(orderBy)
+        .limit(pageSize)
+        .offset(offset),
+      db
+        .select({ count: count() })
+        .from(businessTrip)
+        .where(and(...conditions)),
+    ]);
+
+    return {
+      data,
+      total: totalResult[0]?.count ?? 0,
+      page,
+      pageSize,
+      pageCount: Math.ceil((totalResult[0]?.count ?? 0) / pageSize),
+    };
   },
 
   async addExpense(input: AddExpenseInput) {
@@ -446,6 +646,28 @@ export const createBusinessTripsService = (
       .select()
       .from(tripExpense)
       .where(eq(tripExpense.tripId, tripId));
+  },
+
+  async getApprovalHistory(tripId: string) {
+    return await db
+      .select({
+        id: approvalLog.id,
+        requestId: approvalLog.requestId,
+        actorId: approvalLog.actorId,
+        action: approvalLog.action,
+        stepName: approvalLog.stepName,
+        comment: approvalLog.comment,
+        performedAt: approvalLog.performedAt,
+        actor: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      })
+      .from(approvalLog)
+      .leftJoin(user, eq(approvalLog.actorId, user.id))
+      .where(eq(approvalLog.requestId, tripId))
+      .orderBy(approvalLog.performedAt);
   },
 
   calculateAllowance(perDiem: number, startDate: Date, endDate: Date) {
@@ -475,4 +697,9 @@ export const createBusinessTripsService = (
 
 export type BusinessTripsService = ReturnType<
   typeof createBusinessTripsService
+>;
+
+/** Return type of getPendingApprovals; use for type-safe consumption on the frontend. */
+export type PendingTripApprovalsResult = Awaited<
+  ReturnType<BusinessTripsService["getPendingApprovals"]>
 >;

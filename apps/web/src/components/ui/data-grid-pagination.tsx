@@ -13,20 +13,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface DataGridPaginationProps {
-  sizes?: number[];
-  sizesInfo?: string;
-  sizesLabel?: string;
-  sizesDescription?: string;
-  sizesSkeleton?: ReactNode;
-  more?: boolean;
-  moreLimit?: number;
+  className?: string;
+  ellipsisText?: string;
   info?: string;
   infoSkeleton?: ReactNode;
-  className?: string;
-  rowsPerPageLabel?: string;
-  previousPageLabel?: string;
+  more?: boolean;
+  moreLimit?: number;
   nextPageLabel?: string;
-  ellipsisText?: string;
+  previousPageLabel?: string;
+  rowsPerPageLabel?: string;
+  sizes?: number[];
+  sizesDescription?: string;
+  sizesInfo?: string;
+  sizesLabel?: string;
+  sizesSkeleton?: ReactNode;
 }
 
 function DataGridPagination(props: DataGridPaginationProps) {

@@ -16,8 +16,8 @@ import { client } from "@/utils/orpc";
 import { DepartmentForm } from "./department-form";
 
 interface CreateDepartmentDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
 export function CreateDepartmentDialog({
@@ -31,10 +31,10 @@ export function CreateDepartmentDialog({
       client.departments.create({
         name: data.name,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Department created successfully");
       // Invalidate all department-related queries
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
           return (
@@ -44,6 +44,8 @@ export function CreateDepartmentDialog({
           );
         },
       });
+      // Invalidate org chart and users queries since department changes affect hierarchy
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       onOpenChange(false);
     },
     onError: (error) => {

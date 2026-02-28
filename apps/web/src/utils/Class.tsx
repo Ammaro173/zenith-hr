@@ -2,11 +2,11 @@
 import type { ElementType, ReactNode } from "react";
 
 interface ClassProps {
+  as?: ElementType;
+  children: ReactNode;
   className?: string;
   condition?: boolean;
   toggleClass?: string;
-  children: ReactNode;
-  as?: ElementType;
   // biome-ignore lint/suspicious/noExplicitAny: <//TODO double check>
   [key: string]: any;
 }

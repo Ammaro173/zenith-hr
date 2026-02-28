@@ -5,10 +5,10 @@ import type { HierarchyNode } from "@/types/users";
 import { UserCard } from "./user-card";
 
 interface TreeListViewProps {
-  nodes: HierarchyNode[];
   isExpanded: (nodeId: string) => boolean;
-  onToggle: (nodeId: string) => void;
   level?: number;
+  nodes: HierarchyNode[];
+  onToggle: (nodeId: string) => void;
 }
 
 export function TreeListView({

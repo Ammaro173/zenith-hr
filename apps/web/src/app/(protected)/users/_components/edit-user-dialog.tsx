@@ -15,8 +15,8 @@ import type { CreateUserFormData, UpdateUserFormData } from "./user-form";
 import { UserForm } from "./user-form";
 
 interface EditUserDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
   userId: string;
 }
 
@@ -41,7 +41,7 @@ export function EditUserDialog({
         email: data.email,
         sapNo: data.sapNo,
         status: data.status,
-        jobDescriptionId: data.jobDescriptionId,
+        positionId: data.positionId,
       }),
     onSuccess: () => {
       toast.success("User updated successfully");
@@ -51,6 +51,42 @@ export function EditUserDialog({
           const key = query.queryKey;
           return (
             Array.isArray(key) && Array.isArray(key[0]) && key[0][0] === "users"
+          );
+        },
+      });
+      // Invalidate org chart queries to reflect position changes
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            Array.isArray(key[0]) &&
+            key[0][0] === "users" &&
+            key[0][1] === "getHierarchy"
+          );
+        },
+      });
+      // Invalidate approval-related queries to reflect user changes
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          const isValidKey =
+            Array.isArray(key) &&
+            Array.isArray(key[0]) &&
+            (key[0][0] === "requests" ||
+              key[0][0] === "trips" ||
+              key[0][0] === "approvals");
+          return isValidKey;
+        },
+      });
+      // Invalidate dashboard actions required
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            Array.isArray(key[0]) &&
+            key[0][0] === "dashboard"
           );
         },
       });

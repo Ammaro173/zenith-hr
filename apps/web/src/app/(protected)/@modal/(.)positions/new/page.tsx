@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import {
-  JobDescriptionForm,
-  type JobDescriptionFormData,
-} from "@/app/(protected)/job-descriptions/_components/job-description-form";
-import { useCreateJobDescription } from "@/app/(protected)/job-descriptions/_components/use-job-description-mutations";
+  PositionForm,
+  type PositionFormData,
+} from "@/app/(protected)/positions/_components/position-form";
+import { useCreatePosition } from "@/app/(protected)/positions/_components/use-position-mutations";
 import {
   Dialog,
   DialogContent,
@@ -13,14 +13,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export default function CreateJobDescriptionModal() {
+export default function CreatePositionModal() {
   const router = useRouter();
 
-  const createMutation = useCreateJobDescription({
+  const createMutation = useCreatePosition({
     onSuccess: () => router.back(),
   });
 
-  const handleSubmit = async (data: JobDescriptionFormData) => {
+  const handleSubmit = async (data: PositionFormData) => {
     await createMutation.mutateAsync(data);
   };
 
@@ -32,9 +32,9 @@ export default function CreateJobDescriptionModal() {
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
       <DialogContent className="flex max-h-[85vh] max-w-lg flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Create Job Description</DialogTitle>
+          <DialogTitle>Create Position</DialogTitle>
         </DialogHeader>
-        <JobDescriptionForm
+        <PositionForm
           isPending={createMutation.isPending}
           mode="create"
           onCancel={handleClose}

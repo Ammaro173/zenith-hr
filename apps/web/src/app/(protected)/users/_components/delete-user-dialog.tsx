@@ -44,8 +44,8 @@ function getForceActionLabel(isPending: boolean): string {
 }
 
 interface DeleteUserDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
   userId: string;
   userName: string;
 }

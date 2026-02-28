@@ -77,10 +77,10 @@ export function UserRowActions({ user }: UserRowActionsProps) {
   const [showDeactivateAlert, setShowDeactivateAlert] = useState(false);
   const [showActivateAlert, setShowActivateAlert] = useState(false);
 
-  const canEdit = currentRole === "ADMIN" || currentRole === "HR";
+  const canEdit = currentRole === "ADMIN" || currentRole === "HOD_HR";
   const canViewSessions = currentRole === "ADMIN";
-  const canResetPassword = currentRole === "ADMIN" || currentRole === "HR";
-  const canDeactivate = currentRole === "ADMIN" || currentRole === "HR";
+  const canResetPassword = currentRole === "ADMIN" || currentRole === "HOD_HR";
+  const canDeactivate = currentRole === "ADMIN" || currentRole === "HOD_HR";
   const canDelete = currentRole === "ADMIN";
 
   const isActive = user.status === "ACTIVE";

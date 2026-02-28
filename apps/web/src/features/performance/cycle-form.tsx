@@ -28,18 +28,18 @@ import { cn } from "@/lib/utils";
 import { client } from "@/utils/orpc";
 
 interface CycleFormProps {
-  mode?: "page" | "sheet";
-  onSuccess?: () => void;
-  onCancel?: () => void;
-  initialValues?: Partial<CycleFormValues>;
   cycleId?: string;
+  initialValues?: Partial<CycleFormValues>;
+  mode?: "page" | "sheet";
+  onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 interface CycleFormValues {
-  name: string;
   description: string;
-  startDate: Date | undefined;
   endDate: Date | undefined;
+  name: string;
+  startDate: Date | undefined;
   status: "DRAFT" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
 }
 

@@ -13,8 +13,8 @@ import { getColumnPinningStyle } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData> extends React.ComponentProps<"div"> {
-  table: TanstackTable<TData>;
   actionBar?: React.ReactNode;
+  table: TanstackTable<TData>;
 }
 
 export function DataTable<TData>({

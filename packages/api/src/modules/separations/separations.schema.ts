@@ -59,8 +59,8 @@ export const addChecklistItemSchema = z.object({
   separationId: z.string().uuid(),
   lane: z.enum([
     "OPERATIONS",
-    "IT",
-    "FINANCE",
+    "HOD_IT",
+    "HOD_FINANCE",
     "ADMIN_ASSETS",
     "INSURANCE",
     "USED_CARS",
@@ -76,8 +76,8 @@ export const reorderChecklistItemsSchema = z.object({
   separationId: z.string().uuid(),
   lane: z.enum([
     "OPERATIONS",
-    "IT",
-    "FINANCE",
+    "HOD_IT",
+    "HOD_FINANCE",
     "ADMIN_ASSETS",
     "INSURANCE",
     "USED_CARS",

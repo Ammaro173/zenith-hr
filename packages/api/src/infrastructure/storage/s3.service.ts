@@ -7,6 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../../env";
+import { AppError } from "../../shared/errors";
 import type {
   FileMetadata,
   StorageService,
@@ -14,10 +15,10 @@ import type {
 } from "../interfaces/storage.interface";
 
 export interface S3StorageConfig {
-  region?: string;
   accessKeyId?: string;
-  secretAccessKey?: string;
   bucketName?: string;
+  region?: string;
+  secretAccessKey?: string;
 }
 
 /**
@@ -36,7 +37,7 @@ export class S3StorageService implements StorageService {
     const bucketName = config?.bucketName ?? env.S3_BUCKET_NAME;
 
     if (!(region && accessKeyId && secretAccessKey && bucketName)) {
-      throw new Error("Missing AWS S3 configuration");
+      throw AppError.badRequest("Missing AWS S3 configuration");
     }
 
     this.s3Client = new S3Client({

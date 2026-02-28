@@ -17,10 +17,10 @@ import type { ColumnMapping as ColumnMappingType } from "@/types/imports";
  * Field definition for column mapping
  */
 export interface FieldDefinition {
+  description?: string;
   key: string;
   label: string;
   required: boolean;
-  description?: string;
 }
 
 /**
@@ -28,13 +28,13 @@ export interface FieldDefinition {
  */
 export interface ColumnMappingProps {
   /**
-   * CSV column headers from the uploaded file
-   */
-  headers: string[];
-  /**
    * Expected fields for the import type
    */
   expectedFields: FieldDefinition[];
+  /**
+   * CSV column headers from the uploaded file
+   */
+  headers: string[];
   /**
    * Current column mapping (CSV column -> field key)
    */

@@ -163,9 +163,9 @@ function useDirection(dirProp?: Direction): Direction {
 }
 
 interface StepState {
-  value: string;
   completed: boolean;
   disabled: boolean;
+  value: string;
 }
 
 interface StoreState {
@@ -174,18 +174,18 @@ interface StoreState {
 }
 
 interface Store {
-  subscribe: (callback: () => void) => () => void;
+  addStep: (value: string, completed: boolean, disabled: boolean) => void;
   getState: () => StoreState;
+  hasValidation: () => boolean;
+  notify: () => void;
+  removeStep: (value: string) => void;
   setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
   setStateWithValidation: (
     value: string,
     direction: NavigationDirection,
   ) => Promise<boolean>;
-  hasValidation: () => boolean;
-  notify: () => void;
-  addStep: (value: string, completed: boolean, disabled: boolean) => void;
-  removeStep: (value: string) => void;
   setStep: (value: string, completed: boolean, disabled: boolean) => void;
+  subscribe: (callback: () => void) => () => void;
 }
 
 function createStore(
@@ -323,21 +323,21 @@ function useStore<T>(selector: (state: StoreState) => T): T {
 }
 
 interface ItemData {
+  active: boolean;
+  disabled: boolean;
   id: string;
   ref: React.RefObject<TriggerElement | null>;
   value: string;
-  active: boolean;
-  disabled: boolean;
 }
 
 interface StepperContextValue {
-  id: string;
-  dir: Direction;
-  orientation: Orientation;
   activationMode: ActivationMode;
+  dir: Direction;
   disabled: boolean;
-  nonInteractive: boolean;
+  id: string;
   loop: boolean;
+  nonInteractive: boolean;
+  orientation: Orientation;
 }
 
 const StepperContext = React.createContext<StepperContextValue | null>(null);
@@ -351,22 +351,22 @@ function useStepperContext(consumerName: string) {
 }
 
 interface StepperRootProps extends DivProps {
-  value?: string;
+  activationMode?: ActivationMode;
   defaultValue?: string;
-  onValueChange?: (value: string) => void;
-  onValueComplete?: (value: string, completed: boolean) => void;
-  onValueAdd?: (value: string) => void;
-  onValueRemove?: (value: string) => void;
+  dir?: Direction;
+  disabled?: boolean;
+  loop?: boolean;
+  nonInteractive?: boolean;
   onValidate?: (
     value: string,
     direction: NavigationDirection,
   ) => boolean | Promise<boolean>;
-  activationMode?: ActivationMode;
-  dir?: Direction;
+  onValueAdd?: (value: string) => void;
+  onValueChange?: (value: string) => void;
+  onValueComplete?: (value: string, completed: boolean) => void;
+  onValueRemove?: (value: string) => void;
   orientation?: Orientation;
-  disabled?: boolean;
-  loop?: boolean;
-  nonInteractive?: boolean;
+  value?: string;
 }
 
 function StepperRoot(props: StepperRootProps) {
@@ -467,14 +467,14 @@ function StepperRoot(props: StepperRootProps) {
 }
 
 interface FocusContextValue {
-  tabStopId: string | null;
-  onItemFocus: (tabStopId: string) => void;
-  onItemShiftTab: () => void;
+  getItems: () => ItemData[];
   onFocusableItemAdd: () => void;
   onFocusableItemRemove: () => void;
+  onItemFocus: (tabStopId: string) => void;
   onItemRegister: (item: ItemData) => void;
+  onItemShiftTab: () => void;
   onItemUnregister: (id: string) => void;
-  getItems: () => ItemData[];
+  tabStopId: string | null;
 }
 
 const FocusContext = React.createContext<FocusContextValue | null>(null);
@@ -678,8 +678,8 @@ function StepperList(props: StepperListProps) {
 }
 
 interface StepperItemContextValue {
-  value: string;
   stepState: StepState | undefined;
+  value: string;
 }
 
 const StepperItemContext = React.createContext<StepperItemContextValue | null>(
@@ -695,9 +695,9 @@ function useStepperItemContext(consumerName: string) {
 }
 
 interface StepperItemProps extends DivProps {
-  value: string;
   completed?: boolean;
   disabled?: boolean;
+  value: string;
 }
 
 function StepperItem(props: StepperItemProps) {
@@ -1223,8 +1223,8 @@ function StepperDescription(props: StepperDescriptionProps) {
 }
 
 interface StepperContentProps extends DivProps {
-  value: string;
   forceMount?: boolean;
+  value: string;
 }
 
 function StepperContent(props: StepperContentProps) {

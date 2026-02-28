@@ -14,13 +14,13 @@ import { If } from "@/utils/If";
 import { client } from "@/utils/orpc";
 
 interface DepartmentSelectProps {
-  value?: string | null;
+  disabled?: boolean;
+  loadingLabel?: string | null;
+  nullable?: boolean;
   onChange: (val: string | null) => void;
   placeholder?: string;
-  nullable?: boolean;
-  disabled?: boolean;
+  value?: string | null;
   valueKey?: "id" | "name";
-  loadingLabel?: string | null;
 }
 
 export function DepartmentSelect({

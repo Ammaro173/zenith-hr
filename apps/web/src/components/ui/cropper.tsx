@@ -18,29 +18,29 @@ interface Point {
 }
 
 interface GestureEvent extends UIEvent {
-  rotation: number;
-  scale: number;
   clientX: number;
   clientY: number;
+  rotation: number;
+  scale: number;
 }
 
 interface Size {
-  width: number;
   height: number;
+  width: number;
 }
 
 interface Area {
-  width: number;
   height: number;
+  width: number;
   x: number;
   y: number;
 }
 
 interface MediaSize {
-  width: number;
   height: number;
-  naturalWidth: number;
   naturalHeight: number;
+  naturalWidth: number;
+  width: number;
 }
 
 type Shape = "rectangle" | "circle";
@@ -331,20 +331,20 @@ const useIsomorphicLayoutEffect =
 
 interface StoreState {
   crop: Point;
-  zoom: number;
-  rotation: number;
-  mediaSize: MediaSize | null;
   cropSize: Size | null;
   isDragging: boolean;
   isWheelZooming: boolean;
+  mediaSize: MediaSize | null;
+  rotation: number;
+  zoom: number;
 }
 
 interface Store {
-  subscribe: (callback: () => void) => () => void;
-  getState: () => StoreState;
-  setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
-  notify: () => void;
   batch: (fn: () => void) => void;
+  getState: () => StoreState;
+  notify: () => void;
+  setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
+  subscribe: (callback: () => void) => () => void;
 }
 
 function createStore(
@@ -527,17 +527,17 @@ function useStore<T>(selector: (state: StoreState) => T): T {
 type RootElement = React.ComponentRef<typeof CropperRootImpl>;
 
 interface CropperContextValue {
-  aspectRatio: number;
-  minZoom: number;
-  maxZoom: number;
-  zoomSpeed: number;
-  keyboardStep: number;
-  shape: Shape;
-  objectFit: ObjectFit;
-  rootRef: React.RefObject<RootElement | null>;
   allowOverflow: boolean;
+  aspectRatio: number;
+  keyboardStep: number;
+  maxZoom: number;
+  minZoom: number;
+  objectFit: ObjectFit;
   preventScrollZoom: boolean;
+  rootRef: React.RefObject<RootElement | null>;
+  shape: Shape;
   withGrid: boolean;
+  zoomSpeed: number;
 }
 
 const CropperContext = React.createContext<CropperContextValue | null>(null);
@@ -551,29 +551,29 @@ function useCropperContext(consumerName: string) {
 }
 
 interface CropperRootProps extends DivProps {
-  crop?: Point;
-  zoom?: number;
-  minZoom?: number;
-  maxZoom?: number;
-  zoomSpeed?: number;
-  rotation?: number;
-  keyboardStep?: number;
-  aspectRatio?: number;
-  shape?: Shape;
-  objectFit?: ObjectFit;
   allowOverflow?: boolean;
-  preventScrollZoom?: boolean;
-  withGrid?: boolean;
-  onCropChange?: (crop: Point) => void;
-  onCropSizeChange?: (cropSize: Size) => void;
+  aspectRatio?: number;
+  crop?: Point;
+  keyboardStep?: number;
+  maxZoom?: number;
+  minZoom?: number;
+  objectFit?: ObjectFit;
   onCropAreaChange?: (croppedArea: Area, croppedAreaPixels: Area) => void;
+  onCropChange?: (crop: Point) => void;
   onCropComplete?: (croppedArea: Area, croppedAreaPixels: Area) => void;
-  onZoomChange?: (zoom: number) => void;
-  onRotationChange?: (rotation: number) => void;
-  onMediaLoaded?: (mediaSize: MediaSize) => void;
-  onInteractionStart?: () => void;
+  onCropSizeChange?: (cropSize: Size) => void;
   onInteractionEnd?: () => void;
+  onInteractionStart?: () => void;
+  onMediaLoaded?: (mediaSize: MediaSize) => void;
+  onRotationChange?: (rotation: number) => void;
   onWheelZoom?: (event: WheelEvent) => void;
+  onZoomChange?: (zoom: number) => void;
+  preventScrollZoom?: boolean;
+  rotation?: number;
+  shape?: Shape;
+  withGrid?: boolean;
+  zoom?: number;
+  zoomSpeed?: number;
 }
 
 function CropperRoot(props: CropperRootProps) {
@@ -1375,11 +1375,11 @@ const cropperMediaVariants = cva("will-change-transform", {
 interface UseMediaComputationProps<
   T extends HTMLImageElement | HTMLVideoElement,
 > {
-  mediaRef: React.RefObject<T | null>;
   context: CropperContextValue;
-  store: Store;
-  rotation: number;
   getNaturalDimensions: (media: T) => Size;
+  mediaRef: React.RefObject<T | null>;
+  rotation: number;
+  store: Store;
 }
 
 function useMediaComputation<T extends HTMLImageElement | HTMLVideoElement>({

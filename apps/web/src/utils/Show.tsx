@@ -9,8 +9,8 @@ interface Props {
 }
 
 interface ElseProps {
-  render?: () => ReactNode;
   children?: ReactNode;
+  render?: () => ReactNode;
 }
 
 export const Show = ({ children }: Props) => {

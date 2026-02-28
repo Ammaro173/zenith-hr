@@ -106,7 +106,6 @@
       "nursery": {
         "noShadow": "off",
         "noLeakedRender": "off",
-        "useMaxParams": "off",
         "useSortedClasses": {
           "level": "warn",
           "fix": "safe",

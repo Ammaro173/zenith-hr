@@ -7,40 +7,40 @@ import { orpc } from "@/utils/orpc";
  * Parameters for querying import history
  */
 interface ImportHistoryParams {
-  type?: "users" | "departments";
   limit?: number;
   offset?: number;
+  type?: "users" | "departments";
 }
 
 /**
  * Represents a single import history record
  */
 export interface ImportHistory {
+  createdAt: Date;
+  failedCount: number;
+  filename: string | null;
   id: string;
+  insertedCount: number;
+  skippedCount: number;
+  totalRows: number;
   type: "users" | "departments";
+  updatedCount: number;
+  upsertMode: boolean;
   userId: string;
   userName: string;
-  filename: string | null;
-  totalRows: number;
-  insertedCount: number;
-  updatedCount: number;
-  skippedCount: number;
-  failedCount: number;
-  upsertMode: boolean;
-  createdAt: Date;
 }
 
 /**
  * Represents a single item in import history details
  */
 export interface ImportHistoryItem {
+  createdAt: Date;
+  errorMessage: string | null;
   id: string;
+  identifier: string;
   importHistoryId: string;
   rowNumber: number;
-  identifier: string;
   status: "inserted" | "updated" | "skipped" | "failed";
-  errorMessage: string | null;
-  createdAt: Date;
 }
 
 /**

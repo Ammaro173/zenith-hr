@@ -20,19 +20,19 @@ import {
 type InboxItemType = "REQUEST" | "TRIP";
 
 export interface InboxItem {
-  id: string;
-  type: InboxItemType;
-  title: string;
-  subtitle: string;
   createdAt: Date;
-  status: string;
+  id: string;
+  raw: unknown;
   requester: {
     id: string;
     name: string | null;
     email: string | null;
     image: string | null;
   } | null;
-  raw: unknown;
+  status: string;
+  subtitle: string;
+  title: string;
+  type: InboxItemType;
 }
 
 export function UnifiedInbox() {

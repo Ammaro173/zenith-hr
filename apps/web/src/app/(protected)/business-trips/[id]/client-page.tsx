@@ -11,7 +11,9 @@ import { format } from "date-fns";
 import {
   ArrowLeft,
   CalendarIcon,
+  Check,
   MapPin,
+  MessageSquare,
   Plane,
   Plus,
   User,
@@ -58,6 +60,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { orpc } from "@/utils/orpc";
+import { WorkflowProgress } from "../../approvals/_components/workflow-progress";
 
 type AddExpenseInput = z.input<typeof addExpenseSchema>;
 
@@ -102,6 +105,25 @@ export function BusinessTripDetailClientPage({
       input: { tripId: params.id },
     }),
   );
+
+  const { data: approvalHistory } = useQuery(
+    orpc.businessTrips.getApprovalHistory.queryOptions({
+      input: { tripId: params.id },
+    }),
+  );
+
+  const getActionBadgeVariant = (
+    action: string,
+  ): "default" | "destructive" | "secondary" => {
+    switch (action) {
+      case "REJECT":
+        return "destructive";
+      case "APPROVE":
+        return "default";
+      default:
+        return "secondary";
+    }
+  };
 
   const { mutateAsync: transitionTrip } = useMutation(
     orpc.businessTrips.transition.mutationOptions({
@@ -166,12 +188,12 @@ export function BusinessTripDetailClientPage({
 
   const canReject =
     (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
-    (role === "HR" && trip.status === "PENDING_HR") ||
+    (role === "HOD_HR" && trip.status === "PENDING_HR") ||
     role === "ADMIN";
 
   const canApprove =
     (role === "MANAGER" && trip.status === "PENDING_MANAGER") ||
-    (role === "HR" && trip.status === "PENDING_HR") ||
+    (role === "HOD_HR" && trip.status === "PENDING_HR") ||
     (role === "ADMIN" && trip.status !== "APPROVED");
 
   const hasExpenses = (expenses?.length ?? 0) > 0;
@@ -296,6 +318,23 @@ export function BusinessTripDetailClientPage({
                 {trip.currency} {trip.estimatedCost}
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Visa Required</span>
+              <span>{trip.visaRequired ? "Yes" : "No"}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Approval Workflow Progress */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Check className="size-4" />
+              Approval Workflow
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WorkflowProgress currentStatus={trip.status} />
           </CardContent>
         </Card>
 
@@ -364,6 +403,58 @@ export function BusinessTripDetailClientPage({
                   <p className="text-sm">{trip.flightNotes}</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Approval History */}
+        {approvalHistory && approvalHistory.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="size-4" />
+                Approval History
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {approvalHistory.map((log) => (
+                <div
+                  className="rounded-lg border bg-muted/30 p-4 text-sm"
+                  key={log.id}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className="text-xs"
+                        variant={getActionBadgeVariant(log.action)}
+                      >
+                        {log.action}
+                      </Badge>
+                      <span className="font-medium">
+                        {log.actor?.name || "Unknown"}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {format(new Date(log.performedAt), "dd MMM yyyy, HH:mm")}
+                    </span>
+                  </div>
+                  {log.stepName && (
+                    <p className="mt-1 text-muted-foreground text-xs">
+                      Step: {log.stepName}
+                    </p>
+                  )}
+                  {log.comment && (
+                    <div className="mt-2 rounded bg-background p-2 text-sm">
+                      <p className="mb-1 text-muted-foreground text-xs">
+                        {log.action === "REJECT"
+                          ? "Rejection Reason:"
+                          : "Note:"}
+                      </p>
+                      <p>{log.comment}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

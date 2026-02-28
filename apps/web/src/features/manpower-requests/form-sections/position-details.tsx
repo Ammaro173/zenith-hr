@@ -1,7 +1,7 @@
 import { REQUEST_TYPES } from "@zenith-hr/api/modules/requests/requests.schema";
 import { Info } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
-import { JobDescriptionCombobox } from "@/components/shared/job-description-combobox";
+import { PositionCombobox } from "@/components/shared/position-combobox";
 import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -19,12 +19,12 @@ export function PositionDetailsSection() {
         </h3>
       </div>
 
-      <form.Field name="jobDescriptionId">
+      <form.Field name="positionId">
         {(field) => (
-          <FormField field={field} label="Job Description" required>
-            <JobDescriptionCombobox
+          <FormField field={field} label="Position" required>
+            <PositionCombobox
               onChange={(id) => field.handleChange(id ?? "")}
-              placeholder="Search job descriptions..."
+              placeholder="Search positions..."
               value={field.state.value}
             />
           </FormField>

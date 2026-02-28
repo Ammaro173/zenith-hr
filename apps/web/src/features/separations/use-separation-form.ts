@@ -10,8 +10,8 @@ import { toast } from "sonner";
 import { client } from "@/utils/orpc";
 
 interface UseSeparationFormProps {
-  onSuccess?: () => void;
   onCancel?: () => void;
+  onSuccess?: () => void;
 }
 
 export function useSeparationForm({

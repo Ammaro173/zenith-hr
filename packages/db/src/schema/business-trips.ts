@@ -10,11 +10,14 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { approvalLog } from "./approval-logs";
-import { user, userRoleEnum } from "./auth";
+import { user } from "./auth";
+import { jobPosition } from "./position-slots";
+import { positionRoleEnum } from "./users";
 
 export const tripStatusEnum = pgEnum("trip_status", [
   "DRAFT",
   "PENDING_MANAGER",
+  "PENDING_HOD",
   "PENDING_HR",
   "PENDING_FINANCE",
   "PENDING_CEO",
@@ -41,9 +44,12 @@ export const businessTrip = pgTable("business_trip", {
   requesterId: text("requester_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  delegatedUserId: text("delegated_user_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
+  requesterPositionId: uuid("requester_position_id").references(
+    () => jobPosition.id,
+    {
+      onDelete: "set null",
+    },
+  ),
 
   // Destination (split into country + city)
   country: text("country").notNull(),
@@ -73,10 +79,14 @@ export const businessTrip = pgTable("business_trip", {
   status: tripStatusEnum("status").default("DRAFT").notNull(),
 
   // Approval Workflow Fields
-  currentApproverId: text("current_approver_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  currentApproverRole: userRoleEnum("current_approver_role"),
+  currentApproverPositionId: uuid("current_approver_position_id").references(
+    () => jobPosition.id,
+    {
+      onDelete: "set null",
+    },
+  ),
+  requiredApproverRole: positionRoleEnum("required_approver_role"),
+
   revisionVersion: integer("revision_version").notNull().default(0),
   version: integer("version").notNull().default(0), // For optimistic locking
 
@@ -105,10 +115,13 @@ export const businessTripRelations = relations(
       fields: [businessTrip.requesterId],
       references: [user.id],
     }),
-    delegatedUser: one(user, {
-      fields: [businessTrip.delegatedUserId],
-      references: [user.id],
-      relationName: "delegatedTrips",
+    requesterPosition: one(jobPosition, {
+      fields: [businessTrip.requesterPositionId],
+      references: [jobPosition.id],
+    }),
+    currentApproverPosition: one(jobPosition, {
+      fields: [businessTrip.currentApproverPositionId],
+      references: [jobPosition.id],
     }),
     expenses: many(tripExpense),
     approvalLogs: many(approvalLog),

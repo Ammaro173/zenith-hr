@@ -4,9 +4,9 @@ import type { UserRole, UserStatus } from "./users";
  * Represents parsed CSV data with headers and rows
  */
 export interface ParsedCSVData {
+  filename?: string;
   headers: string[];
   rows: string[][];
-  filename?: string;
 }
 
 /**
@@ -20,14 +20,14 @@ export interface ColumnMapping {
  * Represents a single user row for import
  */
 export interface UserImportRow {
-  name: string;
-  email: string;
-  sapNo: string;
-  role: UserRole;
-  status?: UserStatus;
   departmentId?: string | null;
-  jobDescriptionId?: string | null;
+  email: string;
+  name: string;
   password?: string;
+  positionId?: string | null;
+  role: UserRole;
+  sapNo: string;
+  status?: UserStatus;
 }
 
 /**
@@ -49,9 +49,9 @@ export interface ValidationError {
  * Represents the validation result for a single row
  */
 export interface RowValidationResult {
-  rowIndex: number;
-  isValid: boolean;
   errors: ValidationError[];
+  isValid: boolean;
+  rowIndex: number;
   willUpdate?: boolean;
 }
 
@@ -59,9 +59,9 @@ export interface RowValidationResult {
  * Summary of an import operation
  */
 export interface ImportSummary {
-  total: number;
-  inserted: number;
-  updated: number;
-  skipped: number;
   failed: number;
+  inserted: number;
+  skipped: number;
+  total: number;
+  updated: number;
 }

@@ -7,6 +7,6 @@ export default async function ImportsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRoles(["ADMIN", "HR"]);
+  await requireRoles(["ADMIN", "HOD_HR"]);
   return children;
 }

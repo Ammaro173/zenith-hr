@@ -4,27 +4,6 @@
  */
 export interface StorageService {
   /**
-   * Upload a file to storage
-   * @param key - The storage key/path for the file
-   * @param data - The file data as a Buffer
-   * @param options - Optional upload configuration
-   * @returns The storage URL or key of the uploaded file
-   */
-  upload: (
-    key: string,
-    data: Buffer,
-    options?: UploadOptions,
-  ) => Promise<string>;
-
-  /**
-   * Generate a presigned URL for temporary file access
-   * @param key - The storage key/path of the file
-   * @param expiresIn - URL expiration time in seconds (default: 3600)
-   * @returns A presigned URL for accessing the file
-   */
-  getPresignedUrl: (key: string, expiresIn?: number) => Promise<string>;
-
-  /**
    * Delete a file from storage
    * @param key - The storage key/path of the file to delete
    */
@@ -42,17 +21,37 @@ export interface StorageService {
    * @param key - The storage key/path of the file
    */
   getMetadata?: (key: string) => Promise<FileMetadata>;
+
+  /**
+   * Generate a presigned URL for temporary file access
+   * @param key - The storage key/path of the file
+   * @param expiresIn - URL expiration time in seconds (default: 3600)
+   * @returns A presigned URL for accessing the file
+   */
+  getPresignedUrl: (key: string, expiresIn?: number) => Promise<string>;
+  /**
+   * Upload a file to storage
+   * @param key - The storage key/path for the file
+   * @param data - The file data as a Buffer
+   * @param options - Optional upload configuration
+   * @returns The storage URL or key of the uploaded file
+   */
+  upload: (
+    key: string,
+    data: Buffer,
+    options?: UploadOptions,
+  ) => Promise<string>;
 }
 
 export interface UploadOptions {
+  acl?: "private" | "public-read";
   contentType?: string;
   metadata?: Record<string, string>;
-  acl?: "private" | "public-read";
 }
 
 export interface FileMetadata {
-  size: number;
   contentType: string;
   lastModified: Date;
   metadata?: Record<string, string>;
+  size: number;
 }

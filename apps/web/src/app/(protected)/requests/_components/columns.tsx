@@ -42,7 +42,7 @@ export const columns = [
       <DataGridColumnHeader column={column} title="Position Title" />
     ),
     cell: ({ getValue }) => (
-      <span className="block max-w-[200px] truncate font-medium">
+      <span className="block max-w-50 truncate font-medium">
         {getValue() || "N/A"}
       </span>
     ),

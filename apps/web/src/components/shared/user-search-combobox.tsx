@@ -16,24 +16,24 @@ import { cn } from "@/lib/utils";
 import { client } from "@/utils/orpc";
 
 interface UserOption {
+  departmentName: string | null;
   id: string;
   name: string;
-  sapNo: string;
-  departmentName: string | null;
-  primarySlotCode?: string | null;
   primaryPositionCode?: string | null;
+  primarySlotCode?: string | null;
+  sapNo: string;
 }
 
 interface UserSearchComboboxProps {
-  value?: string | null;
+  disabled?: boolean;
+  excludeUserId?: string;
+  fallbackLabel?: string | null;
+  nullable?: boolean;
   onChange: (val?: string) => void;
   onOptionChange?: (option: UserOption | null) => void;
   placeholder?: string;
-  fallbackLabel?: string | null;
+  value?: string | null;
   valueKey?: "id" | "primarySlotCode" | "primaryPositionCode";
-  excludeUserId?: string;
-  nullable?: boolean;
-  disabled?: boolean;
 }
 
 export function UserSearchCombobox({

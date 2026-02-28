@@ -32,17 +32,17 @@ import {
  */
 interface ImportHistoryDialogProps {
   /**
-   * Whether the dialog is open
+   * The import history ID to display details for
    */
-  open: boolean;
+  importId: string;
   /**
    * Callback when the dialog open state changes
    */
   onOpenChange: (open: boolean) => void;
   /**
-   * The import history ID to display details for
+   * Whether the dialog is open
    */
-  importId: string;
+  open: boolean;
 }
 
 /**

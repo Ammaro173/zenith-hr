@@ -20,10 +20,10 @@ type AnyORPCError = ORPCError<string, unknown>;
 const ALL_ROLES: UserRole[] = [
   "EMPLOYEE",
   "MANAGER",
-  "HR",
-  "FINANCE",
+  "HOD_HR",
+  "HOD_FINANCE",
   "CEO",
-  "IT",
+  "HOD_IT",
   "ADMIN",
 ];
 
@@ -52,7 +52,7 @@ type AdminOnlyOperation = (typeof ADMIN_ONLY_OPERATIONS)[number];
 type UserManagementOperation = AdminHrOperation | AdminOnlyOperation;
 
 // Roles allowed for each operation type
-const ADMIN_HR_ALLOWED_ROLES: UserRole[] = ["ADMIN", "HR"];
+const ADMIN_HR_ALLOWED_ROLES: UserRole[] = ["ADMIN", "HOD_HR"];
 const ADMIN_ONLY_ALLOWED_ROLES: UserRole[] = ["ADMIN"];
 
 // Arbitraries for property-based testing
@@ -205,7 +205,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
       await fc.assert(
         fc.asyncProperty(
           adminHrOperationArb,
-          fc.constantFrom<UserRole>("ADMIN", "HR"),
+          fc.constantFrom<UserRole>("ADMIN", "HOD_HR"),
           async (operation, role) => {
             const context = createMockContext(role);
             const result = await simulateRouterCall(operation, context);
@@ -223,9 +223,9 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
       const nonAdminHrRoles: UserRole[] = [
         "EMPLOYEE",
         "MANAGER",
-        "FINANCE",
+        "HOD_FINANCE",
         "CEO",
-        "IT",
+        "HOD_IT",
       ];
 
       await fc.assert(
@@ -266,10 +266,10 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
       const nonAdminRoles: UserRole[] = [
         "EMPLOYEE",
         "MANAGER",
-        "HR",
-        "FINANCE",
+        "HOD_HR",
+        "HOD_FINANCE",
         "CEO",
-        "IT",
+        "HOD_IT",
       ];
 
       await fc.assert(
@@ -294,7 +294,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
       // Specific test for HR since it has elevated privileges for other operations
       await fc.assert(
         fc.asyncProperty(adminOnlyOperationArb, async (operation) => {
-          const context = createMockContext("HR");
+          const context = createMockContext("HOD_HR");
           const result = await simulateRouterCall(operation, context);
 
           // Property: HR role should receive FORBIDDEN for ADMIN-only operations
@@ -337,12 +337,12 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
       operation: UserManagementOperation;
       allowedRoles: UserRole[];
     }> = [
-      { operation: "create", allowedRoles: ["ADMIN", "HR"] },
-      { operation: "update", allowedRoles: ["ADMIN", "HR"] },
-      { operation: "getById", allowedRoles: ["ADMIN", "HR"] },
-      { operation: "deactivate", allowedRoles: ["ADMIN", "HR"] },
-      { operation: "offboardingPrecheck", allowedRoles: ["ADMIN", "HR"] },
-      { operation: "resetPassword", allowedRoles: ["ADMIN", "HR"] },
+      { operation: "create", allowedRoles: ["ADMIN", "HOD_HR"] },
+      { operation: "update", allowedRoles: ["ADMIN", "HOD_HR"] },
+      { operation: "getById", allowedRoles: ["ADMIN", "HOD_HR"] },
+      { operation: "deactivate", allowedRoles: ["ADMIN", "HOD_HR"] },
+      { operation: "offboardingPrecheck", allowedRoles: ["ADMIN", "HOD_HR"] },
+      { operation: "resetPassword", allowedRoles: ["ADMIN", "HOD_HR"] },
       { operation: "delete", allowedRoles: ["ADMIN"] },
       { operation: "forceDelete", allowedRoles: ["ADMIN"] },
       { operation: "getSessions", allowedRoles: ["ADMIN"] },

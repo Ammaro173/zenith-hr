@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Employee {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  role?: string | null;
   createdAt?: Date | string;
+  email: string;
+  id: string;
+  image: string | null;
+  name: string | null;
+  role?: string | null;
 }
 
 interface EmployeeSidebarProps {

@@ -23,16 +23,16 @@ export type ImportStatus =
 export interface ImportProgressProps {
   /** Current row being processed */
   current: number;
-  /** Total number of rows to process */
-  total: number;
-  /** Current status of the import operation */
-  status: ImportStatus;
-  /** Callback when user clicks cancel button */
-  onCancel: () => void;
-  /** Final summary when import is complete */
-  summary?: ImportSummary;
   /** Error message if status is 'error' */
   errorMessage?: string;
+  /** Callback when user clicks cancel button */
+  onCancel: () => void;
+  /** Current status of the import operation */
+  status: ImportStatus;
+  /** Final summary when import is complete */
+  summary?: ImportSummary;
+  /** Total number of rows to process */
+  total: number;
 }
 
 /**

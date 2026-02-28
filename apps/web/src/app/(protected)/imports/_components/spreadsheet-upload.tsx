@@ -30,22 +30,22 @@ const ACCEPTED_FILE_TYPES =
   ".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 interface SpreadsheetUploadProps {
-  /** Callback when a file is selected for upload */
-  onFileSelect: (file: File) => Promise<void>;
-  /** Callback when CSV text is pasted and parsed */
-  onTextParse: (text: string) => void;
-  /** Whether a file has been successfully loaded */
-  hasData: boolean;
-  /** Filename of the loaded file (if any) */
-  filename?: string;
-  /** Number of rows in the loaded data */
-  rowCount?: number;
   /** Error message to display */
   error?: string | null;
+  /** Filename of the loaded file (if any) */
+  filename?: string;
+  /** Whether a file has been successfully loaded */
+  hasData: boolean;
   /** Whether the parser is currently loading */
   isLoading?: boolean;
+  /** Callback when a file is selected for upload */
+  onFileSelect: (file: File) => Promise<void>;
   /** Callback to reset/clear the loaded data */
   onReset?: () => void;
+  /** Callback when CSV text is pasted and parsed */
+  onTextParse: (text: string) => void;
+  /** Number of rows in the loaded data */
+  rowCount?: number;
 }
 
 /**
@@ -161,12 +161,12 @@ export function SpreadsheetUpload({
 }
 
 interface FileUploadSectionProps {
-  onFileAccept: (files: File[]) => Promise<void>;
-  selectedFile: File | null;
-  hasData: boolean;
   error?: string | null;
+  hasData: boolean;
   isLoading?: boolean;
   onClear: () => void;
+  onFileAccept: (files: File[]) => Promise<void>;
+  selectedFile: File | null;
 }
 
 function FileUploadSection({
@@ -237,13 +237,13 @@ function FileUploadSection({
 }
 
 interface PasteSectionProps {
-  text: string;
-  onTextChange: (text: string) => void;
-  onParse: () => void;
-  hasData: boolean;
   error?: string | null;
+  hasData: boolean;
   isLoading?: boolean;
   onClear: () => void;
+  onParse: () => void;
+  onTextChange: (text: string) => void;
+  text: string;
 }
 
 function PasteSection({

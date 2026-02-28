@@ -12,8 +12,8 @@ import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm";
 
 type Lane =
   | "OPERATIONS"
-  | "IT"
-  | "FINANCE"
+  | "HOD_IT"
+  | "HOD_FINANCE"
   | "ADMIN_ASSETS"
   | "INSURANCE"
   | "USED_CARS"
@@ -84,19 +84,19 @@ async function getLaneRecipients(lane: Lane): Promise<string[]> {
   }
 
   // Fallback: derive from global roles for the lanes that map cleanly.
-  let role: ("IT" | "FINANCE" | "ADMIN" | "HR") | null = null;
+  let role: ("HOD_IT" | "HOD_FINANCE" | "ADMIN" | "HOD_HR") | null = null;
   switch (lane) {
-    case "IT":
-      role = "IT";
+    case "HOD_IT":
+      role = "HOD_IT";
       break;
-    case "FINANCE":
-      role = "FINANCE";
+    case "HOD_FINANCE":
+      role = "HOD_FINANCE";
       break;
     case "ADMIN_ASSETS":
       role = "ADMIN";
       break;
     case "HR_PAYROLL":
-      role = "HR";
+      role = "HOD_HR";
       break;
     default:
       role = null;
@@ -218,7 +218,7 @@ async function separationReminderTick(): Promise<void> {
         const hrs = await db
           .select({ id: user.id })
           .from(user)
-          .where(eq(user.role, "HR"))
+          .where(eq(user.role, "HOD_HR"))
           .limit(20);
         recipients.push(...hrs.map((u) => u.id));
       }

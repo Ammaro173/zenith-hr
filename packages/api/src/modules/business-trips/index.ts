@@ -1,2 +1,6 @@
 export * from "./business-trips.router";
-export * from "./business-trips.service";
+export {
+  type BusinessTripsService,
+  createBusinessTripsService,
+  type PendingTripApprovalsResult,
+} from "./business-trips.service";

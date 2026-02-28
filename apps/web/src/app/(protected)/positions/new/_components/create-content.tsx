@@ -4,30 +4,30 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  JobDescriptionForm,
-  type JobDescriptionFormData,
-} from "../../_components/job-description-form";
-import { useCreateJobDescription } from "../../_components/use-job-description-mutations";
+  PositionForm,
+  type PositionFormData,
+} from "../../_components/position-form";
+import { useCreatePosition } from "../../_components/use-position-mutations";
 
-export function CreateJobDescriptionContent() {
+export function CreatePositionContent() {
   const router = useRouter();
 
-  const createMutation = useCreateJobDescription({
-    onSuccess: () => router.push("/job-descriptions" as Route),
+  const createMutation = useCreatePosition({
+    onSuccess: () => router.push("/positions" as Route),
   });
 
-  const handleSubmit = async (data: JobDescriptionFormData) => {
+  const handleSubmit = async (data: PositionFormData) => {
     await createMutation.mutateAsync(data);
   };
 
   const handleCancel = () => {
-    router.push("/job-descriptions" as Route);
+    router.push("/positions" as Route);
   };
 
   return (
     <Card>
       <CardContent className="pt-6">
-        <JobDescriptionForm
+        <PositionForm
           isPending={createMutation.isPending}
           mode="create"
           onCancel={handleCancel}

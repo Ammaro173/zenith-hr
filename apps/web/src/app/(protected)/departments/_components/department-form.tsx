@@ -16,13 +16,13 @@ import type {
 } from "@/types/departments";
 
 export interface DepartmentFormProps {
-  mode: "create" | "edit";
   initialData?: DepartmentListItem;
+  isPending?: boolean;
+  mode: "create" | "edit";
+  onCancel: () => void;
   onSubmit: (
     data: CreateDepartmentFormData | UpdateDepartmentFormData,
   ) => Promise<void>;
-  onCancel: () => void;
-  isPending?: boolean;
 }
 
 export function DepartmentForm({

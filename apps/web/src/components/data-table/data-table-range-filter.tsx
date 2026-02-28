@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import type { ExtendedColumnFilter } from "@/types/data-table";
 
 interface DataTableRangeFilterProps<TData> extends React.ComponentProps<"div"> {
-  filter: ExtendedColumnFilter<TData>;
   column: Column<TData>;
+  filter: ExtendedColumnFilter<TData>;
   inputId: string;
   onFilterUpdate: (
     filterId: string,

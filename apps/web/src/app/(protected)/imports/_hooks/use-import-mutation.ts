@@ -11,8 +11,8 @@ import { client } from "@/utils/orpc";
  */
 interface ImportUsersInput {
   rows: UserImportRow[];
-  upsertMode: boolean;
   skipInvalid: boolean;
+  upsertMode: boolean;
 }
 
 /**
@@ -20,26 +20,26 @@ interface ImportUsersInput {
  */
 interface ImportDepartmentsInput {
   rows: DepartmentImportRow[];
-  upsertMode: boolean;
   skipInvalid: boolean;
+  upsertMode: boolean;
 }
 
 /**
  * Result item for a single imported row
  */
 export interface ImportResultItem {
+  errorMessage?: string;
   identifier: string;
   status: "inserted" | "updated" | "skipped" | "failed";
-  errorMessage?: string;
 }
 
 /**
  * Complete result of an import operation
  */
 export interface ImportResult {
-  results: ImportResultItem[];
   generatedPasswords?: Record<string, string>;
   historyId: string;
+  results: ImportResultItem[];
   summary: ImportSummary;
 }
 
@@ -47,8 +47,8 @@ export interface ImportResult {
  * Return type for the useImportMutation hook
  */
 export interface UseImportMutationReturn {
-  importUsers: ReturnType<typeof useImportUsersMutation>;
   importDepartments: ReturnType<typeof useImportDepartmentsMutation>;
+  importUsers: ReturnType<typeof useImportUsersMutation>;
 }
 
 /**

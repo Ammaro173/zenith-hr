@@ -72,7 +72,7 @@ export function SeparationDetailClientPage({
       </div>
 
       {separation.status === "PENDING_MANAGER" &&
-      (role === "MANAGER" || role === "HR" || role === "ADMIN") ? (
+      (role === "MANAGER" || role === "HOD_HR" || role === "ADMIN") ? (
         <Card>
           <CardHeader>
             <CardTitle>Manager approval required</CardTitle>
@@ -91,7 +91,7 @@ export function SeparationDetailClientPage({
       ) : null}
 
       {separation.status === "PENDING_HR" &&
-      (role === "HR" || role === "ADMIN") ? (
+      (role === "HOD_HR" || role === "ADMIN") ? (
         <Card>
           <CardHeader>
             <CardTitle>HR approval required</CardTitle>

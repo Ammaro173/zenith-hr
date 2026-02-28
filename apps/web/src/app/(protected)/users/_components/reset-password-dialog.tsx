@@ -21,8 +21,8 @@ import {
 import { client } from "@/utils/orpc";
 
 interface ResetPasswordDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
+  open: boolean;
   userId: string;
   userName: string;
 }

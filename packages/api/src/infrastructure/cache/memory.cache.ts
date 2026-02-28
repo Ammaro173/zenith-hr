@@ -1,8 +1,8 @@
 import type { CacheService } from "../interfaces/cache.interface";
 
 interface CacheEntry<T> {
-  value: T;
   expiresAt: number;
+  value: T;
 }
 
 /**

@@ -5,7 +5,6 @@ import { account, session, user } from "@zenith-hr/db/schema/auth";
 import { businessTrip } from "@zenith-hr/db/schema/business-trips";
 import { department } from "@zenith-hr/db/schema/departments";
 import { importHistory } from "@zenith-hr/db/schema/import-history";
-import { jobDescription } from "@zenith-hr/db/schema/job-descriptions";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { performanceReview } from "@zenith-hr/db/schema/performance";
 import {
@@ -36,7 +35,7 @@ import type {
 } from "./users.schema";
 
 // Roles that can see all users
-const FULL_ACCESS_ROLES = ["ADMIN", "HR", "CEO", "IT", "FINANCE"];
+const FULL_ACCESS_ROLES = ["ADMIN", "HOD_HR", "CEO", "HOD_IT", "HOD_FINANCE"];
 
 export interface CurrentUser {
   id: string;
@@ -120,54 +119,38 @@ function computePrecheckFlags(precheck: OffboardingPrecheckResult) {
 
 async function resolveAndCreatePosition(
   db: DbOrTx,
-  jobDescriptionId: string,
-  userName: string,
+  positionId: string,
 ): Promise<{
   positionId: string;
   derivedDepartmentId: string | null;
   derivedRole:
     | "EMPLOYEE"
     | "MANAGER"
-    | "HR"
-    | "FINANCE"
+    | "HOD"
+    | "HOD_HR"
+    | "HOD_FINANCE"
+    | "HOD_IT"
     | "CEO"
-    | "IT"
     | "ADMIN";
 }> {
-  const [jd] = await db
+  const [position] = await db
     .select({
-      id: jobDescription.id,
-      title: jobDescription.title,
-      departmentId: jobDescription.departmentId,
-      reportsToPositionId: jobDescription.reportsToPositionId,
-      assignedRole: jobDescription.assignedRole,
+      id: jobPosition.id,
+      departmentId: jobPosition.departmentId,
+      role: jobPosition.role,
     })
-    .from(jobDescription)
-    .where(eq(jobDescription.id, jobDescriptionId))
+    .from(jobPosition)
+    .where(eq(jobPosition.id, positionId))
     .limit(1);
 
-  if (!jd) {
-    throw AppError.badRequest("Job description not found");
+  if (!position) {
+    throw AppError.badRequest("Position not found");
   }
 
-  const positionCode = `POS_${Date.now()}_${randomUUID().slice(0, 4).toUpperCase()}`;
-
-  const positionId = randomUUID();
-
-  await db.insert(jobPosition).values({
-    id: positionId,
-    code: positionCode,
-    name: `${userName} — ${jd.title}`,
-    departmentId: jd.departmentId,
-    jobDescriptionId: jd.id,
-    reportsToPositionId: jd.reportsToPositionId,
-    active: true,
-  });
-
   return {
-    positionId,
-    derivedDepartmentId: jd.departmentId,
-    derivedRole: jd.assignedRole,
+    positionId: position.id,
+    derivedDepartmentId: position.departmentId,
+    derivedRole: position.role as typeof position.role,
   };
 }
 
@@ -184,7 +167,6 @@ async function getManagerInfoByUserIds(
       positionId: string | null;
       positionCode: string | null;
       positionName: string | null;
-      jobDescriptionTitle: string | null;
     }
   >
 > {
@@ -197,7 +179,6 @@ async function getManagerInfoByUserIds(
       positionId: string | null;
       positionCode: string | null;
       positionName: string | null;
-      jobDescriptionTitle: string | null;
     }
   >();
 
@@ -221,12 +202,10 @@ async function getManagerInfoByUserIds(
       jp.code AS position_code,
       jp.name AS position_name,
       jp.reports_to_position_id AS reports_to_position_id,
-      jd.title AS job_description_title,
       manager_assignment.user_id AS manager_user_id,
       manager_user.name AS manager_name
     FROM user_position_assignment upa
     LEFT JOIN job_position jp ON jp.id = upa.position_id
-    LEFT JOIN job_description jd ON jd.id = jp.job_description_id
     LEFT JOIN user_position_assignment manager_assignment
       ON manager_assignment.position_id = jp.reports_to_position_id
     LEFT JOIN "user" manager_user ON manager_user.id = manager_assignment.user_id
@@ -239,7 +218,6 @@ async function getManagerInfoByUserIds(
     position_code: string | null;
     position_name: string | null;
     reports_to_position_id: string | null;
-    job_description_title: string | null;
     manager_user_id: string | null;
     manager_name: string | null;
   }>) {
@@ -250,7 +228,6 @@ async function getManagerInfoByUserIds(
       positionId: row.position_id,
       positionCode: row.position_code,
       positionName: row.position_name,
-      jobDescriptionTitle: row.job_description_title,
     });
   }
 
@@ -265,7 +242,6 @@ async function withSlotManagers<
     positionId?: string | null;
     positionCode?: string | null;
     positionName?: string | null;
-    jobDescriptionTitle?: string | null;
   },
 >(
   db: DbOrTx,
@@ -278,7 +254,6 @@ async function withSlotManagers<
       positionId: string | null;
       positionCode: string | null;
       positionName: string | null;
-      jobDescriptionTitle: string | null;
     }
   >
 > {
@@ -298,7 +273,6 @@ async function withSlotManagers<
           positionId: string | null;
           positionCode: string | null;
           positionName: string | null;
-          jobDescriptionTitle: string | null;
         }
       >();
 
@@ -311,7 +285,6 @@ async function withSlotManagers<
           positionId: row.positionId ?? null,
           positionCode: row.positionCode ?? null,
           positionName: row.positionName ?? null,
-          jobDescriptionTitle: row.jobDescriptionTitle ?? null,
         };
 
     return {
@@ -321,7 +294,6 @@ async function withSlotManagers<
       positionId: manager?.positionId ?? null,
       positionCode: manager?.positionCode ?? null,
       positionName: manager?.positionName ?? null,
-      jobDescriptionTitle: manager?.jobDescriptionTitle ?? null,
     };
   });
 }
@@ -341,7 +313,6 @@ function toUserResponse(
     | "positionCode"
     | "positionName"
     | "reportsToPositionId"
-    | "jobDescriptionTitle"
     | "managerName"
     | "createdAt"
     | "updatedAt"
@@ -360,7 +331,6 @@ function toUserResponse(
     positionCode: row.positionCode,
     positionName: row.positionName,
     reportsToPositionId: row.reportsToPositionId,
-    jobDescriptionTitle: row.jobDescriptionTitle,
     managerName: row.managerName,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -513,7 +483,6 @@ export const createUsersService = (db: DbOrTx) => ({
           positionCode: sql<string | null>`null`,
           positionName: sql<string | null>`null`,
           reportsToPositionId: sql<string | null>`null`,
-          jobDescriptionTitle: sql<string | null>`null`,
           managerName: sql<string | null>`null`,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -639,17 +608,17 @@ export const createUsersService = (db: DbOrTx) => ({
     `);
 
     interface HierarchyRow {
-      position_id: string;
-      reports_to_position_id: string | null;
-      position_name: string;
       position_dept: string | null;
+      position_id: string;
+      position_name: string;
+      reports_to_position_id: string | null;
+      user_dept: string | null;
+      user_email: string | null;
       user_id: string | null;
       user_name: string | null;
-      user_email: string | null;
-      user_sap_no: string | null;
       user_role: string | null;
+      user_sap_no: string | null;
       user_status: string | null;
-      user_dept: string | null;
     }
 
     const rows = hierarchyResult.rows as unknown as HierarchyRow[];
@@ -775,7 +744,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async create(input: CreateUserInput): Promise<UserResponse> {
-    const { name, password, sapNo, status, jobDescriptionId } = input;
+    const { name, password, sapNo, status, positionId } = input;
 
     // Normalize email to lowercase (Better Auth does case-sensitive lookups)
     const email = input.email.toLowerCase();
@@ -818,11 +787,7 @@ export const createUsersService = (db: DbOrTx) => ({
     const accountId = randomUUID();
     const now = new Date();
 
-    const derivedProfile = await resolveAndCreatePosition(
-      db,
-      jobDescriptionId,
-      name,
-    );
+    const derivedProfile = await resolveAndCreatePosition(db, positionId);
 
     // Insert user record (passwordHash is null - Better Auth stores password in account table)
     await db.insert(user).values({
@@ -880,7 +845,6 @@ export const createUsersService = (db: DbOrTx) => ({
         positionCode: sql<string | null>`null`,
         positionName: sql<string | null>`null`,
         reportsToPositionId: sql<string | null>`null`,
-        jobDescriptionTitle: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -932,7 +896,6 @@ export const createUsersService = (db: DbOrTx) => ({
         positionCode: sql<string | null>`null`,
         positionName: sql<string | null>`null`,
         reportsToPositionId: sql<string | null>`null`,
-        jobDescriptionTitle: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -963,7 +926,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async update(input: UpdateUserInput): Promise<UserResponse> {
-    const { id, name, email, sapNo, status, jobDescriptionId } = input;
+    const { id, name, email, sapNo, status, positionId } = input;
 
     // Verify user exists
     const [existingUserRecord] = await db
@@ -1019,7 +982,15 @@ export const createUsersService = (db: DbOrTx) => ({
       name: string;
       email: string;
       sapNo: string;
-      role: "EMPLOYEE" | "MANAGER" | "HR" | "FINANCE" | "CEO" | "IT" | "ADMIN";
+      role:
+        | "EMPLOYEE"
+        | "MANAGER"
+        | "HOD"
+        | "HOD_HR"
+        | "HOD_FINANCE"
+        | "CEO"
+        | "HOD_IT"
+        | "ADMIN";
       status: "ACTIVE" | "INACTIVE" | "ON_LEAVE";
       departmentId: string | null;
       updatedAt: Date;
@@ -1039,22 +1010,8 @@ export const createUsersService = (db: DbOrTx) => ({
     if (status !== undefined) {
       updateData.status = status;
     }
-    if (jobDescriptionId !== undefined) {
-      // Get the user's current name for position naming
-      const userName: string =
-        name ??
-        (await db
-          .select({ name: user.name })
-          .from(user)
-          .where(eq(user.id, id))
-          .limit(1)
-          .then((rows) => rows[0]?.name ?? "Unknown"));
-
-      const derivedProfile = await resolveAndCreatePosition(
-        db,
-        jobDescriptionId,
-        userName,
-      );
+    if (positionId !== undefined) {
+      const derivedProfile = await resolveAndCreatePosition(db, positionId);
       updateData.role = derivedProfile.derivedRole;
       updateData.departmentId = derivedProfile.derivedDepartmentId;
 
@@ -1082,7 +1039,7 @@ export const createUsersService = (db: DbOrTx) => ({
         });
       }
     } else {
-      // No job description change — just update user fields
+      // No position change — just update user fields
       await db.update(user).set(updateData).where(eq(user.id, id));
     }
 
@@ -1108,7 +1065,6 @@ export const createUsersService = (db: DbOrTx) => ({
         positionCode: sql<string | null>`null`,
         positionName: sql<string | null>`null`,
         reportsToPositionId: sql<string | null>`null`,
-        jobDescriptionTitle: sql<string | null>`null`,
         managerName: sql<string | null>`null`,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -1270,10 +1226,7 @@ export const createUsersService = (db: DbOrTx) => ({
         .where(
           and(
             inArray(manpowerRequest.status, MANPOWER_OPERATIONAL_STATUSES),
-            or(
-              eq(manpowerRequest.requesterId, userId),
-              eq(manpowerRequest.currentApproverId, userId),
-            ),
+            or(eq(manpowerRequest.requesterId, userId)),
           ),
         )
         .limit(50),
@@ -1286,10 +1239,7 @@ export const createUsersService = (db: DbOrTx) => ({
         .where(
           and(
             inArray(businessTrip.status, BUSINESS_TRIP_OPERATIONAL_STATUSES),
-            or(
-              eq(businessTrip.requesterId, userId),
-              eq(businessTrip.currentApproverId, userId),
-            ),
+            or(eq(businessTrip.requesterId, userId)),
           ),
         )
         .limit(50),
@@ -1344,16 +1294,14 @@ export const createUsersService = (db: DbOrTx) => ({
     precheck.details.manpowerRequests = manpowerRows.map((row) => ({
       id: row.id,
       status: row.status,
-      reason:
-        "User is requester or current approver on an active manpower request",
+      reason: "User is requester on an active manpower request",
     }));
 
     precheck.counts.businessTrips = tripRows.length;
     precheck.details.businessTrips = tripRows.map((row) => ({
       id: row.id,
       status: row.status,
-      reason:
-        "User is requester or current approver on an active business trip",
+      reason: "User is requester on an active business trip",
     }));
 
     precheck.counts.separations = separationRows.length;

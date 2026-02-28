@@ -26,11 +26,11 @@ import {
 import { client } from "@/utils/orpc";
 
 interface CycleRowActionsProps {
+  canManage: boolean;
   cycle: {
     id: string;
     name: string;
   };
-  canManage: boolean;
 }
 
 export function CycleRowActions({ cycle, canManage }: CycleRowActionsProps) {

@@ -3,10 +3,10 @@ import { createSeparationsService } from "./separations.service";
 
 interface MockDb {
   insert: ReturnType<typeof mock>;
-  select: ReturnType<typeof mock>;
-  update: ReturnType<typeof mock>;
-  transaction: ReturnType<typeof mock>;
   query: Record<string, unknown>;
+  select: ReturnType<typeof mock>;
+  transaction: ReturnType<typeof mock>;
+  update: ReturnType<typeof mock>;
 }
 
 function createMockStorage() {
@@ -38,15 +38,17 @@ describe("SeparationsService", () => {
           })),
         })),
       })),
-      select: mock(() => ({
-        from: mock(() => ({
-          where: mock(() => ({
-            limit: mock(() =>
-              Promise.resolve([{ id: "emp-1", role: "EMPLOYEE", name: "Emp" }]),
-            ),
-          })),
-        })),
-      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() =>
+            Promise.resolve([{ role: "EMPLOYEE", positionRole: "EMPLOYEE" }]),
+          ),
+        };
+        return qb;
+      }),
       transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
         let txSelectCall = 0;
         // tx.select: call 1 → getActivePositionId, call 2 → getActivePositionOccupant
@@ -108,20 +110,21 @@ describe("SeparationsService", () => {
     let selectCall = 0;
 
     const mockDb: MockDb = {
-      select: mock(() => ({
-        from: mock(() => ({
-          where: mock(() => ({
-            limit: mock(() => {
-              selectCall++;
-              if (selectCall === 1) {
-                // getActorRole(actorId) => HR
-                return Promise.resolve([{ role: "HR" }]);
-              }
-              return Promise.resolve([]);
-            }),
-          })),
-        })),
-      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() => {
+            selectCall++;
+            if (selectCall === 1) {
+              return Promise.resolve([{ role: "HOD_HR" }]);
+            }
+            return Promise.resolve([]);
+          }),
+        };
+        return qb;
+      }),
       insert: mock(() => ({
         values: mock(() => Promise.resolve(undefined)),
         onConflictDoNothing: mock(() => ({
@@ -239,28 +242,30 @@ describe("SeparationsService", () => {
 
     // checklist select call should return the checklist item after role lookup.
     let selectCall = 0;
-    mockDb.select.mockImplementation(() => ({
-      from: mock(() => ({
-        where: mock(() => ({
-          limit: mock(() => {
-            selectCall++;
-            if (selectCall === 1) {
-              return Promise.resolve([{ role: "IT" }]);
-            }
-            return Promise.resolve([
-              {
-                id: "chk-1",
-                separationId: "sep-1",
-                lane: "IT",
-                title: "Disable email",
-                required: true,
-                status: "PENDING",
-              },
-            ]);
-          }),
-        })),
-      })),
-    }));
+    mockDb.select.mockImplementation(() => {
+      const qb: any = {
+        from: mock(() => qb),
+        innerJoin: mock(() => qb),
+        where: mock(() => qb),
+        limit: mock(() => {
+          selectCall++;
+          if (selectCall === 1) {
+            return Promise.resolve([{ role: "HOD_IT" }]);
+          }
+          return Promise.resolve([
+            {
+              id: "chk-1",
+              separationId: "sep-1",
+              lane: "HOD_IT",
+              title: "Disable email",
+              required: true,
+              status: "PENDING",
+            },
+          ]);
+        }),
+      };
+      return qb;
+    });
 
     const service = createSeparationsService(
       mockDb as unknown as any,
@@ -303,23 +308,25 @@ describe("SeparationsService", () => {
     };
 
     let selectCall = 0;
-    mockDb.select.mockImplementation(() => ({
-      from: mock((_table: unknown) => ({
+    mockDb.select.mockImplementation(() => {
+      const qb: any = {
+        from: mock((_table: unknown) => qb),
+        innerJoin: mock(() => qb),
         where: mock(() => {
           const builder = {
             limit: mock(() => {
               selectCall++;
               if (selectCall === 1) {
-                // getActorRole => FINANCE
-                return Promise.resolve([{ role: "FINANCE" }]);
+                // getActorRole => HOD_FINANCE
+                return Promise.resolve([{ role: "HOD_FINANCE" }]);
               }
               if (selectCall === 2) {
-                // checklist lookup => IT lane
+                // checklist lookup => HOD_IT lane
                 return Promise.resolve([
                   {
                     id: "chk-1",
                     separationId: "sep-1",
-                    lane: "IT",
+                    lane: "HOD_IT",
                     title: "Disable email",
                     required: true,
                     status: "PENDING",
@@ -339,8 +346,9 @@ describe("SeparationsService", () => {
               Promise.resolve([]).then(onFulfilled),
           };
         }),
-      })),
-    }));
+      };
+      return qb;
+    });
 
     const service = createSeparationsService(
       mockDb as unknown as any,

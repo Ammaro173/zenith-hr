@@ -13,9 +13,9 @@ interface SegmentedControlOption<Value extends string> {
 
 interface SegmentedControlProps<Value extends string>
   extends React.ComponentProps<"div"> {
-  value: Value;
   onValueChange?: (value: Value) => void;
   options: SegmentedControlOption<Value>[];
+  value: Value;
 }
 
 export function SegmentedControl<Value extends string>(

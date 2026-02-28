@@ -36,7 +36,7 @@ export function PerformanceCycleClientPage({
   const params = useParams<{ id: string }>();
   const pathname = usePathname();
   const canCreateReview =
-    role === "HR" || role === "ADMIN" || role === "MANAGER";
+    role === "HOD_HR" || role === "ADMIN" || role === "MANAGER";
 
   // Only run query when actually on the cycles/[id] path (not reviews)
   const isCyclePage =

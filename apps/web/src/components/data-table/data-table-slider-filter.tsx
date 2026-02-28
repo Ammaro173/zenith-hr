@@ -16,8 +16,8 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
 interface Range {
-  min: number;
   max: number;
+  min: number;
 }
 
 type RangeValue = [number, number];

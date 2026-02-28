@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  JobDescriptionForm,
-  type JobDescriptionFormData,
-  type JobDescriptionListItem,
-} from "@/app/(protected)/job-descriptions/_components/job-description-form";
-import { useUpdateJobDescription } from "@/app/(protected)/job-descriptions/_components/use-job-description-mutations";
+  PositionForm,
+  type PositionFormData,
+  type PositionListItem,
+} from "@/app/(protected)/positions/_components/position-form";
+import { useUpdatePosition } from "@/app/(protected)/positions/_components/use-position-mutations";
 import {
   Dialog,
   DialogContent,
@@ -18,21 +18,21 @@ import {
 } from "@/components/ui/dialog";
 import { client } from "@/utils/orpc";
 
-export default function EditJobDescriptionModal() {
+export default function EditPositionModal() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
 
-  const { data: jobDescription, isLoading } = useQuery({
-    queryKey: ["jobDescriptions", "getById", params.id],
-    queryFn: () => client.jobDescriptions.getById({ id: params.id }),
+  const { data: position, isLoading } = useQuery({
+    queryKey: ["positions", "getById", params.id],
+    queryFn: () => client.positions.getById({ id: params.id }),
     enabled: !!params.id,
   });
 
-  const updateMutation = useUpdateJobDescription({
+  const updateMutation = useUpdatePosition({
     onSuccess: () => router.back(),
   });
 
-  const handleSubmit = async (data: JobDescriptionFormData) => {
+  const handleSubmit = async (data: PositionFormData) => {
     if (!params.id) {
       return;
     }
@@ -52,17 +52,32 @@ export default function EditJobDescriptionModal() {
       );
     }
 
-    if (!jobDescription) {
+    if (!position) {
       return (
         <div className="py-8 text-center text-muted-foreground">
-          Job description not found.
+          Position not found.
         </div>
       );
     }
 
+    const initialData: PositionListItem = {
+      id: position.id,
+      code: position.code,
+      name: position.name,
+      description: position.description,
+      responsibilities: position.responsibilities,
+      grade: position.grade,
+      role: position.role,
+      departmentId: position.departmentId,
+      departmentName: position.departmentName,
+      reportsToPositionId: position.reportsToPositionId,
+      reportsToPositionName: position.reportsToPositionName,
+      active: position.active,
+    };
+
     return (
-      <JobDescriptionForm
-        initialData={jobDescription as JobDescriptionListItem}
+      <PositionForm
+        initialData={initialData}
         isPending={updateMutation.isPending}
         mode="edit"
         onCancel={handleClose}
@@ -75,9 +90,9 @@ export default function EditJobDescriptionModal() {
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
       <DialogContent className="flex max-h-[85vh] max-w-lg flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Edit Job Description</DialogTitle>
+          <DialogTitle>Edit Position</DialogTitle>
           <DialogDescription>
-            Update default role and department behavior for linked positions.
+            Update position details and hierarchy.
           </DialogDescription>
         </DialogHeader>
         {renderContent()}

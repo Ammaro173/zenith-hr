@@ -16,10 +16,10 @@ import {
 import { client } from "@/utils/orpc";
 
 interface DeleteDepartmentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   departmentId: string;
   departmentName: string;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
 }
 
 export function DeleteDepartmentDialog({
@@ -32,10 +32,10 @@ export function DeleteDepartmentDialog({
 
   const deleteMutation = useMutation({
     mutationFn: () => client.departments.delete({ id: departmentId }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Department deleted successfully");
       // Invalidate all department-related queries
-      queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
           return (
@@ -45,6 +45,8 @@ export function DeleteDepartmentDialog({
           );
         },
       });
+      // Invalidate org chart and users queries since department deletion affects hierarchy
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       onOpenChange(false);
     },
     onError: (error) => {

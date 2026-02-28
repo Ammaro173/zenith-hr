@@ -15,19 +15,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ApprovalActionDialogProps {
-  open: boolean;
-  title: string;
-  description?: string;
-  confirmLabel: string;
-  confirmVariant?: "default" | "destructive";
+  comment: string;
   commentLabel?: string;
   commentPlaceholder?: string;
-  comment: string;
-  requireComment?: boolean;
+  confirmLabel: string;
+  confirmVariant?: "default" | "destructive";
+  description?: string;
   isPending?: boolean;
   onCommentChange: (next: string) => void;
-  onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  requireComment?: boolean;
+  title: string;
 }
 
 export function ApprovalActionDialog({

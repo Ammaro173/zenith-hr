@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import type { RequestStatus, UserRole } from "../../shared/types";
+import type { PositionRole, RequestStatus, UserRole } from "../../shared/types";
 import { createWorkflowService } from "./workflow.service";
 
 // ============================================================================
@@ -12,6 +12,9 @@ function createMockDb(
       id: string;
       status: RequestStatus;
       requesterId: string;
+      requesterPositionId: string;
+      currentApproverPositionId: string | null;
+      requiredApproverRole: PositionRole | null;
       revisionVersion: number;
       positionDetails: Record<string, unknown>;
       budgetDetails: Record<string, unknown>;
@@ -23,12 +26,16 @@ function createMockDb(
     }> | null;
     hrUser?: { id: string } | null;
     targetRoleUser?: { id: string } | null;
+    requester?: Partial<any> | null;
   } = {},
 ) {
   const defaultRequest = {
     id: "request-123",
     status: "DRAFT" as RequestStatus,
     requesterId: "user-1",
+    requesterPositionId: "pos-1",
+    currentApproverPositionId: "pos-1",
+    requiredApproverRole: null as PositionRole | null,
     revisionVersion: 1,
     positionDetails: {},
     budgetDetails: {},
@@ -38,6 +45,20 @@ function createMockDb(
     id: "user-1",
     role: "EMPLOYEE" as UserRole,
     name: "Test User",
+    positionId: overrides.actor?.id ?? "pos-1",
+    positionRole: "EMPLOYEE",
+    departmentId: "dept-1",
+    reportsToPositionId: null,
+  };
+
+  const defaultRequester = {
+    id: overrides.request?.requesterId ?? "user-1",
+    role: "EMPLOYEE" as UserRole,
+    name: "Requester User",
+    positionId: "pos-1",
+    positionRole: "EMPLOYEE",
+    departmentId: "dept-1",
+    reportsToPositionId: null,
   };
 
   const request =
@@ -45,35 +66,62 @@ function createMockDb(
       ? null
       : { ...defaultRequest, ...overrides.request };
   const actor =
-    overrides.actor === null ? null : { ...defaultActor, ...overrides.actor };
+    overrides.actor === null
+      ? null
+      : {
+          ...defaultActor,
+          ...overrides.actor,
+          positionRole: overrides.actor?.role ?? defaultActor.role,
+        };
+  const requester =
+    overrides.requester === null
+      ? null
+      : {
+          ...defaultRequester,
+          ...overrides.requester,
+          positionRole: overrides.requester?.role ?? defaultRequester.role,
+        };
 
   let selectCallCount = 0;
 
   const mockDb = {
-    select: mock(() => ({
-      from: mock((_table: unknown) => ({
-        where: mock(() => ({
-          limit: mock(() => {
-            selectCallCount++;
-            // First select is for request, second is for actor, third might be for next approver
-            if (selectCallCount === 1) {
-              return Promise.resolve(request ? [request] : []);
-            }
-            if (selectCallCount === 2) {
-              return Promise.resolve(actor ? [actor] : []);
-            }
-            // For role lookups (HR, FINANCE, CEO, etc.)
-            if (overrides.targetRoleUser) {
-              return Promise.resolve([overrides.targetRoleUser]);
-            }
-            if (overrides.hrUser) {
-              return Promise.resolve([overrides.hrUser]);
-            }
-            return Promise.resolve([{ id: "approver-1" }]);
-          }),
-        })),
-      })),
-    })),
+    select: mock(() => {
+      const getArrayResult = () => {
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          return request ? [request] : [];
+        }
+        if (
+          selectCallCount === 2 ||
+          selectCallCount === 3 ||
+          selectCallCount === 5 ||
+          selectCallCount === 6
+        ) {
+          return actor ? [actor] : [];
+        }
+        if (selectCallCount === 4) {
+          return requester ? [requester] : [];
+        }
+        if (overrides.targetRoleUser) {
+          return [overrides.targetRoleUser];
+        }
+        if (overrides.hrUser) {
+          return [overrides.hrUser];
+        }
+        return [{ id: "approver-1", userId: "approver-1" }];
+      };
+
+      const qb: any = {
+        from: mock(() => qb),
+        innerJoin: mock(() => qb),
+        where: mock(() => qb),
+        limit: mock(() => Promise.resolve(getArrayResult())),
+        // biome-ignore lint/suspicious/noThenProperty: mock object
+        then: (onFulfilled: any) =>
+          Promise.resolve(getArrayResult()).then(onFulfilled),
+      };
+      return qb;
+    }),
     insert: mock(() => ({
       values: mock(() => Promise.resolve()),
     })),
@@ -106,11 +154,13 @@ describe("WorkflowService", () => {
     });
 
     it("returns HR for PENDING_HR status", () => {
-      expect(service.getApproverForStatus("PENDING_HR")).toBe("HR");
+      expect(service.getApproverForStatus("PENDING_HR")).toBe("HOD_HR");
     });
 
     it("returns FINANCE for PENDING_FINANCE status", () => {
-      expect(service.getApproverForStatus("PENDING_FINANCE")).toBe("FINANCE");
+      expect(service.getApproverForStatus("PENDING_FINANCE")).toBe(
+        "HOD_FINANCE",
+      );
     });
 
     it("returns CEO for PENDING_CEO status", () => {
@@ -131,42 +181,11 @@ describe("WorkflowService", () => {
   });
 
   // ============================================================================
-  // Tests: shouldSkipStep
-  // ============================================================================
-
-  describe("shouldSkipStep", () => {
-    const mockDb = createMockDb();
-    const service = createWorkflowService(mockDb);
-
-    it("returns true when MANAGER submits at PENDING_MANAGER", () => {
-      expect(service.shouldSkipStep("MANAGER", "PENDING_MANAGER")).toBe(true);
-    });
-
-    it("returns true when HR submits at PENDING_HR", () => {
-      expect(service.shouldSkipStep("HR", "PENDING_HR")).toBe(true);
-    });
-
-    it("returns false for EMPLOYEE at PENDING_MANAGER", () => {
-      expect(service.shouldSkipStep("EMPLOYEE", "PENDING_MANAGER")).toBe(false);
-    });
-
-    it("returns false for MANAGER at PENDING_HR", () => {
-      expect(service.shouldSkipStep("MANAGER", "PENDING_HR")).toBe(false);
-    });
-
-    it("returns false for any role at DRAFT", () => {
-      expect(service.shouldSkipStep("MANAGER", "DRAFT")).toBe(false);
-      expect(service.shouldSkipStep("HR", "DRAFT")).toBe(false);
-      expect(service.shouldSkipStep("EMPLOYEE", "DRAFT")).toBe(false);
-    });
-  });
-
-  // ============================================================================
   // Tests: transitionRequest - DRAFT status
   // ============================================================================
 
   describe("transitionRequest - DRAFT status", () => {
-    it("SUBMIT by EMPLOYEE → PENDING_HR", async () => {
+    it("SUBMIT by EMPLOYEE → PENDING_MANAGER", async () => {
       const mockDb = createMockDb({
         request: { status: "DRAFT", requesterId: "user-1" },
         actor: { id: "user-1", role: "EMPLOYEE" },
@@ -180,13 +199,14 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("DRAFT");
-      expect(result.newStatus).toBe("PENDING_HR");
+      expect(result.newStatus).toBe("PENDING_MANAGER");
     });
 
     it("SUBMIT by MANAGER → PENDING_HR (skips PENDING_MANAGER)", async () => {
       const mockDb = createMockDb({
         request: { status: "DRAFT", requesterId: "manager-1" },
         actor: { id: "manager-1", role: "MANAGER" },
+        requester: { id: "manager-1", role: "MANAGER" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -200,10 +220,11 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("PENDING_HR");
     });
 
-    it("SUBMIT by HR → PENDING_HR (skips PENDING_MANAGER)", async () => {
+    it("SUBMIT by HR → PENDING_FINANCE (skips PENDING_MANAGER)", async () => {
       const mockDb = createMockDb({
         request: { status: "DRAFT", requesterId: "hr-1" },
-        actor: { id: "hr-1", role: "HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
+        requester: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -214,7 +235,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("DRAFT");
-      expect(result.newStatus).toBe("PENDING_HR");
+      expect(result.newStatus).toBe("PENDING_FINANCE");
     });
 
     it("throws BadRequest for APPROVE action from DRAFT", async () => {
@@ -237,7 +258,10 @@ describe("WorkflowService", () => {
   describe("transitionRequest - PENDING_MANAGER status", () => {
     it("APPROVE by MANAGER → PENDING_HR", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_MANAGER" },
+        request: {
+          status: "PENDING_MANAGER",
+          currentApproverPositionId: "manager-1",
+        },
         actor: { id: "manager-1", role: "MANAGER" },
       });
       const service = createWorkflowService(mockDb);
@@ -254,7 +278,10 @@ describe("WorkflowService", () => {
 
     it("REJECT by MANAGER → REJECTED", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_MANAGER" },
+        request: {
+          status: "PENDING_MANAGER",
+          currentApproverPositionId: "manager-1",
+        },
         actor: { id: "manager-1", role: "MANAGER" },
       });
       const service = createWorkflowService(mockDb);
@@ -271,7 +298,10 @@ describe("WorkflowService", () => {
 
     it("REQUEST_CHANGE by MANAGER → DRAFT", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_MANAGER" },
+        request: {
+          status: "PENDING_MANAGER",
+          currentApproverPositionId: "manager-1",
+        },
         actor: { id: "manager-1", role: "MANAGER" },
       });
       const service = createWorkflowService(mockDb);
@@ -289,30 +319,13 @@ describe("WorkflowService", () => {
     it("throws FORBIDDEN when HR tries to approve PENDING_MANAGER", async () => {
       const mockDb = createMockDb({
         request: { status: "PENDING_MANAGER" },
-        actor: { id: "hr-1", role: "HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
       await expect(
         service.transitionRequest("request-123", "hr-1", "APPROVE"),
       ).rejects.toThrow();
-    });
-
-    it("REQUEST_CHANGE bypasses role check (any user can request changes)", async () => {
-      const mockDb = createMockDb({
-        request: { status: "PENDING_MANAGER" },
-        actor: { id: "hr-1", role: "HR" },
-      });
-      const service = createWorkflowService(mockDb);
-
-      // Should not throw - REQUEST_CHANGE is allowed regardless of role
-      const result = await service.transitionRequest(
-        "request-123",
-        "hr-1",
-        "REQUEST_CHANGE",
-      );
-
-      expect(result.newStatus).toBe("DRAFT");
     });
   });
 
@@ -323,8 +336,8 @@ describe("WorkflowService", () => {
   describe("transitionRequest - PENDING_HR status", () => {
     it("APPROVE by HR → PENDING_FINANCE", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_HR" },
-        actor: { id: "hr-1", role: "HR" },
+        request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -340,8 +353,8 @@ describe("WorkflowService", () => {
 
     it("REJECT by HR → REJECTED", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_HR" },
-        actor: { id: "hr-1", role: "HR" },
+        request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -357,8 +370,8 @@ describe("WorkflowService", () => {
 
     it("HOLD by HR → stays PENDING_HR", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_HR" },
-        actor: { id: "hr-1", role: "HR" },
+        request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -374,8 +387,8 @@ describe("WorkflowService", () => {
 
     it("REQUEST_CHANGE by HR → DRAFT", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_HR" },
-        actor: { id: "hr-1", role: "HR" },
+        request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -409,8 +422,11 @@ describe("WorkflowService", () => {
   describe("transitionRequest - PENDING_FINANCE status", () => {
     it("APPROVE by FINANCE → PENDING_CEO", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_FINANCE" },
-        actor: { id: "finance-1", role: "FINANCE" },
+        request: {
+          status: "PENDING_FINANCE",
+          requiredApproverRole: "HOD_FINANCE",
+        },
+        actor: { id: "finance-1", role: "HOD_FINANCE" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -426,8 +442,11 @@ describe("WorkflowService", () => {
 
     it("REJECT by FINANCE → DRAFT", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_FINANCE" },
-        actor: { id: "finance-1", role: "FINANCE" },
+        request: {
+          status: "PENDING_FINANCE",
+          requiredApproverRole: "HOD_FINANCE",
+        },
+        actor: { id: "finance-1", role: "HOD_FINANCE" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -438,13 +457,16 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_FINANCE");
-      expect(result.newStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("REJECTED");
     });
 
     it("REQUEST_CHANGE by FINANCE → DRAFT", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_FINANCE" },
-        actor: { id: "finance-1", role: "FINANCE" },
+        request: {
+          status: "PENDING_FINANCE",
+          requiredApproverRole: "HOD_FINANCE",
+        },
+        actor: { id: "finance-1", role: "HOD_FINANCE" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -466,7 +488,7 @@ describe("WorkflowService", () => {
   describe("transitionRequest - PENDING_CEO status", () => {
     it("APPROVE by CEO → HIRING_IN_PROGRESS", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_CEO" },
+        request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
       });
       const service = createWorkflowService(mockDb);
@@ -483,7 +505,7 @@ describe("WorkflowService", () => {
 
     it("REJECT by CEO → REJECTED", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_CEO" },
+        request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
       });
       const service = createWorkflowService(mockDb);
@@ -498,16 +520,21 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("REJECTED");
     });
 
-    it("throws BadRequest for REQUEST_CHANGE from PENDING_CEO", async () => {
+    it("REQUEST_CHANGE from PENDING_CEO → DRAFT", async () => {
       const mockDb = createMockDb({
-        request: { status: "PENDING_CEO" },
+        request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
       });
       const service = createWorkflowService(mockDb);
 
-      await expect(
-        service.transitionRequest("request-123", "ceo-1", "REQUEST_CHANGE"),
-      ).rejects.toThrow();
+      const result = await service.transitionRequest(
+        "request-123",
+        "ceo-1",
+        "REQUEST_CHANGE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_CEO");
+      expect(result.newStatus).toBe("DRAFT");
     });
   });
 
@@ -519,7 +546,7 @@ describe("WorkflowService", () => {
     it("APPROVE by HR → COMPLETED", async () => {
       const mockDb = createMockDb({
         request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
-        actor: { id: "hr-1", role: "HR" },
+        actor: { id: "hr-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 
@@ -599,7 +626,7 @@ describe("WorkflowService", () => {
     it("throws BadRequest for invalid status", async () => {
       const mockDb = createMockDb({
         request: { status: "ARCHIVED" as RequestStatus },
-        actor: { id: "user-1", role: "HR" },
+        actor: { id: "user-1", role: "HOD_HR" },
       });
       const service = createWorkflowService(mockDb);
 

@@ -6,7 +6,7 @@ import { useCallback, useMemo } from "react";
 import type { Filter } from "@/components/ui/filters";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import type { BusinessTrip, TripStatus } from "@/types/business-trips";
+import type { TripStatus } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { columns } from "../_components/columns";
 
@@ -25,6 +25,12 @@ const validSortFields: SortByField[] = [
 ];
 
 export function useBusinessTripsTable() {
+  // Tab state: "all-related" (default) or "my-requests"
+  const [viewTab, setViewTab] = useQueryState("view", {
+    defaultValue: "all-related",
+    shallow: false,
+  });
+
   // URL-synced search state
   const [globalFilter, setGlobalFilter] = useQueryState("q", {
     defaultValue: "",
@@ -78,10 +84,16 @@ export function useBusinessTripsTable() {
     [pagination, debouncedSearch, statusFilter, sorting],
   );
 
+  const isAllRelatedView = viewTab === "all-related";
+
   const { data, isLoading, isFetching } = useQuery({
-    ...orpc.businessTrips.getMyTrips.queryOptions({
-      input: queryInput,
-    }),
+    ...(isAllRelatedView
+      ? orpc.businessTrips.getAllRelated.queryOptions({
+          input: queryInput,
+        })
+      : orpc.businessTrips.getMyTrips.queryOptions({
+          input: queryInput,
+        })),
     placeholderData: (previousData) => previousData,
   });
 
@@ -91,7 +103,7 @@ export function useBusinessTripsTable() {
   // Sync table state with fetched data
   table.setOptions((prev) => ({
     ...prev,
-    data: trips as BusinessTrip[], // Casting to BusinessTrip[] explicit type instead of any
+    data: trips,
     pageCount: Math.ceil(totalCount / pagination.pageSize),
     rowCount: totalCount,
   }));
@@ -122,5 +134,7 @@ export function useBusinessTripsTable() {
     totalCount,
     handleFiltersChange,
     handleClearFilters,
+    viewTab,
+    setViewTab,
   };
 }

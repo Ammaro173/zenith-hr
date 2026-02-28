@@ -1,34 +1,33 @@
 import type { GetMyTripsInput } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 
 export interface BusinessTrip {
-  id: string;
-  requesterId: string;
-  delegatedUserId: string | null;
-  country: string;
+  arrivalCity: string | null;
   city: string;
-  purposeType: string;
-  purposeDetails: string | null;
-  startDate: string | Date;
+  country: string;
+  createdAt: string | Date;
+  currency: string | null;
+  currentApproverPositionId: string | null;
+  departureCity: string | null;
   endDate: string | Date;
   estimatedCost: string | null;
-  currency: string | null;
-  visaRequired: boolean;
+  flightNotes: string | null;
+  id: string;
   needsFlightBooking: boolean;
   needsHotelBooking: boolean;
   perDiemAllowance: string | null;
-  departureCity: string | null;
-  arrivalCity: string | null;
-  preferredDepartureDate: string | Date | null;
   preferredArrivalDate: string | Date | null;
-  travelClass: string | null;
-  flightNotes: string | null;
-  status: string;
-  currentApproverId: string | null;
-  currentApproverRole: string | null;
+  preferredDepartureDate: string | Date | null;
+  purposeDetails: string | null;
+  purposeType: string;
+  requesterId: string;
+  requiredApproverRole: string | null;
   revisionVersion: number;
-  version: number;
-  createdAt: string | Date;
+  startDate: string | Date;
+  status: string;
+  travelClass: string | null;
   updatedAt: string | Date;
+  version: number;
+  visaRequired: boolean;
 }
 
 export type TripStatus = GetMyTripsInput["status"] extends
