@@ -140,21 +140,6 @@ async function seed() {
       updatedAt: now,
     },
     {
-      id: "seed-admin-dept",
-      name: "Khalid Ibrahim",
-      email: "coo@q-auto.com",
-      emailVerified: true,
-      role: "MANAGER" as const,
-      status: "ACTIVE" as const,
-      sapNo: "SAP-0007",
-      departmentId: adminDeptId,
-      passwordHash: null,
-      signatureUrl: null,
-      failedLoginAttempts: 0,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
       id: "seed-it",
       name: "Sara Al-Fahd",
       email: "cto@q-auto.com",
@@ -279,7 +264,7 @@ async function seed() {
       name: "Noor Al-Said",
       email: "it.manager@q-auto.com",
       emailVerified: true,
-      role: "HOD_IT" as const,
+      role: "MANAGER" as const,
       status: "ACTIVE" as const,
       sapNo: "SAP-0016",
       departmentId: itDeptId,
@@ -456,12 +441,13 @@ async function seed() {
     },
   ];
 
-  //TODO slot maybe like we did in MPR-0006 ?
+  // Hierarchy: CEO → Admin (solo), HOD_HR, HOD_FINANCE, HOD_IT. Finance Manager (Mohammed) → 6 staff. IT Manager (Noor) under HOD_IT.
   const ceoSlotId = randomUUID();
   const hrHodSlotId = randomUUID();
   const financeHodSlotId = randomUUID();
   const itHodSlotId = randomUUID();
-  const adminHodSlotId = randomUUID();
+  const adminSlotId = randomUUID();
+  const financeManagerSlotId = randomUUID();
   const hrManagerSlotId = randomUUID();
   const hrStaffSlotId = randomUUID();
 
@@ -519,14 +505,27 @@ async function seed() {
       updatedAt: now,
     },
     {
-      id: adminHodSlotId,
-      code: "HOD_ADMIN",
-      name: "Head of Administration",
-      description: "Leads administrative and facilities operations.",
-      responsibilities: "Admin governance, facilities, shared services",
+      id: adminSlotId,
+      code: "ADMIN",
+      name: "Administrator",
+      description: "Administrative and facilities operations, reports to CEO.",
+      responsibilities: "Admin operations, facilities, shared services",
       departmentId: adminDeptId,
-      role: "HOD" as const,
+      role: "ADMIN" as const,
       reportsToPositionId: ceoSlotId,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: financeManagerSlotId,
+      code: "MANAGER_FINANCE",
+      name: "Finance Manager",
+      description: "Manages finance team and financial operations.",
+      responsibilities: "Financial oversight, team management, budget control",
+      departmentId: financeDeptId,
+      role: "MANAGER" as const,
+      reportsToPositionId: financeHodSlotId,
       active: true,
       createdAt: now,
       updatedAt: now,
@@ -585,8 +584,14 @@ async function seed() {
       updatedAt: now,
     },
     {
-      positionId: adminHodSlotId,
-      userId: "seed-admin-dept",
+      positionId: adminSlotId,
+      userId: "seed-admin",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      positionId: financeManagerSlotId,
+      userId: "seed-user-12",
       createdAt: now,
       updatedAt: now,
     },
@@ -609,7 +614,16 @@ async function seed() {
     [hrDeptId]: hrManagerSlotId,
     [financeDeptId]: financeHodSlotId,
     [itDeptId]: itHodSlotId,
-    [adminDeptId]: adminHodSlotId,
+    [adminDeptId]: adminSlotId,
+  };
+  const reportsToByDepartmentAndRole: Record<
+    string,
+    Partial<Record<string, string>>
+  > = {
+    [financeDeptId]: {
+      EMPLOYEE: financeManagerSlotId,
+      MANAGER: financeHodSlotId,
+    },
   };
 
   // Shared position templates for auto-generated positions (one per role+department)
@@ -660,14 +674,6 @@ async function seed() {
       },
     ],
     [
-      `HOD:${adminDeptId}`,
-      {
-        name: "Admin Staff",
-        description: "Supports administrative operations.",
-        responsibilities: "Administrative support, coordination, documentation",
-      },
-    ],
-    [
       `MANAGER:${hrDeptId}`,
       {
         name: "HR Manager",
@@ -689,8 +695,11 @@ async function seed() {
     .filter((seedUser) => !assignedUserIds.has(seedUser.id))
     .map((seedUser) => {
       const departmentKey = seedUser.departmentId ?? adminDeptId;
+      const byRole = reportsToByDepartmentAndRole[departmentKey];
       const reportsToPositionId =
-        reportsToByDepartment[departmentKey] ?? adminHodSlotId;
+        byRole?.[seedUser.role] ??
+        reportsToByDepartment[departmentKey] ??
+        adminSlotId;
 
       const template = sharedTemplates.get(
         `${seedUser.role}:${departmentKey}`,
@@ -906,7 +915,7 @@ async function seed() {
     await tx.insert(userClearanceLane).values([
       { userId: "seed-it", lane: "HOD_IT", createdAt: now },
       { userId: "seed-finance", lane: "HOD_FINANCE", createdAt: now },
-      { userId: "seed-admin-dept", lane: "ADMIN_ASSETS", createdAt: now },
+      { userId: "seed-admin", lane: "ADMIN_ASSETS", createdAt: now },
       { userId: "seed-hr", lane: "HR_PAYROLL", createdAt: now },
     ]);
   });
