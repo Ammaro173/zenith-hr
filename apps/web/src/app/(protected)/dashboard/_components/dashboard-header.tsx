@@ -4,9 +4,12 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  canCreateRequest: boolean;
+}
+
+export function DashboardHeader({ canCreateRequest }: DashboardHeaderProps) {
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
@@ -19,15 +22,6 @@ export function DashboardHeader() {
       }),
     );
   }, []);
-
-  const { data: session } = authClient.useSession();
-  const canCreateRequest = [
-    "MANAGER",
-    "ADMIN",
-    "CEO",
-    "HOD_HR",
-    "HOD_FINANCE",
-  ].includes(session?.user.role ?? "");
 
   return (
     <div className="flex items-center justify-between pb-6">
