@@ -20,9 +20,11 @@ export const manpowerRequestSeq = pgSequence("manpower_requests_seq", {
 export const requestStatusEnum = pgEnum("request_status", [
   "DRAFT",
   "PENDING_MANAGER",
+  "PENDING_HOD",
   "PENDING_HR",
   "PENDING_FINANCE",
   "PENDING_CEO",
+  "CHANGE_REQUESTED",
   "APPROVED_OPEN",
   "HIRING_IN_PROGRESS",
   "REJECTED",

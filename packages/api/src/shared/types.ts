@@ -32,9 +32,11 @@ export type TripStatus =
 export type RequestStatus =
   | "DRAFT"
   | "PENDING_MANAGER"
+  | "PENDING_HOD"
   | "PENDING_HR"
   | "PENDING_FINANCE"
   | "PENDING_CEO"
+  | "CHANGE_REQUESTED"
   | "APPROVED_OPEN"
   | "HIRING_IN_PROGRESS"
   | "REJECTED"
