@@ -305,16 +305,16 @@ export const createRequestsService = (
      */
     async getByRequester(
       requesterId: string,
-      role: string,
+      _role: string,
       params: GetMyRequestsInput,
     ) {
       const { page, pageSize, search, status, requestType, sortBy, sortOrder } =
         params;
 
       const conditions: SQL[] = [];
-      if (role === "EMPLOYEE" || role === "MANAGER") {
-        conditions.push(eq(manpowerRequest.requesterId, requesterId));
-      }
+      // Always scope "My Requests" to the requester's own submissions,
+      // regardless of role. Broader visibility is handled by getAllRelated.
+      conditions.push(eq(manpowerRequest.requesterId, requesterId));
 
       // Status filter
       if (status?.length) {
@@ -745,8 +745,11 @@ export const createRequestsService = (
         return false;
       }
 
-      // Only requester can edit, and only if in DRAFT status
-      return request.requesterId === userId && request.status === "DRAFT";
+      // Only requester can edit, and only if in DRAFT or CHANGE_REQUESTED status
+      return (
+        request.requesterId === userId &&
+        (request.status === "DRAFT" || request.status === "CHANGE_REQUESTED")
+      );
     },
   };
 };
