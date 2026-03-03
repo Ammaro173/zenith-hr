@@ -21,6 +21,7 @@ import {
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import { getActorPositionInfo, getActorRole } from "../../shared/utils";
+import type { NotificationsService } from "../notifications/notifications.service";
 import type { WorkflowService } from "../workflow/workflow.service";
 import type {
   createRequestSchema,
@@ -37,6 +38,7 @@ type UpdateRequestInput = z.infer<typeof updateRequestSchema>;
 export const createRequestsService = (
   db: DbOrTx,
   workflowService: WorkflowService,
+  notificationsService: NotificationsService,
 ) => {
   return {
     /**
@@ -139,6 +141,59 @@ export const createRequestsService = (
           status: initialStatus,
         })
         .returning();
+
+      if (!newRequest) {
+        throw new AppError(
+          "INTERNAL_SERVER_ERROR",
+          "Failed to create manpower request",
+          500,
+        );
+      }
+
+      // Dispatch notification to approvers
+      if (nextApprover.positionId) {
+        const approvers = await db
+          .select({
+            userId: userPositionAssignment.userId,
+            email: user.email,
+          })
+          .from(userPositionAssignment)
+          .innerJoin(user, eq(userPositionAssignment.userId, user.id))
+          .where(
+            eq(userPositionAssignment.positionId, nextApprover.positionId),
+          );
+
+        for (const approver of approvers) {
+          notificationsService
+            .createNotification(
+              approver.userId,
+              "Manpower Request Needs Approval",
+              `A new Manpower Request (${newRequest.requestCode}) requires your approval.`,
+              "ACTION_REQUIRED",
+              `/requests/${newRequest.id}`,
+              approver.email,
+            )
+            .catch(console.error); // non-blocking
+        }
+      }
+
+      // NORE: Notify requester too
+      const requester = await db.query.user.findFirst({
+        where: eq(user.id, requesterId),
+      });
+
+      if (requester) {
+        notificationsService
+          .createNotification(
+            requesterId,
+            "Request Submitted",
+            `Your Manpower Request ${newRequest.requestCode} has been submitted and is pending approval.`,
+            "INFO",
+            `/requests/${newRequest.id}`,
+            requester.email,
+          )
+          .catch(console.error);
+      }
 
       return newRequest;
     },
