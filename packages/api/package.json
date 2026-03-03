@@ -49,6 +49,7 @@
     "elysia": "catalog:",
     "pdf-lib": "^1.17.1",
     "pino": "catalog:",
+    "resend": "^6.9.3",
     "xstate": "^5.28.0",
     "zod": "catalog:"
   }
