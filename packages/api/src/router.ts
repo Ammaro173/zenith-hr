@@ -5,6 +5,7 @@ import { contractsRouter } from "./modules/contracts";
 import { dashboardRouter } from "./modules/dashboard";
 import { departmentsRouter } from "./modules/departments";
 import { importsRouter } from "./modules/imports";
+import { notificationsRouter } from "./modules/notifications";
 import { performanceRouter } from "./modules/performance";
 import { positionsRouter } from "./modules/positions";
 import { requestsRouter } from "./modules/requests";
@@ -33,6 +34,7 @@ export const appRouter = o.router({
   positions: positionsRouter,
   separations: separationsRouter,
   users: usersRouter,
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;
