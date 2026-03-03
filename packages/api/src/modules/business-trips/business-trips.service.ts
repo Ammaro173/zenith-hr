@@ -234,9 +234,13 @@ export const createBusinessTripsService = (
     }
 
     const actorRole = await getActorRole(db, userId);
-    const isSharedQueueRole = ["HOD_HR", "HOD_FINANCE", "CEO"].includes(
-      actorRole,
-    );
+    const isSharedQueueRole = [
+      "HOD",
+      "HOD_IT",
+      "HOD_HR",
+      "HOD_FINANCE",
+      "CEO",
+    ].includes(actorRole);
 
     // Build visibility conditions based on position
     const visibilityConditions: ReturnType<typeof eq>[] = [];
@@ -341,7 +345,7 @@ export const createBusinessTripsService = (
         if (!isRequester) {
           throw new AppError("FORBIDDEN", "Only requester can submit", 403);
         }
-        if (currentStatus !== "DRAFT") {
+        if (currentStatus !== "DRAFT" && currentStatus !== "REJECTED") {
           throw AppError.badRequest(
             `Invalid status transition from ${currentStatus}`,
           );
