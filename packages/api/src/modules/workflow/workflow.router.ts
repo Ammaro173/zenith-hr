@@ -6,6 +6,7 @@ export const workflowRouter = o.router({
   transition: requireRoles([
     "EMPLOYEE",
     "MANAGER",
+    "HOD",
     "HOD_HR",
     "HOD_FINANCE",
     "CEO",
