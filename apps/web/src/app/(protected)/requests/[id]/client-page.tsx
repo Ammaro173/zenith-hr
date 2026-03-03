@@ -46,7 +46,9 @@ export function RequestDetailClientPage({
   );
 
   const transitionMutation = useMutation({
-    mutationFn: (action: "APPROVE" | "REJECT" | "REQUEST_CHANGE" | "HOLD") =>
+    mutationFn: (
+      action: "APPROVE" | "REJECT" | "REQUEST_CHANGE" | "HOLD" | "SUBMIT",
+    ) =>
       client.requests.transition({
         requestId: params.id,
         action,
@@ -85,9 +87,18 @@ export function RequestDetailClientPage({
 
   const isApprover =
     request.currentApprover?.id === currentUserId &&
-    !["APPROVED_OPEN", "REJECTED", "ARCHIVED", "DRAFT", "COMPLETED"].includes(
-      request.status,
-    );
+    ![
+      "APPROVED_OPEN",
+      "REJECTED",
+      "ARCHIVED",
+      "DRAFT",
+      "CHANGE_REQUESTED",
+      "COMPLETED",
+    ].includes(request.status);
+
+  const canResubmit =
+    request.status === "CHANGE_REQUESTED" &&
+    request.requester?.id === currentUserId;
 
   const canCompleteHiring =
     request.status === "HIRING_IN_PROGRESS" &&
@@ -132,10 +143,11 @@ export function RequestDetailClientPage({
                 "text-[10px] uppercase",
                 request.status === "APPROVED_OPEN" && "bg-green-500",
                 request.status === "REJECTED" && "bg-destructive",
+                request.status === "CHANGE_REQUESTED" && "bg-amber-500",
                 request.status.startsWith("PENDING") && "bg-orange-500",
               )}
             >
-              {request.status.replace("_", " ")}
+              {request.status.replace(/_/g, " ")}
             </Badge>
           </div>
           <h1 className="font-bold text-3xl tracking-tight">
@@ -392,6 +404,43 @@ export function RequestDetailClientPage({
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {canResubmit && (
+            <Card className="border-amber-200 shadow-amber-500/5 shadow-lg">
+              <CardHeader className="bg-amber-50 pb-4">
+                <CardTitle className="font-bold text-base">
+                  Changes Requested
+                </CardTitle>
+                <p className="text-muted-foreground text-xs">
+                  An approver has requested changes. Review the activity log,
+                  update the request, and resubmit.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-6">
+                <div className="space-y-2">
+                  <Label className="font-bold text-xs uppercase tracking-wider">
+                    COMMENTS (optional)
+                  </Label>
+                  <Textarea
+                    className="min-h-[80px] resize-none"
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Add a note about your changes..."
+                    value={comment}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  disabled={transitionMutation.isPending}
+                  onClick={() => transitionMutation.mutate("SUBMIT")}
+                >
+                  {transitionMutation.isPending ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : null}
+                  Resubmit Request
+                </Button>
               </CardContent>
             </Card>
           )}
