@@ -10,7 +10,6 @@ import {
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
-import { notifyUser } from "../../shared/notify";
 import type {
   ApprovalAction,
   PositionRole,
@@ -18,6 +17,7 @@ import type {
   UserRole,
 } from "../../shared/types";
 import { getActorPositionInfo } from "../../shared/utils";
+import type { NotificationsService } from "../notifications/notifications.service";
 
 /** RequestStatus + PENDING_HOD (trip-only); used by canActorTransition for both MPR and trips */
 type TransitionStatus = RequestStatus | "PENDING_HOD";
@@ -116,7 +116,10 @@ const HOD_ROLE_TO_STATUS: Record<string, RequestStatus> = {
   HOD_FINANCE: "PENDING_FINANCE",
 };
 
-export const createWorkflowService = (db: DbOrTx) => {
+export const createWorkflowService = (
+  db: DbOrTx,
+  notificationsService: NotificationsService,
+) => {
   /**
    * Get manager chain using recursive CTE starting from a position
    * Returns positions ordered by depth (closest manager first)
@@ -1239,15 +1242,21 @@ export const createWorkflowService = (db: DbOrTx) => {
     // does not roll back the state change.
     try {
       if (result.newStatus === "REJECTED") {
-        notifyUser({
-          userId: result.requesterId,
-          message: `Your manpower request ${result.requestCode} has been rejected. Please check the comments for details.`,
-        });
+        await notificationsService.createNotification(
+          result.requesterId,
+          "Manpower Request Rejected",
+          `Your manpower request ${result.requestCode} has been rejected. Please check the comments for details.`,
+          "INFO",
+          `/requests/${requestId}`,
+        );
       } else if (result.newStatus === "CHANGE_REQUESTED") {
-        notifyUser({
-          userId: result.requesterId,
-          message: `Your manpower request ${result.requestCode} requires changes. Please review the comments and resubmit.`,
-        });
+        await notificationsService.createNotification(
+          result.requesterId,
+          "Changes Requested",
+          `Your manpower request ${result.requestCode} requires changes. Please review the comments and resubmit.`,
+          "ACTION_REQUIRED",
+          `/requests/${requestId}`,
+        );
       }
     } catch (notifyError) {
       console.warn("[workflow] Failed to send notifications:", notifyError);
