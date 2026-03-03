@@ -1,6 +1,7 @@
 import {
   awsEnvSchema,
   createPackageEnv,
+  emailEnvSchema,
   serverEnvSchema,
 } from "@zenith-hr/config/env";
 
@@ -10,6 +11,7 @@ import {
  */
 export const env = createPackageEnv({
   ...awsEnvSchema,
+  ...emailEnvSchema,
   LOG_LEVEL: serverEnvSchema.LOG_LEVEL,
   NODE_ENV: serverEnvSchema.NODE_ENV,
 });

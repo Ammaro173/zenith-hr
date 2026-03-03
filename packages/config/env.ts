@@ -64,6 +64,14 @@ export const cacheEnvSchema = {
 };
 
 /**
+ * Email/Resend environment variables
+ */
+export const emailEnvSchema = {
+  RESEND_API_KEY: z.string().min(1).optional(),
+  EMAIL_FROM: z.string().min(1).optional(),
+};
+
+/**
  * Combined schema for all environment variables
  */
 export const allEnvSchema = {
@@ -73,6 +81,7 @@ export const allEnvSchema = {
   ...authEnvSchema,
   ...aiEnvSchema,
   ...cacheEnvSchema,
+  ...emailEnvSchema,
 };
 
 /**
