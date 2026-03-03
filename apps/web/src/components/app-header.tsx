@@ -2,6 +2,7 @@
 
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +44,8 @@ export function AppHeader({ user }: AppHeaderProps) {
         <SidebarTrigger className="cursor-pointer rounded-full border border-border/50 bg-background/80 p-2 shadow-sm transition-all duration-200 hover:bg-background hover:shadow-md" />
         {/* </div> */}
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-4">
+          <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
