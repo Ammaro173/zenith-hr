@@ -10,6 +10,7 @@ import {
 import { requestVersion } from "@zenith-hr/db/schema/request-versions";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
+import { notifyUser } from "../../shared/notify";
 import type {
   ApprovalAction,
   PositionRole,
@@ -1087,7 +1088,7 @@ export const createWorkflowService = (db: DbOrTx) => {
     previousStatus: RequestStatus;
     newStatus: RequestStatus;
   }> => {
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const [request] = await tx
         .select()
         .from(manpowerRequest)
@@ -1229,8 +1230,33 @@ export const createWorkflowService = (db: DbOrTx) => {
       return {
         previousStatus: currentStatus,
         newStatus: nextStep.nextStatus,
+        requestCode: request.requestCode,
+        requesterId: request.requesterId,
       };
     });
+
+    // Send notifications outside the transaction so a notification failure
+    // does not roll back the state change.
+    try {
+      if (result.newStatus === "REJECTED") {
+        notifyUser({
+          userId: result.requesterId,
+          message: `Your manpower request ${result.requestCode} has been rejected. Please check the comments for details.`,
+        });
+      } else if (result.newStatus === "CHANGE_REQUESTED") {
+        notifyUser({
+          userId: result.requesterId,
+          message: `Your manpower request ${result.requestCode} requires changes. Please review the comments and resubmit.`,
+        });
+      }
+    } catch (notifyError) {
+      console.warn("[workflow] Failed to send notifications:", notifyError);
+    }
+
+    return {
+      previousStatus: result.previousStatus,
+      newStatus: result.newStatus,
+    };
   };
 
   return {
