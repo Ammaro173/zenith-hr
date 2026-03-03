@@ -27,6 +27,12 @@ function createMockDb(
     hrUser?: { id: string } | null;
     targetRoleUser?: { id: string } | null;
     requester?: Partial<any> | null;
+    /** Manager chain rows returned by db.execute() for the recursive CTE */
+    managerChain?: Array<{
+      position_id: string;
+      position_role: string;
+      depth: number;
+    }>;
   } = {},
 ) {
   const defaultRequest = {
@@ -130,7 +136,9 @@ function createMockDb(
         where: mock(() => Promise.resolve()),
       })),
     })),
-    execute: mock(() => Promise.resolve({ rows: [] })),
+    execute: mock(() =>
+      Promise.resolve({ rows: overrides.managerChain ?? [] }),
+    ),
     transaction: mock(async (cb: (tx: typeof mockDb) => Promise<unknown>) => {
       selectCallCount = 0; // Reset for each transaction
       return await cb(mockDb);
@@ -202,11 +210,15 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("PENDING_MANAGER");
     });
 
-    it("SUBMIT by MANAGER → PENDING_HR (skips PENDING_MANAGER)", async () => {
+    it("SUBMIT by MANAGER → PENDING_HOD (routes through HOD before HR)", async () => {
       const mockDb = createMockDb({
         request: { status: "DRAFT", requesterId: "manager-1" },
         actor: { id: "manager-1", role: "MANAGER" },
         requester: { id: "manager-1", role: "MANAGER" },
+        // HOD exists in the manager chain so PENDING_HOD is not skipped
+        managerChain: [
+          { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
+        ],
       });
       const service = createWorkflowService(mockDb);
 
@@ -217,7 +229,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("DRAFT");
-      expect(result.newStatus).toBe("PENDING_HR");
+      expect(result.newStatus).toBe("PENDING_HOD");
     });
 
     it("SUBMIT by HR → PENDING_FINANCE (skips PENDING_MANAGER)", async () => {
@@ -256,13 +268,17 @@ describe("WorkflowService", () => {
   // ============================================================================
 
   describe("transitionRequest - PENDING_MANAGER status", () => {
-    it("APPROVE by MANAGER → PENDING_HR", async () => {
+    it("APPROVE by MANAGER → PENDING_HOD", async () => {
       const mockDb = createMockDb({
         request: {
           status: "PENDING_MANAGER",
           currentApproverPositionId: "manager-1",
         },
         actor: { id: "manager-1", role: "MANAGER" },
+        // HOD exists in the manager chain so PENDING_HOD is not skipped
+        managerChain: [
+          { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
+        ],
       });
       const service = createWorkflowService(mockDb);
 
@@ -273,7 +289,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_MANAGER");
-      expect(result.newStatus).toBe("PENDING_HR");
+      expect(result.newStatus).toBe("PENDING_HOD");
     });
 
     it("REJECT by MANAGER → REJECTED", async () => {
@@ -296,7 +312,7 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("REJECTED");
     });
 
-    it("REQUEST_CHANGE by MANAGER → DRAFT", async () => {
+    it("REQUEST_CHANGE by MANAGER → CHANGE_REQUESTED", async () => {
       const mockDb = createMockDb({
         request: {
           status: "PENDING_MANAGER",
@@ -313,7 +329,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_MANAGER");
-      expect(result.newStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("CHANGE_REQUESTED");
     });
 
     it("throws FORBIDDEN when HR tries to approve PENDING_MANAGER", async () => {
@@ -385,7 +401,7 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("PENDING_HR");
     });
 
-    it("REQUEST_CHANGE by HR → DRAFT", async () => {
+    it("REQUEST_CHANGE by HR → CHANGE_REQUESTED", async () => {
       const mockDb = createMockDb({
         request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
         actor: { id: "hr-1", role: "HOD_HR" },
@@ -399,7 +415,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_HR");
-      expect(result.newStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("CHANGE_REQUESTED");
     });
 
     it("throws FORBIDDEN when MANAGER tries to approve PENDING_HR", async () => {
@@ -460,7 +476,7 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("REJECTED");
     });
 
-    it("REQUEST_CHANGE by FINANCE → DRAFT", async () => {
+    it("REQUEST_CHANGE by FINANCE → CHANGE_REQUESTED", async () => {
       const mockDb = createMockDb({
         request: {
           status: "PENDING_FINANCE",
@@ -477,7 +493,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_FINANCE");
-      expect(result.newStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("CHANGE_REQUESTED");
     });
   });
 
@@ -520,7 +536,7 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("REJECTED");
     });
 
-    it("REQUEST_CHANGE from PENDING_CEO → DRAFT", async () => {
+    it("REQUEST_CHANGE from PENDING_CEO → CHANGE_REQUESTED", async () => {
       const mockDb = createMockDb({
         request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
@@ -534,7 +550,7 @@ describe("WorkflowService", () => {
       );
 
       expect(result.previousStatus).toBe("PENDING_CEO");
-      expect(result.newStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("CHANGE_REQUESTED");
     });
   });
 
@@ -632,6 +648,230 @@ describe("WorkflowService", () => {
 
       await expect(
         service.transitionRequest("request-123", "user-1", "APPROVE"),
+      ).rejects.toThrow();
+    });
+  });
+
+  // ============================================================================
+  // NEW Tests: HOD approval path
+  // ============================================================================
+
+  describe("transitionRequest - PENDING_HOD status", () => {
+    it("SUBMIT by EMPLOYEE → PENDING_MANAGER (first step)", async () => {
+      const mockDb = createMockDb({
+        request: { status: "DRAFT", requesterId: "user-1" },
+        actor: { id: "user-1", role: "EMPLOYEE" },
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "user-1",
+        "SUBMIT",
+      );
+
+      expect(result.previousStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("PENDING_MANAGER");
+    });
+
+    it("APPROVE by HOD at PENDING_HOD → PENDING_HR", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_HOD" as RequestStatus,
+          requiredApproverRole: "HOD" as PositionRole,
+          currentApproverPositionId: "hod-pos-1",
+        },
+        actor: { id: "hod-1", role: "HOD" },
+        requester: { id: "user-1", role: "EMPLOYEE" },
+        // Generic HOD — no skip applies
+        managerChain: [
+          { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
+        ],
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_HOD");
+      expect(result.newStatus).toBe("PENDING_HR");
+    });
+
+    it("REJECT by HOD at PENDING_HOD → REJECTED", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_HOD" as RequestStatus,
+          requiredApproverRole: "HOD" as PositionRole,
+          currentApproverPositionId: "hod-pos-1",
+        },
+        actor: { id: "hod-1", role: "HOD" },
+        requester: { id: "user-1", role: "EMPLOYEE" },
+        managerChain: [
+          { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
+        ],
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-1",
+        "REJECT",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_HOD");
+      expect(result.newStatus).toBe("REJECTED");
+    });
+
+    it("REQUEST_CHANGE by HOD at PENDING_HOD → CHANGE_REQUESTED", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_HOD" as RequestStatus,
+          requiredApproverRole: "HOD" as PositionRole,
+          currentApproverPositionId: "hod-pos-1",
+        },
+        actor: { id: "hod-1", role: "HOD" },
+        requester: { id: "user-1", role: "EMPLOYEE" },
+        managerChain: [
+          { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
+        ],
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-1",
+        "REQUEST_CHANGE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_HOD");
+      expect(result.newStatus).toBe("CHANGE_REQUESTED");
+    });
+
+    it("HOD_HR at PENDING_HOD skips PENDING_HR → goes to PENDING_FINANCE", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_HOD" as RequestStatus,
+          requiredApproverRole: "HOD_HR" as PositionRole,
+          currentApproverPositionId: "hod-hr-pos-1",
+        },
+        actor: { id: "hod-hr-1", role: "HOD_HR" as UserRole },
+        requester: { id: "user-1", role: "EMPLOYEE" },
+        // The dept HOD is HOD_HR — PENDING_HR should be skipped
+        managerChain: [
+          { position_id: "hod-hr-pos-1", position_role: "HOD_HR", depth: 1 },
+        ],
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-hr-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_HOD");
+      // PENDING_HR is skipped because HOD_HR already approved
+      expect(result.newStatus).toBe("PENDING_FINANCE");
+    });
+
+    it("HOD_FINANCE skip: from PENDING_HR skips PENDING_FINANCE → goes to PENDING_CEO", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_HR" as RequestStatus,
+          requiredApproverRole: "HOD_HR" as PositionRole,
+          currentApproverPositionId: "hod-hr-pos-1",
+        },
+        actor: { id: "hod-hr-1", role: "HOD_HR" as UserRole },
+        // The requester is an EMPLOYEE
+        requester: { id: "user-1", role: "EMPLOYEE" },
+        // The dept HOD (who approved earlier) is HOD_FINANCE
+        // PENDING_FINANCE should be skipped when transitioning out of PENDING_HR
+        managerChain: [
+          {
+            position_id: "hod-fin-pos-1",
+            position_role: "HOD_FINANCE",
+            depth: 1,
+          },
+        ],
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-hr-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_HR");
+      // PENDING_FINANCE is skipped because the dept HOD is HOD_FINANCE
+      expect(result.newStatus).toBe("PENDING_CEO");
+    });
+
+    it("Flat org (no HOD in chain) skips PENDING_HOD → goes to PENDING_HR", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_MANAGER",
+          currentApproverPositionId: "manager-1",
+        },
+        actor: { id: "manager-1", role: "MANAGER" },
+        // No HOD in the chain — empty manager chain
+        managerChain: [],
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "manager-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_MANAGER");
+      // PENDING_HOD skipped because no dept HOD found
+      expect(result.newStatus).toBe("PENDING_HR");
+    });
+  });
+
+  // ============================================================================
+  // NEW Tests: CHANGE_REQUESTED resubmission
+  // ============================================================================
+
+  describe("transitionRequest - CHANGE_REQUESTED status", () => {
+    it("SUBMIT from CHANGE_REQUESTED by requester re-enters workflow", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "CHANGE_REQUESTED" as RequestStatus,
+          requesterId: "user-1",
+        },
+        actor: { id: "user-1", role: "EMPLOYEE" },
+      });
+      const service = createWorkflowService(mockDb);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "user-1",
+        "SUBMIT",
+      );
+
+      expect(result.previousStatus).toBe("CHANGE_REQUESTED");
+      // EMPLOYEE route starts at PENDING_MANAGER
+      expect(result.newStatus).toBe("PENDING_MANAGER");
+    });
+
+    it("throws FORBIDDEN when non-requester tries to SUBMIT from CHANGE_REQUESTED", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "CHANGE_REQUESTED" as RequestStatus,
+          requesterId: "user-1",
+        },
+        actor: { id: "other-user", role: "MANAGER" },
+      });
+      const service = createWorkflowService(mockDb);
+
+      await expect(
+        service.transitionRequest("request-123", "other-user", "SUBMIT"),
       ).rejects.toThrow();
     });
   });
