@@ -492,7 +492,7 @@ export function RequestDetailClientPage({
                   Approval Chain
                 </CardTitle>
                 <Badge className="text-[10px]" variant="secondary">
-                  STEP {getStepNumber(request.status)} OF 4
+                  STEP {getStepNumber(request.status)} OF 6
                 </Badge>
               </div>
             </CardHeader>
@@ -503,6 +503,25 @@ export function RequestDetailClientPage({
                   actorPrefix="Submitted by"
                   label="Requester"
                   status="COMPLETED"
+                />
+                {request.status === "PENDING_MANAGER" ||
+                getChainStepStatus(request.status, "PENDING_MANAGER") ===
+                  "COMPLETED" ? (
+                  <ChainStep
+                    actor={getApproverNameForStep("Manager Review")}
+                    isActive={request.status === "PENDING_MANAGER"}
+                    label="Manager"
+                    status={getChainStepStatus(
+                      request.status,
+                      "PENDING_MANAGER",
+                    )}
+                  />
+                ) : null}
+                <ChainStep
+                  actor={getApproverNameForStep("Head of Department Review")}
+                  isActive={request.status === "PENDING_HOD"}
+                  label="Head of Department"
+                  status={getChainStepStatus(request.status, "PENDING_HOD")}
                 />
                 <ChainStep
                   actor={getApproverNameForStep("HR Review")}
@@ -552,6 +571,9 @@ function getChainStepStatus(
 ): "COMPLETED" | "PENDING" | "WAITING" {
   const statuses = [
     "DRAFT",
+    "CHANGE_REQUESTED",
+    "PENDING_MANAGER",
+    "PENDING_HOD",
     "PENDING_HR",
     "PENDING_FINANCE",
     "PENDING_CEO",
@@ -561,7 +583,7 @@ function getChainStepStatus(
   const currentIndex = statuses.indexOf(currentStatus);
   const stepIndex = statuses.indexOf(stepStatus);
 
-  // Statuses beyond the chain (HIRING_IN_PROGRESS, COMPLETED, etc.) mean all steps are done
+  // Unknown status (REJECTED, ARCHIVED etc.) — treat all steps as done
   if (currentIndex < 0) {
     return "COMPLETED";
   }
@@ -578,13 +600,16 @@ function getChainStepStatus(
 function getStepNumber(status: string): number {
   const mapping: Record<string, number> = {
     DRAFT: 1,
-    PENDING_HR: 2,
-    PENDING_FINANCE: 3,
-    PENDING_CEO: 4,
-    HIRING_IN_PROGRESS: 4,
-    COMPLETED: 4,
+    CHANGE_REQUESTED: 1,
+    PENDING_MANAGER: 2,
+    PENDING_HOD: 3,
+    PENDING_HR: 4,
+    PENDING_FINANCE: 5,
+    PENDING_CEO: 6,
+    HIRING_IN_PROGRESS: 6,
+    COMPLETED: 6,
   };
-  return mapping[status] || 4;
+  return mapping[status] || 6;
 }
 
 function DetailItem({
