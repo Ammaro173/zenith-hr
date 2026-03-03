@@ -33,6 +33,7 @@ const MPR_ROUTES: Record<
     initialStatus: "PENDING_MANAGER",
     sequence: [
       "PENDING_MANAGER",
+      "PENDING_HOD",
       "PENDING_HR",
       "PENDING_FINANCE",
       "PENDING_CEO",
@@ -41,8 +42,10 @@ const MPR_ROUTES: Record<
     ],
   },
   MANAGER: {
-    initialStatus: "PENDING_HR",
+    // Manager submits → goes to HOD first, then HR chain
+    initialStatus: "PENDING_HOD",
     sequence: [
+      "PENDING_HOD",
       "PENDING_HR",
       "PENDING_FINANCE",
       "PENDING_CEO",
@@ -51,6 +54,7 @@ const MPR_ROUTES: Record<
     ],
   },
   HOD: {
+    // HOD submits → goes directly to HR (they ARE the HOD)
     initialStatus: "PENDING_HR",
     sequence: [
       "PENDING_HR",
@@ -74,8 +78,9 @@ const MPR_ROUTES: Record<
     sequence: ["PENDING_HR", "PENDING_CEO", "HIRING_IN_PROGRESS", "COMPLETED"],
   },
   HOD_IT: {
-    initialStatus: "PENDING_HR",
+    initialStatus: "PENDING_HOD",
     sequence: [
+      "PENDING_HOD",
       "PENDING_HR",
       "PENDING_FINANCE",
       "PENDING_CEO",
@@ -959,9 +964,11 @@ export const createWorkflowService = (db: DbOrTx) => {
     const stepMap: Record<RequestStatus, string> = {
       DRAFT: "Draft",
       PENDING_MANAGER: "Manager Review",
+      PENDING_HOD: "Head of Department Review",
       PENDING_HR: "HR Review",
       PENDING_FINANCE: "Finance Review",
       PENDING_CEO: "CEO Review",
+      CHANGE_REQUESTED: "Change Requested",
       APPROVED_OPEN: "Approved",
       HIRING_IN_PROGRESS: "Hiring",
       REJECTED: "Rejected",
