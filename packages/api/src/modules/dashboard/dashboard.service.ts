@@ -47,7 +47,12 @@ const ACTION_STRATEGIES = {
     link: "/approvals",
     type: "urgent" as const,
   }),
-  HOD: (_userId: string) => null,
+  HOD: (_userId: string) => ({
+    where: eq(manpowerRequest.status, "PENDING_HOD"),
+    title: "Department Approvals",
+    link: "/approvals",
+    type: "urgent" as const,
+  }),
   HOD_HR: (_userId: string) => ({
     where: eq(manpowerRequest.status, "PENDING_HR"),
     title: "Action Required",
@@ -66,7 +71,12 @@ const ACTION_STRATEGIES = {
     link: "/approvals",
     type: "urgent" as const,
   }),
-  HOD_IT: (_userId: string) => null,
+  HOD_IT: (_userId: string) => ({
+    where: eq(manpowerRequest.status, "PENDING_HOD"),
+    title: "Department Approvals",
+    link: "/approvals",
+    type: "urgent" as const,
+  }),
   ADMIN: (_userId: string) => null,
 } satisfies Record<UserRole, ActionFilterStrategy>;
 
@@ -88,17 +98,20 @@ export const createDashboardService = (db: DbOrTx) => {
     async getPendingRequests(userId: string, role: UserRole): Promise<number> {
       let whereClause: SQL | undefined;
 
-      if (role === "EMPLOYEE" || role === "HOD_IT" || role === "HOD") {
+      if (role === "EMPLOYEE") {
+        whereClause = eq(manpowerRequest.requesterId, userId);
+      } else if (role === "HOD_IT") {
         whereClause = eq(manpowerRequest.requesterId, userId);
       } else if (role === "ADMIN") {
         whereClause = inArray(manpowerRequest.status, [
           "PENDING_MANAGER",
+          "PENDING_HOD",
           "PENDING_HR",
           "PENDING_FINANCE",
           "PENDING_CEO",
         ]);
       } else {
-        // MANAGER, HR, FINANCE, CEO — items waiting for this role
+        // MANAGER, HOD, HOD_HR, HOD_FINANCE, CEO — items waiting for this role
         const config = ACTION_STRATEGIES[role](userId);
         whereClause = config?.where;
       }
