@@ -102,7 +102,15 @@ describe("BusinessTripsService", () => {
     ]),
   } as any;
 
-  const service = createBusinessTripsService(mockDb, mockWorkflowService);
+  const mockNotificationsService = {
+    createNotification: mock(() => Promise.resolve()),
+  } as any;
+
+  const service = createBusinessTripsService(
+    mockDb,
+    mockWorkflowService,
+    mockNotificationsService,
+  );
 
   const baseTripInput = {
     country: "United States",
