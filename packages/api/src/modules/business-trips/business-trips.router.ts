@@ -11,8 +11,10 @@ import {
 const create = requireRoles([
   "EMPLOYEE",
   "MANAGER",
+  "HOD",
   "HOD_HR",
   "HOD_FINANCE",
+  "HOD_IT",
   "ADMIN",
   "CEO",
 ])
@@ -57,8 +59,10 @@ const getAllRelated = protectedProcedure
 
 const getPendingApprovals = requireRoles([
   "MANAGER",
+  "HOD",
   "HOD_HR",
   "HOD_FINANCE",
+  "HOD_IT",
   "ADMIN",
   "CEO",
 ]).handler(async ({ context }) =>
@@ -68,8 +72,10 @@ const getPendingApprovals = requireRoles([
 const transition = requireRoles([
   "EMPLOYEE",
   "MANAGER",
+  "HOD",
   "HOD_HR",
   "HOD_FINANCE",
+  "HOD_IT",
   "ADMIN",
   "CEO",
 ])
