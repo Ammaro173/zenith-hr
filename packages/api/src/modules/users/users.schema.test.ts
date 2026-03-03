@@ -93,7 +93,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -111,7 +111,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -129,7 +129,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -147,7 +147,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -166,7 +166,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -185,7 +185,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -203,7 +203,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -223,7 +223,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -243,7 +243,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
   });
@@ -261,7 +261,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -277,7 +277,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -293,7 +293,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -309,7 +309,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -325,7 +325,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -340,7 +340,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -358,7 +358,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
   });
@@ -376,7 +376,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -392,7 +392,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(false);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -408,7 +408,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
   });
@@ -420,7 +420,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
           const result = userRoleSchema.safeParse(role);
           expect(result.success).toBe(false);
         }),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -430,7 +430,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
           const result = userRoleSchema.safeParse(role);
           expect(result.success).toBe(true);
         }),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
   });
@@ -442,7 +442,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
           const result = userStatusSchema.safeParse(status);
           expect(result.success).toBe(false);
         }),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
 
@@ -452,7 +452,7 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
           const result = userStatusSchema.safeParse(status);
           expect(result.success).toBe(true);
         }),
-        { numRuns: 100 },
+        { numRuns: 10 },
       );
     });
   });

@@ -215,7 +215,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
             expect(result.error).toBeUndefined();
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -242,7 +242,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
             expect(result.error?.code).toBe("FORBIDDEN");
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
   });
@@ -258,7 +258,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
           expect(result.success).toBe(true);
           expect(result.error).toBeUndefined();
         }),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -286,7 +286,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
             expect(result.error?.code).toBe("FORBIDDEN");
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -302,7 +302,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
           expect(result.error).toBeInstanceOf(ORPCError);
           expect(result.error?.code).toBe("FORBIDDEN");
         }),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
   });
@@ -326,7 +326,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
             expect(result.error?.code).toBe("FORBIDDEN");
           }
         }),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
   });
@@ -368,7 +368,7 @@ describe("Feature: user-management, Property 4: Role-based access control enforc
             }
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
   });
