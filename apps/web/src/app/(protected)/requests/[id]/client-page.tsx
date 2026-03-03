@@ -175,6 +175,11 @@ export function RequestDetailClientPage({
             <span className="font-semibold">
               {request.requester?.name || "Unknown"}
             </span>
+            {request.requester?.email && (
+              <span className="text-muted-foreground text-xs">
+                {request.requester.email}
+              </span>
+            )}
           </div>
           <Avatar className="size-10">
             <AvatarImage src={request.requester?.image ?? undefined} />
