@@ -152,10 +152,14 @@ function createMockDb(
 // Tests: getApproverForStatus
 // ============================================================================
 
+const mockNotificationsService = {
+  createNotification: mock(() => Promise.resolve()),
+} as any; //TODO update types
+
 describe("WorkflowService", () => {
   describe("getApproverForStatus", () => {
     const mockDb = createMockDb();
-    const service = createWorkflowService(mockDb);
+    const service = createWorkflowService(mockDb, mockNotificationsService);
 
     it("returns MANAGER for PENDING_MANAGER status", () => {
       expect(service.getApproverForStatus("PENDING_MANAGER")).toBe("MANAGER");
@@ -198,7 +202,7 @@ describe("WorkflowService", () => {
         request: { status: "DRAFT", requesterId: "user-1" },
         actor: { id: "user-1", role: "EMPLOYEE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -220,7 +224,7 @@ describe("WorkflowService", () => {
           { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -238,7 +242,7 @@ describe("WorkflowService", () => {
         actor: { id: "hr-1", role: "HOD_HR" },
         requester: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -255,7 +259,7 @@ describe("WorkflowService", () => {
         request: { status: "DRAFT" },
         actor: { id: "user-1", role: "MANAGER" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("request-123", "user-1", "APPROVE"),
@@ -280,7 +284,7 @@ describe("WorkflowService", () => {
           { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -300,7 +304,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "manager-1", role: "MANAGER" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -320,7 +324,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "manager-1", role: "MANAGER" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -337,7 +341,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_MANAGER" },
         actor: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("request-123", "hr-1", "APPROVE"),
@@ -355,7 +359,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
         actor: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -372,7 +376,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
         actor: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -389,7 +393,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
         actor: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -406,7 +410,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_HR", requiredApproverRole: "HOD_HR" },
         actor: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -423,7 +427,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_HR" },
         actor: { id: "manager-1", role: "MANAGER" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("request-123", "manager-1", "APPROVE"),
@@ -444,7 +448,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "finance-1", role: "HOD_FINANCE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -464,7 +468,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "finance-1", role: "HOD_FINANCE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -484,7 +488,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "finance-1", role: "HOD_FINANCE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -507,7 +511,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -524,7 +528,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -541,7 +545,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_CEO", requiredApproverRole: "CEO" },
         actor: { id: "ceo-1", role: "CEO" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -564,7 +568,7 @@ describe("WorkflowService", () => {
         request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
         actor: { id: "hr-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -581,7 +585,7 @@ describe("WorkflowService", () => {
         request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
         actor: { id: "admin-1", role: "ADMIN" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -598,7 +602,7 @@ describe("WorkflowService", () => {
         request: { status: "HIRING_IN_PROGRESS" as RequestStatus },
         actor: { id: "user-1", role: "EMPLOYEE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("request-123", "user-1", "APPROVE"),
@@ -616,7 +620,7 @@ describe("WorkflowService", () => {
         request: null,
         actor: { id: "user-1", role: "MANAGER" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("non-existent", "user-1", "APPROVE"),
@@ -628,7 +632,7 @@ describe("WorkflowService", () => {
         request: { status: "PENDING_MANAGER" },
         actor: null,
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest(
@@ -644,7 +648,7 @@ describe("WorkflowService", () => {
         request: { status: "ARCHIVED" as RequestStatus },
         actor: { id: "user-1", role: "HOD_HR" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("request-123", "user-1", "APPROVE"),
@@ -662,7 +666,7 @@ describe("WorkflowService", () => {
         request: { status: "DRAFT", requesterId: "user-1" },
         actor: { id: "user-1", role: "EMPLOYEE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -688,7 +692,7 @@ describe("WorkflowService", () => {
           { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -713,7 +717,7 @@ describe("WorkflowService", () => {
           { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -738,7 +742,7 @@ describe("WorkflowService", () => {
           { position_id: "hod-pos-1", position_role: "HOD", depth: 1 },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -764,7 +768,7 @@ describe("WorkflowService", () => {
           { position_id: "hod-hr-pos-1", position_role: "HOD_HR", depth: 1 },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -797,7 +801,7 @@ describe("WorkflowService", () => {
           },
         ],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -820,7 +824,7 @@ describe("WorkflowService", () => {
         // No HOD in the chain — empty manager chain
         managerChain: [],
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -847,7 +851,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "user-1", role: "EMPLOYEE" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       const result = await service.transitionRequest(
         "request-123",
@@ -868,7 +872,7 @@ describe("WorkflowService", () => {
         },
         actor: { id: "other-user", role: "MANAGER" },
       });
-      const service = createWorkflowService(mockDb);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
 
       await expect(
         service.transitionRequest("request-123", "other-user", "SUBMIT"),
