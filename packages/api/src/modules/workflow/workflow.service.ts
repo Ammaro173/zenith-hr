@@ -424,8 +424,11 @@ export const createWorkflowService = (db: DbOrTx) => {
     nextApproverPositionId: string | null;
     nextApproverRole: PositionRole | null;
   }> => {
-    // Handle SUBMIT action
-    if (action === "SUBMIT" && currentStatus === "DRAFT") {
+    // Handle SUBMIT action (from DRAFT or CHANGE_REQUESTED)
+    if (
+      action === "SUBMIT" &&
+      (currentStatus === "DRAFT" || currentStatus === "CHANGE_REQUESTED")
+    ) {
       const route = MPR_ROUTES[requesterPositionRole] || MPR_ROUTES.EMPLOYEE;
       const nextStatus = route.initialStatus;
       const approver = await getNextApproverPositionForStatus(
@@ -452,7 +455,7 @@ export const createWorkflowService = (db: DbOrTx) => {
     // Handle REQUEST_CHANGE action
     if (action === "REQUEST_CHANGE") {
       return {
-        nextStatus: "DRAFT",
+        nextStatus: "CHANGE_REQUESTED",
         nextApproverPositionId: null,
         nextApproverRole: null,
       };
@@ -1129,7 +1132,10 @@ export const createWorkflowService = (db: DbOrTx) => {
       const currentStatus = request.status as RequestStatus;
 
       // Auth check
-      if (currentStatus === "DRAFT" && action === "SUBMIT") {
+      if (
+        (currentStatus === "DRAFT" || currentStatus === "CHANGE_REQUESTED") &&
+        action === "SUBMIT"
+      ) {
         if (request.requesterId !== actorId) {
           throw new AppError("FORBIDDEN", "Only requester can submit", 403);
         }
@@ -1183,7 +1189,10 @@ export const createWorkflowService = (db: DbOrTx) => {
           currentApproverPositionId: nextStep.nextApproverPositionId,
           requiredApproverRole: nextStep.nextApproverRole,
           revisionVersion:
-            nextStep.nextStatus === "DRAFT" && currentStatus !== "DRAFT"
+            (nextStep.nextStatus === "DRAFT" ||
+              nextStep.nextStatus === "CHANGE_REQUESTED") &&
+            currentStatus !== "DRAFT" &&
+            currentStatus !== "CHANGE_REQUESTED"
               ? request.revisionVersion + 1
               : request.revisionVersion,
           updatedAt: new Date(),
@@ -1204,7 +1213,12 @@ export const createWorkflowService = (db: DbOrTx) => {
         comment,
       });
 
-      if (nextStep.nextStatus === "DRAFT" && currentStatus !== "DRAFT") {
+      if (
+        (nextStep.nextStatus === "DRAFT" ||
+          nextStep.nextStatus === "CHANGE_REQUESTED") &&
+        currentStatus !== "DRAFT" &&
+        currentStatus !== "CHANGE_REQUESTED"
+      ) {
         await archiveVersion(tx, requestId, request.revisionVersion + 1, {
           status: currentStatus,
           positionDetails: request.positionDetails,
