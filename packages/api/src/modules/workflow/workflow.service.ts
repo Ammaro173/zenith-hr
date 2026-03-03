@@ -100,10 +100,19 @@ const MPR_ROUTES: Record<
 };
 
 // Shared role queues - these statuses can be handled by any user with matching role
+// Note: PENDING_HOD is NOT a shared queue — it routes to the requester's specific dept HOD.
 const SHARED_ROLE_QUEUES: Record<string, PositionRole[]> = {
   PENDING_HR: ["HOD_HR"],
   PENDING_FINANCE: ["HOD_FINANCE"],
   PENDING_CEO: ["CEO"],
+};
+
+// Role-to-status mapping for double-approval skip logic.
+// When the dept HOD who approved at PENDING_HOD has one of these roles,
+// the corresponding cross-functional step is skipped.
+const HOD_ROLE_TO_STATUS: Record<string, RequestStatus> = {
+  HOD_HR: "PENDING_HR",
+  HOD_FINANCE: "PENDING_FINANCE",
 };
 
 export const createWorkflowService = (db: DbOrTx) => {
@@ -252,7 +261,8 @@ export const createWorkflowService = (db: DbOrTx) => {
     positionId: string | null;
     positionRole: PositionRole | null;
   }> => {
-    // For shared role queues, find any position with matching role
+    // For shared role queues (PENDING_HR, PENDING_FINANCE, PENDING_CEO),
+    // find any active position with a matching role.
     if (
       status === "PENDING_HR" ||
       status === "PENDING_FINANCE" ||
@@ -299,6 +309,40 @@ export const createWorkflowService = (db: DbOrTx) => {
         `No active position found for ${status}. Please configure ${targetRoles.join(" or ")} positions.`,
         500,
       );
+    }
+
+    // For PENDING_HOD, walk the manager chain to find the requester's
+    // specific department head. This is NOT a shared queue — only the
+    // HOD in the requester's reporting line can approve.
+    if (status === "PENDING_HOD") {
+      const chain = await getManagerChain(requesterPositionId, txOrDb);
+      // Look for any HOD-type role in the chain
+      const hodPosition = chain.find(
+        (p) =>
+          p.positionRole === "HOD" ||
+          p.positionRole === "HOD_IT" ||
+          p.positionRole === "HOD_HR" ||
+          p.positionRole === "HOD_FINANCE",
+      );
+
+      if (hodPosition) {
+        const users = await getPositionUsers(hodPosition.positionId, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `Department head position ${hodPosition.positionId} (${hodPosition.positionRole}) has no assigned users. Cannot route approval.`,
+            500,
+          );
+        }
+        return {
+          positionId: hodPosition.positionId, // Specific position, not shared
+          positionRole: hodPosition.positionRole,
+        };
+      }
+
+      // No HOD in the chain — skip PENDING_HOD and go straight to HR
+      // (this handles flat orgs without a department head)
+      return { positionId: null, positionRole: null };
     }
 
     // For PENDING_MANAGER, walk up the manager chain
@@ -453,7 +497,35 @@ export const createWorkflowService = (db: DbOrTx) => {
         };
       }
 
-      const nextStatus = route.sequence[nextIndex] || currentStatus;
+      let remaining = route.sequence.slice(nextIndex);
+
+      // Skip rules to avoid redundant or impossible approvals
+
+      // 1. Double-approval skip for HODs:
+      // If the requester's dept HOD is also a cross-functional reviewer (e.g., HOD_HR),
+      // they shouldn't review the same request twice. We look up the HOD and filter
+      // out their corresponding cross-functional step from the remaining path.
+      const hodApprover = await getNextApproverPositionForStatus(
+        requesterPositionId,
+        "PENDING_HOD",
+        txOrDb,
+      );
+      if (hodApprover.positionRole) {
+        const duplicateStatus = HOD_ROLE_TO_STATUS[hodApprover.positionRole];
+        if (duplicateStatus) {
+          remaining = remaining.filter((s) => s !== duplicateStatus);
+        }
+      }
+
+      // 2. Flat org skip:
+      // If a request is routed through PENDING_HOD, but there is no department
+      // HOD in the manager chain, skip the step entirely.
+      if (!(hodApprover.positionId || hodApprover.positionRole)) {
+        remaining = remaining.filter((s) => s !== "PENDING_HOD");
+      }
+
+      const nextStatus = (remaining[0] ?? currentStatus) as RequestStatus;
+
       const approver = await getNextApproverPositionForStatus(
         requesterPositionId,
         nextStatus,
@@ -886,7 +958,8 @@ export const createWorkflowService = (db: DbOrTx) => {
       return true;
     }
 
-    // Check shared role queue access
+    // Check shared role queue access (NOT including PENDING_HOD —
+    // that relies on currentApproverPositionId match above)
     if (
       (currentStatus === "PENDING_HR" &&
         (actorPositionRole === "HOD" || actorPositionRole === "HOD_HR")) ||
