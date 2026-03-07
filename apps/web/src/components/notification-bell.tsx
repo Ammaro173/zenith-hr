@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { env } from "@/lib/env";
 import { client, orpc } from "@/utils/orpc";
 
@@ -30,6 +31,7 @@ interface NotificationItem {
 export function NotificationBell() {
   const router = useRouter();
   const [unreadCount, setUnreadCount] = useState(0);
+  const { isSupported, permission, subscribe } = usePushNotifications();
 
   const queryClient = useQueryClient();
 
@@ -82,7 +84,6 @@ export function NotificationBell() {
             : undefined,
         });
 
-        setUnreadCount((prev) => prev + 1);
         refetch();
       } catch (err) {
         console.error("Failed to parse SSE notification", err);
@@ -141,6 +142,22 @@ export function NotificationBell() {
             </span>
           )}
         </DropdownMenuLabel>
+
+        {isSupported && permission !== "granted" && (
+          <div className="border-border/40 border-b bg-primary/5 p-3 px-4">
+            <p className="mb-2 text-muted-foreground text-xs">
+              Stay updated with push notifications even when the app is closed.
+            </p>
+            <Button
+              className="h-8 w-full text-xs"
+              onClick={() => subscribe()}
+              size="sm"
+            >
+              Enable Push Notifications
+            </Button>
+          </div>
+        )}
+
         <DropdownMenuSeparator className="m-0 bg-border/60" />
 
         <div className="max-h-87.5 overflow-y-auto">
