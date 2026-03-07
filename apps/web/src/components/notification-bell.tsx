@@ -5,6 +5,7 @@ import { Bell } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,12 +52,10 @@ export function NotificationBell() {
 
   // Update unread count when notifications data changes
   useEffect(() => {
-    if (notifications) {
-      setUnreadCount(
-        notifications.filter((n: NotificationItem) => !n.readAt).length,
-      );
+    if (notificationsData?.unreadCount !== undefined) {
+      setUnreadCount(notificationsData.unreadCount);
     }
-  }, [notifications]);
+  }, [notificationsData?.unreadCount]);
 
   // Server-Sent Events setup
   useEffect(() => {
@@ -73,6 +72,16 @@ export function NotificationBell() {
         }
 
         // When a real notification arrives
+        toast(data.title, {
+          description: data.body,
+          action: data.link
+            ? {
+                label: "View Details",
+                onClick: () => router.push(data.link as Route),
+              }
+            : undefined,
+        });
+
         setUnreadCount((prev) => prev + 1);
         refetch();
       } catch (err) {
@@ -91,7 +100,7 @@ export function NotificationBell() {
     return () => {
       eventSource.close();
     };
-  }, [refetch]);
+  }, [refetch, router]);
 
   const handleNotificationClick = async (notification: NotificationItem) => {
     if (!notification.readAt) {
