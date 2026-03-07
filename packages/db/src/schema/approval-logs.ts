@@ -1,5 +1,12 @@
 import { relations } from "drizzle-orm";
-import { index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { businessTrip } from "./business-trips";
 import { manpowerRequest } from "./manpower-requests";
@@ -15,24 +22,31 @@ export const approvalActionEnum = pgEnum("approval_action", [
   "CANCEL",
 ]);
 
-export const approvalLog = pgTable("approval_log", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  requestId: uuid("request_id").notNull(),
-  actorId: text("actor_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  actorPositionId: uuid("actor_position_id").references(() => jobPosition.id, {
-    onDelete: "set null",
+export const approvalLog = pgTable(
+  "approval_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    requestId: uuid("request_id").notNull(),
+    actorId: text("actor_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    actorPositionId: uuid("actor_position_id").references(
+      () => jobPosition.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    action: approvalActionEnum("action").notNull(),
+    comment: text("comment"),
+    stepName: text("step_name").notNull(),
+    performedAt: timestamp("performed_at").notNull().defaultNow(),
+    ipAddress: text("ip_address"),
+  },
+  (table) => ({
+    requestIdIdx: index("approval_log_request_id_idx").on(table.requestId),
+    actorIdIdx: index("approval_log_actor_id_idx").on(table.actorId),
   }),
-  action: approvalActionEnum("action").notNull(),
-  comment: text("comment"),
-  stepName: text("step_name").notNull(),
-  performedAt: timestamp("performed_at").notNull().defaultNow(),
-  ipAddress: text("ip_address"),
-}, (table) => ({
-  requestIdIdx: index("approval_log_request_id_idx").on(table.requestId),
-  actorIdIdx: index("approval_log_actor_id_idx").on(table.actorId),
-}));
+);
 
 export const approvalLogRelations = relations(approvalLog, ({ one }) => ({
   manpowerRequest: one(manpowerRequest, {

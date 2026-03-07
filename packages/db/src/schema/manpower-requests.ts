@@ -54,59 +54,65 @@ export const employmentTypeEnum = pgEnum("employment_type", [
   "TEMPORARY",
 ]);
 
-export const manpowerRequest = pgTable("manpower_request", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  requesterId: text("requester_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  requesterPositionId: uuid("requester_position_id").references(
-    () => jobPosition.id,
-    {
+export const manpowerRequest = pgTable(
+  "manpower_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    requesterPositionId: uuid("requester_position_id").references(
+      () => jobPosition.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    requestCode: text("request_code").notNull().unique(),
+    status: requestStatusEnum("status").notNull().default("DRAFT"),
+    requestType: requestTypeEnum("request_type").notNull(),
+    replacementForUserId: text("replacement_for_user_id").references(
+      () => user.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    contractDuration: contractDurationEnum("contract_duration").notNull(),
+    employmentType: employmentTypeEnum("employment_type")
+      .notNull()
+      .default("FULL_TIME"),
+    headcount: integer("headcount").notNull().default(1),
+    positionId: uuid("position_id").references(() => jobPosition.id, {
       onDelete: "set null",
-    },
-  ),
-  requestCode: text("request_code").notNull().unique(),
-  status: requestStatusEnum("status").notNull().default("DRAFT"),
-  requestType: requestTypeEnum("request_type").notNull(),
-  replacementForUserId: text("replacement_for_user_id").references(
-    () => user.id,
-    {
-      onDelete: "set null",
-    },
-  ),
-  contractDuration: contractDurationEnum("contract_duration").notNull(),
-  employmentType: employmentTypeEnum("employment_type")
-    .notNull()
-    .default("FULL_TIME"),
-  headcount: integer("headcount").notNull().default(1),
-  positionId: uuid("position_id").references(() => jobPosition.id, {
-    onDelete: "set null",
+    }),
+    justificationText: text("justification_text").notNull(),
+    salaryRangeMin: decimal("salary_range_min", {
+      precision: 12,
+      scale: 2,
+    }).notNull(),
+    salaryRangeMax: decimal("salary_range_max", {
+      precision: 12,
+      scale: 2,
+    }).notNull(),
+    currentApproverPositionId: uuid("current_approver_position_id").references(
+      () => jobPosition.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    requiredApproverRole: positionRoleEnum("required_approver_role"),
+    positionDetails: jsonb("position_details").notNull(),
+    budgetDetails: jsonb("budget_details").notNull(),
+    revisionVersion: integer("revision_version").notNull().default(0),
+    version: integer("version").notNull().default(0), // For optimistic locking
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    requesterIdIdx: index("manpower_request_requester_id_idx").on(
+      table.requesterId,
+    ),
+    createdAtIdx: index("manpower_request_created_at_idx").on(table.createdAt),
   }),
-  justificationText: text("justification_text").notNull(),
-  salaryRangeMin: decimal("salary_range_min", {
-    precision: 12,
-    scale: 2,
-  }).notNull(),
-  salaryRangeMax: decimal("salary_range_max", {
-    precision: 12,
-    scale: 2,
-  }).notNull(),
-  currentApproverPositionId: uuid("current_approver_position_id").references(
-    () => jobPosition.id,
-    {
-      onDelete: "set null",
-    },
-  ),
-  requiredApproverRole: positionRoleEnum("required_approver_role"),
-  positionDetails: jsonb("position_details").notNull(),
-  budgetDetails: jsonb("budget_details").notNull(),
-  revisionVersion: integer("revision_version").notNull().default(0),
-  version: integer("version").notNull().default(0), // For optimistic locking
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-}, (table) => ({
-  requesterIdIdx: index("manpower_request_requester_id_idx").on(table.requesterId),
-  createdAtIdx: index("manpower_request_created_at_idx").on(table.createdAt),
-}));
+);
 
 // Relations will be defined after all schemas are imported

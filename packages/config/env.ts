@@ -77,7 +77,7 @@ export const emailEnvSchema = {
 export const vapidEnvSchema = {
   VAPID_PUBLIC_KEY: z.string().min(1).optional(),
   VAPID_PRIVATE_KEY: z.string().min(1).optional(),
-  VAPID_SUBJECT: z.string().url().default("mailto:support@zenith.hr"),
+  VAPID_SUBJECT: z.string().url().default("mailto:info@audiclub.qa"),
 };
 
 /**

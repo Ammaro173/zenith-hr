@@ -60,48 +60,56 @@ export const separationDocumentKindEnum = pgEnum("separation_document_kind", [
   "OTHER",
 ]);
 
-export const separationRequest = pgTable("separation_request", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  employeeId: text("employee_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  managerId: text("manager_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  managerPositionId: uuid("manager_position_id").references(
-    () => jobPosition.id,
-    {
+export const separationRequest = pgTable(
+  "separation_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    managerId: text("manager_id").references(() => user.id, {
       onDelete: "set null",
-    },
-  ),
-  hrOwnerId: text("hr_owner_id").references(() => user.id, {
-    onDelete: "set null",
+    }),
+    managerPositionId: uuid("manager_position_id").references(
+      () => jobPosition.id,
+      {
+        onDelete: "set null",
+      },
+    ),
+    hrOwnerId: text("hr_owner_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    type: separationTypeEnum("type").notNull(),
+    reason: text("reason").notNull(),
+    lastWorkingDay: date("last_working_day").notNull(),
+    noticePeriodWaived: boolean("notice_period_waived")
+      .notNull()
+      .default(false),
+    status: separationStatusEnum("status").notNull().default("REQUESTED"),
+    completedAt: timestamp("completed_at"),
+    // --- HR/Payroll integration fields (nullable; filled at later stages) ---
+    visaAction: text("visa_action", {
+      enum: ["TRANSFER", "CANCEL", "NONE"],
+    }),
+    visaStatus: text("visa_status", {
+      enum: ["PENDING", "IN_PROGRESS", "COMPLETED"],
+    }),
+    eosbStatus: text("eosb_status", {
+      enum: ["PENDING", "IN_PROGRESS", "COMPLETED"],
+    }),
+    repatriationRequired: boolean("repatriation_required"),
+    finalSettlementMethod: text("final_settlement_method", {
+      enum: ["BANK_TRANSFER", "CHEQUE", "CASH", "OTHER"],
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    employeeIdIdx: index("separation_request_employee_id_idx").on(
+      table.employeeId,
+    ),
   }),
-  type: separationTypeEnum("type").notNull(),
-  reason: text("reason").notNull(),
-  lastWorkingDay: date("last_working_day").notNull(),
-  noticePeriodWaived: boolean("notice_period_waived").notNull().default(false),
-  status: separationStatusEnum("status").notNull().default("REQUESTED"),
-  completedAt: timestamp("completed_at"),
-  // --- HR/Payroll integration fields (nullable; filled at later stages) ---
-  visaAction: text("visa_action", {
-    enum: ["TRANSFER", "CANCEL", "NONE"],
-  }),
-  visaStatus: text("visa_status", {
-    enum: ["PENDING", "IN_PROGRESS", "COMPLETED"],
-  }),
-  eosbStatus: text("eosb_status", {
-    enum: ["PENDING", "IN_PROGRESS", "COMPLETED"],
-  }),
-  repatriationRequired: boolean("repatriation_required"),
-  finalSettlementMethod: text("final_settlement_method", {
-    enum: ["BANK_TRANSFER", "CHEQUE", "CASH", "OTHER"],
-  }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  employeeIdIdx: index("separation_request_employee_id_idx").on(table.employeeId),
-}));
+);
 
 // Membership table that maps users to exit-clearance lanes.
 export const userClearanceLane = pgTable("user_clearance_lane", {
@@ -129,56 +137,72 @@ export const separationChecklistTemplate = pgTable(
   },
 );
 
-export const separationChecklist = pgTable("separation_checklist", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  separationId: uuid("separation_id")
-    .notNull()
-    .references(() => separationRequest.id, { onDelete: "cascade" }),
-  // Legacy column kept for backfill (old schema). Use `lane` going forward.
-  department: text("department"),
-  lane: clearanceLaneEnum("lane").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  required: boolean("required").notNull().default(true),
-  dueAt: timestamp("due_at"),
-  status: separationChecklistStatusEnum("status").notNull().default("PENDING"),
-  checkedBy: text("checked_by").references(() => user.id, {
-    onDelete: "set null",
+export const separationChecklist = pgTable(
+  "separation_checklist",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    separationId: uuid("separation_id")
+      .notNull()
+      .references(() => separationRequest.id, { onDelete: "cascade" }),
+    // Legacy column kept for backfill (old schema). Use `lane` going forward.
+    department: text("department"),
+    lane: clearanceLaneEnum("lane").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    required: boolean("required").notNull().default(true),
+    dueAt: timestamp("due_at"),
+    status: separationChecklistStatusEnum("status")
+      .notNull()
+      .default("PENDING"),
+    checkedBy: text("checked_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    checkedAt: timestamp("checked_at"),
+    verifiedBy: text("verified_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    verifiedAt: timestamp("verified_at"),
+    remarks: text("remarks"),
+    source: separationChecklistSourceEnum("source")
+      .notNull()
+      .default("TEMPLATE"),
+    order: integer("order").notNull().default(0),
+    // Extra metadata for integrations / UI hints.
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    separationIdIdx: index("separation_checklist_separation_id_idx").on(
+      table.separationId,
+    ),
   }),
-  checkedAt: timestamp("checked_at"),
-  verifiedBy: text("verified_by").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  verifiedAt: timestamp("verified_at"),
-  remarks: text("remarks"),
-  source: separationChecklistSourceEnum("source").notNull().default("TEMPLATE"),
-  order: integer("order").notNull().default(0),
-  // Extra metadata for integrations / UI hints.
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  separationIdIdx: index("separation_checklist_separation_id_idx").on(table.separationId),
-}));
+);
 
-export const separationDocument = pgTable("separation_document", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  separationId: uuid("separation_id")
-    .notNull()
-    .references(() => separationRequest.id, { onDelete: "cascade" }),
-  kind: separationDocumentKindEnum("kind").notNull(),
-  fileName: text("file_name").notNull(),
-  contentType: text("content_type").notNull(),
-  size: integer("size").notNull().default(0),
-  storageKey: text("storage_key").notNull(),
-  storageUrl: text("storage_url"),
-  uploadedBy: text("uploaded_by").references(() => user.id, {
-    onDelete: "set null",
+export const separationDocument = pgTable(
+  "separation_document",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    separationId: uuid("separation_id")
+      .notNull()
+      .references(() => separationRequest.id, { onDelete: "cascade" }),
+    kind: separationDocumentKindEnum("kind").notNull(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull().default(0),
+    storageKey: text("storage_key").notNull(),
+    storageUrl: text("storage_url"),
+    uploadedBy: text("uploaded_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    separationIdIdx: index("separation_document_separation_id_idx").on(
+      table.separationId,
+    ),
   }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  separationIdIdx: index("separation_document_separation_id_idx").on(table.separationId),
-}));
+);
 
 export const separationReminderState = pgTable("separation_reminder_state", {
   id: uuid("id").primaryKey().defaultRandom(),

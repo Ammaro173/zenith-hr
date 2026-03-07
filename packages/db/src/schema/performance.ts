@@ -70,87 +70,103 @@ export const performanceCycle = pgTable("performance_cycle", {
 /**
  * Performance Review - An individual employee's review within a cycle
  */
-export const performanceReview = pgTable("performance_review", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  cycleId: uuid("cycle_id")
-    .notNull()
-    .references(() => performanceCycle.id, { onDelete: "cascade" }),
-  employeeId: text("employee_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  reviewerId: text("reviewer_id").references(() => user.id, {
-    onDelete: "set null",
+export const performanceReview = pgTable(
+  "performance_review",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    cycleId: uuid("cycle_id")
+      .notNull()
+      .references(() => performanceCycle.id, { onDelete: "cascade" }),
+    employeeId: text("employee_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    reviewerId: text("reviewer_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    reviewType: performanceReviewTypeEnum("review_type")
+      .default("ANNUAL_PERFORMANCE")
+      .notNull(),
+    status: performanceReviewStatusEnum("status").default("DRAFT").notNull(),
+    // Review period (may differ from cycle dates for probation reviews)
+    reviewPeriodStart: timestamp("review_period_start"),
+    reviewPeriodEnd: timestamp("review_period_end"),
+    // Ratings and Comments
+    overallRating: decimal("overall_rating", { precision: 3, scale: 2 }), // 1.00 - 5.00 scale
+    managerComment: text("manager_comment"),
+    selfComment: text("self_comment"),
+    // Additional feedback as JSON for flexibility
+    feedback: jsonb("feedback"),
+    // Calculated fields
+    totalScore: decimal("total_score", { precision: 5, scale: 2 }),
+    completionPercentage: integer("completion_percentage").default(0),
+    // Timestamps
+    submittedAt: timestamp("submitted_at"),
+    acknowledgedAt: timestamp("acknowledged_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    cycleIdIdx: index("performance_review_cycle_id_idx").on(table.cycleId),
+    employeeIdIdx: index("performance_review_employee_id_idx").on(
+      table.employeeId,
+    ),
   }),
-  reviewType: performanceReviewTypeEnum("review_type")
-    .default("ANNUAL_PERFORMANCE")
-    .notNull(),
-  status: performanceReviewStatusEnum("status").default("DRAFT").notNull(),
-  // Review period (may differ from cycle dates for probation reviews)
-  reviewPeriodStart: timestamp("review_period_start"),
-  reviewPeriodEnd: timestamp("review_period_end"),
-  // Ratings and Comments
-  overallRating: decimal("overall_rating", { precision: 3, scale: 2 }), // 1.00 - 5.00 scale
-  managerComment: text("manager_comment"),
-  selfComment: text("self_comment"),
-  // Additional feedback as JSON for flexibility
-  feedback: jsonb("feedback"),
-  // Calculated fields
-  totalScore: decimal("total_score", { precision: 5, scale: 2 }),
-  completionPercentage: integer("completion_percentage").default(0),
-  // Timestamps
-  submittedAt: timestamp("submitted_at"),
-  acknowledgedAt: timestamp("acknowledged_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  cycleIdIdx: index("performance_review_cycle_id_idx").on(table.cycleId),
-  employeeIdIdx: index("performance_review_employee_id_idx").on(table.employeeId),
-}));
+);
 
 /**
  * Performance Competency - Core competencies to rate in a review
  * Each review has multiple competencies with weighted ratings
  */
-export const performanceCompetency = pgTable("performance_competency", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  reviewId: uuid("review_id")
-    .notNull()
-    .references(() => performanceReview.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  weight: integer("weight").default(20).notNull(), // Percentage weight (all should sum to 100)
-  rating: integer("rating"), // 1-5 scale
-  justification: text("justification"), // Required when rating < 3 (below expectations)
-  ratedById: text("rated_by_id").references(() => user.id, {
-    onDelete: "set null",
+export const performanceCompetency = pgTable(
+  "performance_competency",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => performanceReview.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    weight: integer("weight").default(20).notNull(), // Percentage weight (all should sum to 100)
+    rating: integer("rating"), // 1-5 scale
+    justification: text("justification"), // Required when rating < 3 (below expectations)
+    ratedById: text("rated_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    ratedAt: timestamp("rated_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    reviewIdIdx: index("performance_competency_review_id_idx").on(
+      table.reviewId,
+    ),
   }),
-  ratedAt: timestamp("rated_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  reviewIdIdx: index("performance_competency_review_id_idx").on(table.reviewId),
-}));
+);
 
 /**
  * Performance Goal - Future goals set during a review
  */
-export const performanceGoal = pgTable("performance_goal", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  reviewId: uuid("review_id")
-    .notNull()
-    .references(() => performanceReview.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  targetDate: timestamp("target_date"),
-  weight: integer("weight").default(0), // Optional percentage weight
-  rating: integer("rating"), // 1-5 scale (for completed goals)
-  comment: text("comment"),
-  status: performanceGoalStatusEnum("status").default("PENDING").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  reviewIdIdx: index("performance_goal_review_id_idx").on(table.reviewId),
-}));
+export const performanceGoal = pgTable(
+  "performance_goal",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reviewId: uuid("review_id")
+      .notNull()
+      .references(() => performanceReview.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    targetDate: timestamp("target_date"),
+    weight: integer("weight").default(0), // Optional percentage weight
+    rating: integer("rating"), // 1-5 scale (for completed goals)
+    comment: text("comment"),
+    status: performanceGoalStatusEnum("status").default("PENDING").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    reviewIdIdx: index("performance_goal_review_id_idx").on(table.reviewId),
+  }),
+);
 
 /**
  * Competency Template - Reusable competency definitions
