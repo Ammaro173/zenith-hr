@@ -7,6 +7,7 @@ import { corsPlugin } from "./plugins/cors.plugin";
 // Route handlers
 import { aiRouteHandler } from "./routes/ai.route";
 import { authHandler } from "./routes/auth.route";
+import { notificationsStreamHandler } from "./routes/notifications.route";
 import { openApiRouteHandler } from "./routes/openapi.route";
 import { rpcRouteHandler } from "./routes/rpc.route";
 import { docuSignWebhookHandler } from "./routes/webhooks.route";
@@ -47,6 +48,9 @@ export const app = new Elysia()
 
   // Webhook routes
   .post("/api/webhooks/docusign", docuSignWebhookHandler)
+
+  // Notifications
+  .get("/api/notifications/stream", notificationsStreamHandler)
 
   // Start server
   .listen({ port: env.PORT, hostname: "0.0.0.0" }, () => {

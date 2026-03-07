@@ -1,4 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
+import type { NotificationsService } from "../notifications/notifications.service";
+import type { WorkflowService } from "../workflow";
 import { createRequestsService } from "./requests.service";
 
 describe("RequestsService", () => {
@@ -29,9 +31,20 @@ describe("RequestsService", () => {
   const mockWorkflowService = {
     getNextApproverIdForStatus: mock(() => Promise.resolve("manager-1")),
     getApproverForStatus: mock(() => "MANAGER"),
-  } as any;
+  } as unknown as WorkflowService;
 
-  const service = createRequestsService(mockDb, mockWorkflowService);
+  const mockNotificationsService = {
+    createNotification: mock(() => Promise.resolve()),
+    getUserNotifications: mock(),
+    markAsRead: mock(),
+    getUnreadCount: mock(),
+  } as unknown as NotificationsService;
+
+  const service = createRequestsService(
+    mockDb,
+    mockWorkflowService,
+    mockNotificationsService,
+  );
 
   it("should generate correct request code from sequence", async () => {
     // Override the mock for specific sequence return if needed,

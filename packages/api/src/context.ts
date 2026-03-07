@@ -17,6 +17,7 @@ import { createContractsService } from "./modules/contracts";
 import { createDashboardService } from "./modules/dashboard";
 import { createDepartmentsService } from "./modules/departments";
 import { createImportsService } from "./modules/imports";
+import { createNotificationsService } from "./modules/notifications";
 import { createPerformanceService } from "./modules/performance";
 import { createPositionsService } from "./modules/positions";
 import { createRequestsService } from "./modules/requests";
@@ -50,15 +51,17 @@ export async function createContext({ context }: CreateContextOptions) {
   const requestId = crypto.randomUUID();
 
   // Initialize services with dependencies
-  const workflow = createWorkflowService(db);
+  const notifications = createNotificationsService(db);
+  const workflow = createWorkflowService(db, notifications);
 
   const services = {
     workflow,
-    requests: createRequestsService(db, workflow),
+    notifications,
+    requests: createRequestsService(db, workflow, notifications),
     contracts: createContractsService(db, storage, pdf),
     dashboard: createDashboardService(db),
     candidates: createCandidatesService(db, storage),
-    businessTrips: createBusinessTripsService(db, workflow),
+    businessTrips: createBusinessTripsService(db, workflow, notifications),
     performance: createPerformanceService(db),
     positions: createPositionsService(db),
     separations: createSeparationsService(db, storage),

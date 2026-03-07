@@ -10,6 +10,7 @@ export * from "./manpower-requests";
 export * from "./notifications";
 export * from "./performance";
 export * from "./position-slots";
+export * from "./push-subscriptions";
 export * from "./request-versions";
 export * from "./separations";
 export * from "./users";

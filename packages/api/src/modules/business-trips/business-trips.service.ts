@@ -23,9 +23,9 @@ import {
 } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
-import { notifyUser } from "../../shared/notify";
 import type { ApprovalAction, PositionRole } from "../../shared/types";
 import { getActorPositionInfo, getActorRole } from "../../shared/utils";
+import type { NotificationsService } from "../notifications/notifications.service";
 import type {
   addExpenseSchema,
   createTripSchema,
@@ -44,6 +44,7 @@ import type { WorkflowService } from "../workflow/workflow.service";
 export const createBusinessTripsService = (
   db: DbOrTx,
   workflowService: WorkflowService,
+  notificationsService: NotificationsService,
 ) => ({
   async create(input: CreateTripInput, requesterId: string) {
     if (input.startDate > input.endDate) {
@@ -534,16 +535,22 @@ export const createBusinessTripsService = (
     const { trip, newStatus, nextApproverUserId } = result;
 
     try {
-      await notifyUser({
-        userId: trip.requesterId,
-        message: `Business trip to ${trip.city}, ${trip.country} updated to ${newStatus}`,
-      });
+      await notificationsService.createNotification(
+        trip.requesterId,
+        "Business Trip Updated",
+        `Business trip to ${trip.city}, ${trip.country} updated to ${newStatus}`,
+        "INFO",
+        `/business-trips/${trip.id}`,
+      );
 
       if (nextApproverUserId && nextApproverUserId !== trip.requesterId) {
-        await notifyUser({
-          userId: nextApproverUserId,
-          message: `New Business Trip Approval Required: ${trip.city}, ${trip.country}`,
-        });
+        await notificationsService.createNotification(
+          nextApproverUserId,
+          "Business Trip Approval Required",
+          `New Business Trip Approval Required: ${trip.city}, ${trip.country}`,
+          "ACTION_REQUIRED",
+          `/business-trips/${trip.id}`,
+        );
       }
     } catch (notifyError) {
       // Log notification errors but don't fail the transaction

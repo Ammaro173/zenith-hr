@@ -11,6 +11,7 @@ import type { Options } from "nuqs";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { queryClient } from "@/utils/orpc";
 import { CommandMenu } from "./command-menu";
+import { PwaManager } from "./pwa-manager";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/sonner";
 
@@ -48,6 +49,7 @@ export default function Providers({
             <QueryClientProvider client={queryClient}>
               <HydrationBoundary state={dehydratedState}>
                 {children}
+                <PwaManager />
               </HydrationBoundary>
               <ReactQueryDevtools />
             </QueryClientProvider>

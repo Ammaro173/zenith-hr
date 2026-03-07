@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@types/react": "catalog:",
+    "@types/web-push": "^3.6.4",
     "@zenith-hr/config": "workspace:*",
     "fast-check": "^4.5.3",
     "pino-pretty": "catalog:",
@@ -49,6 +50,8 @@
     "elysia": "catalog:",
     "pdf-lib": "^1.17.1",
     "pino": "catalog:",
+    "resend": "^6.9.3",
+    "web-push": "^3.6.7",
     "xstate": "^5.28.0",
     "zod": "catalog:"
   }

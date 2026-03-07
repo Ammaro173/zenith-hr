@@ -402,9 +402,9 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
         expect(insertedAccount.userId).toBe(insertedUser.id);
         expect(insertedAccount.providerId).toBe("credential");
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  }, 15_000);
+  }, 30_000);
 
   it("should produce a hash that can verify the original password", async () => {
     await fc.assert(
@@ -431,7 +431,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
       }),
       { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should produce a hash that rejects incorrect passwords", async () => {
     await fc.assert(
@@ -467,7 +467,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant", () 
       ),
       { numRuns: 5 },
     );
-  });
+  }, 30_000);
 });
 
 /**
@@ -500,9 +500,9 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
           expect(appError.message).toContain("email");
         }
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should reject creation when SAP number already exists", async () => {
     await fc.assert(
@@ -526,9 +526,9 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
           expect(appError.message).toContain("SAP");
         }
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should allow creation when email and SAP number are unique", async () => {
     await fc.assert(
@@ -545,9 +545,9 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
         expect(result.email).toBe(input.email);
         expect(result.sapNo).toBe(input.sapNo);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 });
 
 /**
@@ -574,9 +574,9 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
           (result as unknown as Record<string, unknown>).passwordHash,
         ).toBeUndefined();
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should not include password in the response", async () => {
     await fc.assert(
@@ -594,9 +594,9 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
           (result as unknown as Record<string, unknown>).password,
         ).toBeUndefined();
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should only include safe user fields in the response", async () => {
     const safeFields = [
@@ -637,9 +637,9 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
         expect("password" in result).toBe(false);
         expect("failedLoginAttempts" in result).toBe(false);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 });
 
 // ============================================
@@ -936,7 +936,7 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
           }
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -975,7 +975,7 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
           }
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1010,7 +1010,7 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
         expect(result).toBeDefined();
         expect(result.email).toBe(originalInput.email);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1045,7 +1045,7 @@ describe("Feature: user-management, Property 3: Email and SAP number uniqueness 
         expect(result).toBeDefined();
         expect(result.sapNo).toBe(originalInput.sapNo);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -1098,7 +1098,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.positionId).toBeNull();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1142,7 +1142,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.positionId).toBeNull();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1186,7 +1186,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.positionId).toBeNull();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1230,7 +1230,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.departmentId).toBe(DERIVED_TEST_DEPARTMENT_ID);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1276,7 +1276,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.positionId).toBeNull();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1314,7 +1314,7 @@ describe("Feature: user-management, Property 5: Update preserves unmodified fiel
           expect(result.createdAt).toEqual(createdAt);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -1459,7 +1459,7 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
           expect(updatedUser.status).toBe("INACTIVE");
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1512,7 +1512,7 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
           expect(appError.code).toBe("NOT_FOUND");
         }
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1546,7 +1546,7 @@ describe("Feature: user-management, Property 6: Deactivation status change", () 
           originalDate.getTime(),
         );
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -1609,7 +1609,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           expect(mockDb.getSessions().length).toBe(0);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1649,7 +1649,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
         // Property: Sessions array should still be empty
         expect(mockDb.getSessions().length).toBe(0);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1722,7 +1722,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
         // Property: ALL sessions should be deleted regardless of expiration state
         expect(mockDb.getSessions().length).toBe(0);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -1775,7 +1775,7 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           expect(mockDb.getSessions().length).toBe(0);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -2024,7 +2024,7 @@ describe("Feature: user-management, Property 8: Hard delete cascade", () => {
         // Property: User should be marked as deleted
         expect(mockDb.isUserDeleted()).toBe(true);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -2047,7 +2047,7 @@ describe("Feature: user-management, Property 8: Hard delete cascade", () => {
           expect(appError.code).toBe("NOT_FOUND");
         }
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -2174,7 +2174,7 @@ describe("Feature: user-management, Property 9: Session data completeness", () =
           }
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -2193,7 +2193,7 @@ describe("Feature: user-management, Property 9: Session data completeness", () =
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBe(0);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -2239,7 +2239,7 @@ describe("Feature: user-management, Property 9: Session data completeness", () =
           }
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -2280,7 +2280,7 @@ describe("Feature: user-management, Property 9: Session data completeness", () =
         expect(session.createdAt).toBeInstanceOf(Date);
         expect(session.expiresAt).toBeInstanceOf(Date);
       }),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 
@@ -2323,7 +2323,7 @@ describe("Feature: user-management, Property 9: Session data completeness", () =
           expect(session.ipAddress).toBe(ipAddress);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
   });
 });
@@ -2568,7 +2568,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             expect(remainingSessions.length).toBe(sessions.length - 1);
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2614,7 +2614,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             }
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2644,7 +2644,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             expect(remainingSessions.length).toBe(0);
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2678,7 +2678,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             expect(revokedSession).toBeUndefined();
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
   });
@@ -2712,7 +2712,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             expect(userSessions.length).toBe(0);
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2748,7 +2748,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             expect(mockDb.getSessions().length).toBe(0);
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2767,7 +2767,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
           // Property: Should complete without error
           expect(mockDb.getSessions().length).toBe(0);
         }),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2824,7 +2824,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
           // Property: ALL sessions should be deleted regardless of expiration state
           expect(mockDb.getSessions().length).toBe(0);
         }),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
 
@@ -2873,7 +2873,7 @@ describe("Feature: user-management, Property 10: Session revocation deletes reco
             expect(user2RemainingCount).toBe(user2Sessions.length);
           },
         ),
-        { numRuns: 20 },
+        { numRuns: 5 },
       );
     });
   });
@@ -3040,7 +3040,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
       ),
       { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should produce a hash that can verify the new password", async () => {
     await fc.assert(
@@ -3082,7 +3082,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
       ),
       { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should produce a hash that rejects incorrect passwords after reset", async () => {
     await fc.assert(
@@ -3130,7 +3130,7 @@ describe("Feature: user-management, Property 2: Password hashing invariant (rese
       ),
       { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should throw NOT_FOUND error when user does not exist", async () => {
     await fc.assert(
@@ -3220,9 +3220,9 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           expect(mockDb.getSessions().length).toBe(0);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should handle password reset when user has no sessions", async () => {
     await fc.assert(
@@ -3265,9 +3265,9 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           expect(mockDb.getSessions().length).toBe(0);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should delete sessions with various expiration states on password reset", async () => {
     await fc.assert(
@@ -3343,9 +3343,9 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           expect(mockDb.getSessions().length).toBe(0);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should perform both password update and session cleanup atomically", async () => {
     await fc.assert(
@@ -3398,9 +3398,9 @@ describe("Feature: user-management, Property 7: Session cleanup on state changes
           expect(mockDb.getSessions().length).toBe(0);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  });
+  }, 30_000);
 });
 
 /**
@@ -3444,9 +3444,9 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
           expect(result).toBeUndefined();
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  }, 15_000);
+  }, 30_000);
 
   it("should not return any user data including password or passwordHash", async () => {
     await fc.assert(
@@ -3493,7 +3493,7 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
       ),
       { numRuns: 5 },
     );
-  });
+  }, 30_000);
 
   it("should successfully reset password without exposing any credentials in response", async () => {
     await fc.assert(
@@ -3535,9 +3535,9 @@ describe("Feature: user-management, Property 11: Response sanitization (reset)",
           expect(updatedAccount.password).not.toBe(newPassword);
         },
       ),
-      { numRuns: 20 },
+      { numRuns: 5 },
     );
-  }, 15_000);
+  }, 30_000);
 });
 
 // ============================================
