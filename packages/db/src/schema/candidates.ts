@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { manpowerRequest } from "./manpower-requests";
 
 export const candidates = pgTable("candidates", {
@@ -12,4 +13,13 @@ export const candidates = pgTable("candidates", {
   status: text("status").notNull().default("APPLIED"), // APPLIED, SELECTED, REJECTED
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  requestIdIdx: index("candidates_request_id_idx").on(table.requestId),
+}));
+
+export const candidatesRelations = relations(candidates, ({ one }) => ({
+  request: one(manpowerRequest, {
+    fields: [candidates.requestId],
+    references: [manpowerRequest.id],
+  }),
+}));

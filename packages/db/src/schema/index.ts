@@ -29,6 +29,7 @@ export { approvalLogRelations } from "./approval-logs";
 export { auditLogRelations } from "./audit-logs";
 export { userRelations } from "./auth";
 export { businessTripRelations, tripExpenseRelations } from "./business-trips";
+export { candidatesRelations } from "./candidates";
 export { contractRelations } from "./contracts";
 export {
   importHistoryItemRelations,
