@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   pgTable,
   text,
@@ -14,7 +15,7 @@ export const importHistory = pgTable("import_history", {
   type: text("type").notNull(), // 'users' | 'departments'
   userId: text("user_id")
     .notNull()
-    .references(() => user.id),
+    .references(() => user.id, { onDelete: "cascade" }),
   filename: text("filename"),
   totalRows: integer("total_rows").notNull(),
   insertedCount: integer("inserted_count").notNull().default(0),
@@ -23,7 +24,9 @@ export const importHistory = pgTable("import_history", {
   failedCount: integer("failed_count").notNull().default(0),
   upsertMode: boolean("upsert_mode").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  userIdIdx: index("import_history_user_id_idx").on(table.userId),
+}));
 
 export const importHistoryItem = pgTable("import_history_item", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -35,7 +38,9 @@ export const importHistoryItem = pgTable("import_history_item", {
   status: text("status").notNull(), // 'inserted' | 'updated' | 'skipped' | 'failed'
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  importHistoryIdIdx: index("import_history_item_history_id_idx").on(table.importHistoryId),
+}));
 
 // Relations
 export const importHistoryRelations = relations(
