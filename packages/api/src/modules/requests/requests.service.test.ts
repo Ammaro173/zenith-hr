@@ -34,7 +34,7 @@ describe("RequestsService", () => {
   } as unknown as WorkflowService;
 
   const mockNotificationsService = {
-    createNotification: mock(),
+    createNotification: mock(() => Promise.resolve()),
     getUserNotifications: mock(),
     markAsRead: mock(),
     getUnreadCount: mock(),

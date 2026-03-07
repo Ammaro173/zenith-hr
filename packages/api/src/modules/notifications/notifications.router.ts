@@ -11,6 +11,7 @@ export const notificationsRouter = {
       const items = await context.services.notifications.getUserNotifications(
         context.session.user.id,
         input.limit,
+        input.cursor,
       );
       const unreadCount = await context.services.notifications.getUnreadCount(
         context.session.user.id,
