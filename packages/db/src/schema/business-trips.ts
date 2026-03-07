@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   decimal,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -92,7 +93,10 @@ export const businessTrip = pgTable("business_trip", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  requesterIdIdx: index("business_trip_requester_id_idx").on(table.requesterId),
+  createdAtIdx: index("business_trip_created_at_idx").on(table.createdAt),
+}));
 
 export const tripExpense = pgTable("trip_expense", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -106,7 +110,9 @@ export const tripExpense = pgTable("trip_expense", {
   description: text("description"),
   receiptUrl: text("receipt_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  tripIdIdx: index("trip_expense_trip_id_idx").on(table.tripId),
+}));
 
 export const businessTripRelations = relations(
   businessTrip,

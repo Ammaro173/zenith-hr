@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   date,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -98,7 +99,9 @@ export const separationRequest = pgTable("separation_request", {
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  employeeIdIdx: index("separation_request_employee_id_idx").on(table.employeeId),
+}));
 
 // Membership table that maps users to exit-clearance lanes.
 export const userClearanceLane = pgTable("user_clearance_lane", {
@@ -154,7 +157,9 @@ export const separationChecklist = pgTable("separation_checklist", {
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  separationIdIdx: index("separation_checklist_separation_id_idx").on(table.separationId),
+}));
 
 export const separationDocument = pgTable("separation_document", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -171,7 +176,9 @@ export const separationDocument = pgTable("separation_document", {
     onDelete: "set null",
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  separationIdIdx: index("separation_document_separation_id_idx").on(table.separationId),
+}));
 
 export const separationReminderState = pgTable("separation_reminder_state", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
 import { manpowerRequest } from "./manpower-requests";
 
 export const requestVersion = pgTable("request_version", {
@@ -10,7 +10,9 @@ export const requestVersion = pgTable("request_version", {
   versionNumber: integer("version_number").notNull(),
   snapshotData: jsonb("snapshot_data").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  requestIdIdx: index("request_version_request_id_idx").on(table.requestId),
+}));
 
 export const requestVersionRelations = relations(requestVersion, ({ one }) => ({
   request: one(manpowerRequest, {

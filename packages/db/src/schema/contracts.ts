@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  index,
   jsonb,
   pgEnum,
   pgTable,
@@ -29,7 +30,9 @@ export const contract = pgTable("contract", {
   status: contractStatusEnum("status").notNull().default("DRAFT"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  requestIdIdx: index("contract_request_id_idx").on(table.requestId),
+}));
 
 export const contractRelations = relations(contract, ({ one }) => ({
   request: one(manpowerRequest, {

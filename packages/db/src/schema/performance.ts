@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   decimal,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -101,7 +102,10 @@ export const performanceReview = pgTable("performance_review", {
   acknowledgedAt: timestamp("acknowledged_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  cycleIdIdx: index("performance_review_cycle_id_idx").on(table.cycleId),
+  employeeIdIdx: index("performance_review_employee_id_idx").on(table.employeeId),
+}));
 
 /**
  * Performance Competency - Core competencies to rate in a review
@@ -123,7 +127,9 @@ export const performanceCompetency = pgTable("performance_competency", {
   ratedAt: timestamp("rated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  reviewIdIdx: index("performance_competency_review_id_idx").on(table.reviewId),
+}));
 
 /**
  * Performance Goal - Future goals set during a review
@@ -142,7 +148,9 @@ export const performanceGoal = pgTable("performance_goal", {
   status: performanceGoalStatusEnum("status").default("PENDING").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  reviewIdIdx: index("performance_goal_review_id_idx").on(table.reviewId),
+}));
 
 /**
  * Competency Template - Reusable competency definitions
