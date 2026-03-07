@@ -72,6 +72,15 @@ export const emailEnvSchema = {
 };
 
 /**
+ * Web Push / VAPID environment variables
+ */
+export const vapidEnvSchema = {
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_SUBJECT: z.string().url().default("mailto:support@zenith.hr"),
+};
+
+/**
  * Combined schema for all environment variables
  */
 export const allEnvSchema = {
@@ -82,6 +91,7 @@ export const allEnvSchema = {
   ...aiEnvSchema,
   ...cacheEnvSchema,
   ...emailEnvSchema,
+  ...vapidEnvSchema,
 };
 
 /**

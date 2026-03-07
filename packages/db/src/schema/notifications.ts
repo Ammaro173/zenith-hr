@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
   uuid,
+  index,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
@@ -32,7 +33,9 @@ export const notification = pgTable("notification", {
   link: text("link"),
   readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdCreatedAtIdx: index("notification_user_id_created_at_idx").on(table.userId, table.createdAt),
+}));
 
 export const notificationOutbox = pgTable("notification_outbox", {
   id: uuid("id").primaryKey().defaultRandom(),
