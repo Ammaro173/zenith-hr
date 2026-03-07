@@ -3,6 +3,7 @@ import {
   createPackageEnv,
   emailEnvSchema,
   serverEnvSchema,
+  vapidEnvSchema,
 } from "@zenith-hr/config/env";
 
 /**
@@ -12,6 +13,7 @@ import {
 export const env = createPackageEnv({
   ...awsEnvSchema,
   ...emailEnvSchema,
+  ...vapidEnvSchema,
   LOG_LEVEL: serverEnvSchema.LOG_LEVEL,
   NODE_ENV: serverEnvSchema.NODE_ENV,
 });
