@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { businessTrip } from "./business-trips";
 import { manpowerRequest } from "./manpower-requests";
@@ -29,7 +29,10 @@ export const approvalLog = pgTable("approval_log", {
   stepName: text("step_name").notNull(),
   performedAt: timestamp("performed_at").notNull().defaultNow(),
   ipAddress: text("ip_address"),
-});
+}, (table) => ({
+  requestIdIdx: index("approval_log_request_id_idx").on(table.requestId),
+  actorIdIdx: index("approval_log_actor_id_idx").on(table.actorId),
+}));
 
 export const approvalLogRelations = relations(approvalLog, ({ one }) => ({
   manpowerRequest: one(manpowerRequest, {

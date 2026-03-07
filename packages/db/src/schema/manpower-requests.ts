@@ -1,5 +1,6 @@
 import {
   decimal,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -103,6 +104,9 @@ export const manpowerRequest = pgTable("manpower_request", {
   version: integer("version").notNull().default(0), // For optimistic locking
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  requesterIdIdx: index("manpower_request_requester_id_idx").on(table.requesterId),
+  createdAtIdx: index("manpower_request_created_at_idx").on(table.createdAt),
+}));
 
 // Relations will be defined after all schemas are imported
