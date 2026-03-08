@@ -44,9 +44,11 @@ export function TripInboxDetailView({
 }: TripInboxDetailViewProps) {
   const queryClient = useQueryClient();
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [requestChangeDialogOpen, setRequestChangeDialogOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [approveComment, setApproveComment] = useState("");
   const [rejectComment, setRejectComment] = useState("");
+  const [requestChangeComment, setRequestChangeComment] = useState("");
 
   // Fetch approval history for this trip
   const { data: approvalHistory } = useQuery(
@@ -92,6 +94,11 @@ export function TripInboxDetailView({
     setRejectDialogOpen(true);
   }, []);
 
+  const openRequestChangeDialog = useCallback(() => {
+    setRequestChangeComment("");
+    setRequestChangeDialogOpen(true);
+  }, []);
+
   const confirmReject = useCallback(async () => {
     await transitionTrip({
       tripId: trip.id,
@@ -100,6 +107,15 @@ export function TripInboxDetailView({
     });
     setRejectDialogOpen(false);
   }, [trip.id, rejectComment, transitionTrip]);
+
+  const confirmRequestChange = useCallback(async () => {
+    await transitionTrip({
+      tripId: trip.id,
+      action: "REQUEST_CHANGE",
+      comment: requestChangeComment.trim() || undefined,
+    });
+    setRequestChangeDialogOpen(false);
+  }, [trip.id, requestChangeComment, transitionTrip]);
 
   const status = STATUS_VARIANTS[trip.status] || {
     variant: "secondary" as const,
@@ -126,6 +142,19 @@ export function TripInboxDetailView({
         open={rejectDialogOpen}
         requireComment={true}
         title="Reject trip"
+      />
+
+      <ApprovalActionDialog
+        comment={requestChangeComment}
+        confirmLabel="Request change"
+        description="Please provide the changes needed before this trip can be resubmitted."
+        isPending={isPending}
+        onCommentChange={setRequestChangeComment}
+        onConfirm={confirmRequestChange}
+        onOpenChange={setRequestChangeDialogOpen}
+        open={requestChangeDialogOpen}
+        requireComment={true}
+        title="Request trip changes"
       />
 
       {/* Approve Dialog - Optional comment */}
@@ -360,6 +389,14 @@ export function TripInboxDetailView({
         </section>
 
         <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t bg-background/80 p-4 backdrop-blur-sm">
+          <Button
+            disabled={isPending}
+            onClick={openRequestChangeDialog}
+            variant="outline"
+          >
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Request Changes
+          </Button>
           <Button
             disabled={isPending}
             onClick={openRejectDialog}
