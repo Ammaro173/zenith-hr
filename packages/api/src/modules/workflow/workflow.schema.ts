@@ -16,3 +16,8 @@ export const transitionSchema = z.object({
 export const requestIdSchema = z.object({
   id: z.string().uuid(),
 });
+
+export const requestNoteSchema = z.object({
+  requestId: z.string().uuid(),
+  comment: z.string().trim().min(1).max(2000),
+});

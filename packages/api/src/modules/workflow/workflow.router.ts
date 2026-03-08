@@ -1,6 +1,11 @@
 import { ORPCError } from "@orpc/server";
+import { AppError } from "../../shared/errors";
 import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
-import { requestIdSchema, transitionSchema } from "./workflow.schema";
+import {
+  requestIdSchema,
+  requestNoteSchema,
+  transitionSchema,
+} from "./workflow.schema";
 
 export const workflowRouter = o.router({
   transition: requireRoles([
@@ -36,16 +41,15 @@ export const workflowRouter = o.router({
           ...result,
         };
       } catch (error) {
-        if (error instanceof Error) {
-          if (error.message === "FORBIDDEN") {
-            throw new ORPCError("FORBIDDEN");
-          }
-          if (error.message === "Request not found") {
-            throw new ORPCError("NOT_FOUND");
-          }
-          throw new ORPCError("BAD_REQUEST");
+        if (error instanceof AppError) {
+          throw error.toORPCError();
         }
-        throw error;
+
+        if (error instanceof ORPCError) {
+          throw error;
+        }
+
+        throw new ORPCError("BAD_REQUEST");
       }
     }),
 
@@ -66,4 +70,38 @@ export const workflowRouter = o.router({
     .handler(async ({ input, context }) =>
       context.services.workflow.getRequestHistory(input.id),
     ),
+
+  addRequestNote: requireRoles([
+    "MANAGER",
+    "HOD",
+    "HOD_HR",
+    "HOD_FINANCE",
+    "HOD_IT",
+    "CEO",
+    "ADMIN",
+  ])
+    .input(requestNoteSchema)
+    .handler(async ({ input, context }) => {
+      try {
+        const note = await context.services.workflow.addRequestNote(
+          input.requestId,
+          context.session.user.id,
+          input.comment,
+        );
+
+        await context.cache.deletePattern("dashboard:stats:*");
+
+        return note;
+      } catch (error) {
+        if (error instanceof AppError) {
+          throw error.toORPCError();
+        }
+
+        if (error instanceof ORPCError) {
+          throw error;
+        }
+
+        throw new ORPCError("BAD_REQUEST");
+      }
+    }),
 });

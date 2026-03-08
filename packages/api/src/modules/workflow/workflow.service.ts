@@ -1336,6 +1336,86 @@ export const createWorkflowService = (
         .where(eq(approvalLog.requestId, id))
         .orderBy(approvalLog.performedAt);
     },
+
+    async addRequestNote(requestId: string, actorId: string, comment: string) {
+      const trimmedComment = comment.trim();
+
+      if (!trimmedComment) {
+        throw AppError.badRequest("Note cannot be empty");
+      }
+
+      return await db.transaction(async (tx) => {
+        const [request] = await tx
+          .select()
+          .from(manpowerRequest)
+          .where(eq(manpowerRequest.id, requestId))
+          .limit(1);
+
+        if (!request) {
+          throw AppError.notFound("Request not found");
+        }
+
+        const actorPosInfo = await getActorPositionInfo(tx, actorId);
+        if (!actorPosInfo) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Actor has no position assignment",
+            403,
+          );
+        }
+
+        const [actorRecord] = await tx
+          .select({ role: user.role })
+          .from(user)
+          .where(eq(user.id, actorId))
+          .limit(1);
+
+        if (!actorRecord) {
+          throw AppError.notFound("Actor not found");
+        }
+
+        const currentStatus = request.status as RequestStatus;
+        const canActOnRequest = await canActorTransition(
+          actorId,
+          request.currentApproverPositionId,
+          request.requiredApproverRole as PositionRole | null,
+          currentStatus,
+          "HOLD",
+          tx,
+        );
+
+        const isHrOrAdmin =
+          actorRecord.role === "ADMIN" ||
+          actorPosInfo.positionRole === "HOD_HR";
+
+        if (!(isHrOrAdmin || canActOnRequest)) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Only HR or the active approver can add notes",
+            403,
+          );
+        }
+
+        const [createdNote] = await tx
+          .insert(approvalLog)
+          .values({
+            requestId,
+            actorId,
+            actorPositionId: actorPosInfo.positionId,
+            action: "HOLD",
+            stepName: "Internal Note",
+            comment: trimmedComment,
+            performedAt: new Date(),
+          })
+          .returning();
+
+        await createAuditLog(tx, requestId, actorId, "NOTE", {
+          comment: trimmedComment,
+        });
+
+        return createdNote;
+      });
+    },
   };
 };
 
