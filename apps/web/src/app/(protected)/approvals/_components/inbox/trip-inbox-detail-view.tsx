@@ -10,6 +10,7 @@ import {
   Hotel,
   MapPin,
   MessageSquare,
+  RotateCcw,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -33,6 +34,8 @@ export type TripWithRequester = BusinessTrip & {
   } | null;
 };
 
+type DialogAction = "REJECT" | "REQUEST_CHANGE";
+
 interface TripInboxDetailViewProps {
   onActionComplete: () => void;
   trip: TripWithRequester;
@@ -43,12 +46,9 @@ export function TripInboxDetailView({
   onActionComplete,
 }: TripInboxDetailViewProps) {
   const queryClient = useQueryClient();
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [requestChangeDialogOpen, setRequestChangeDialogOpen] = useState(false);
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [approveComment, setApproveComment] = useState("");
-  const [rejectComment, setRejectComment] = useState("");
-  const [requestChangeComment, setRequestChangeComment] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<DialogAction | null>(null);
+  const [comment, setComment] = useState("");
 
   // Fetch approval history for this trip
   const { data: approvalHistory } = useQuery(
@@ -75,47 +75,28 @@ export function TripInboxDetailView({
     }),
   );
 
-  const openApproveDialog = useCallback(() => {
-    setApproveComment("");
-    setApproveDialogOpen(true);
+  const approve = useCallback(async () => {
+    await transitionTrip({ tripId: trip.id, action: "APPROVE" });
+  }, [trip.id, transitionTrip]);
+
+  const openDialog = useCallback((action: DialogAction) => {
+    setDialogAction(action);
+    setComment("");
+    setDialogOpen(true);
   }, []);
 
-  const confirmApprove = useCallback(async () => {
+  const confirmDialogAction = useCallback(async () => {
+    if (!dialogAction) {
+      return;
+    }
+
     await transitionTrip({
       tripId: trip.id,
-      action: "APPROVE",
-      comment: approveComment.trim() || undefined,
+      action: dialogAction,
+      comment: comment.trim() || undefined,
     });
-    setApproveDialogOpen(false);
-  }, [trip.id, approveComment, transitionTrip]);
-
-  const openRejectDialog = useCallback(() => {
-    setRejectComment("");
-    setRejectDialogOpen(true);
-  }, []);
-
-  const openRequestChangeDialog = useCallback(() => {
-    setRequestChangeComment("");
-    setRequestChangeDialogOpen(true);
-  }, []);
-
-  const confirmReject = useCallback(async () => {
-    await transitionTrip({
-      tripId: trip.id,
-      action: "REJECT",
-      comment: rejectComment.trim() || undefined,
-    });
-    setRejectDialogOpen(false);
-  }, [trip.id, rejectComment, transitionTrip]);
-
-  const confirmRequestChange = useCallback(async () => {
-    await transitionTrip({
-      tripId: trip.id,
-      action: "REQUEST_CHANGE",
-      comment: requestChangeComment.trim() || undefined,
-    });
-    setRequestChangeDialogOpen(false);
-  }, [trip.id, requestChangeComment, transitionTrip]);
+    setDialogOpen(false);
+  }, [comment, dialogAction, trip.id, transitionTrip]);
 
   const status = STATUS_VARIANTS[trip.status] || {
     variant: "secondary" as const,
@@ -127,63 +108,46 @@ export function TripInboxDetailView({
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
 
+  let dialogConfirmLabel = "Confirm";
+  let dialogTitle = "Update trip";
+
+  if (dialogAction === "REQUEST_CHANGE") {
+    dialogConfirmLabel = "Request change";
+    dialogTitle = "Request trip changes";
+  } else if (dialogAction === "REJECT") {
+    dialogConfirmLabel = "Reject";
+    dialogTitle = "Reject trip";
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Reject Dialog - Requires comment */}
       <ApprovalActionDialog
-        comment={rejectComment}
-        confirmLabel="Reject"
-        confirmVariant="destructive"
-        description="Please provide a reason for rejecting this trip request. This will be shared with the requester."
+        comment={comment}
+        confirmLabel={dialogConfirmLabel}
+        confirmVariant={dialogAction === "REJECT" ? "destructive" : "default"}
+        description="This will notify the requester and update the trip status."
         isPending={isPending}
-        onCommentChange={setRejectComment}
-        onConfirm={confirmReject}
-        onOpenChange={setRejectDialogOpen}
-        open={rejectDialogOpen}
-        requireComment={true}
-        title="Reject trip"
-      />
-
-      <ApprovalActionDialog
-        comment={requestChangeComment}
-        confirmLabel="Request change"
-        description="Please provide the changes needed before this trip can be resubmitted."
-        isPending={isPending}
-        onCommentChange={setRequestChangeComment}
-        onConfirm={confirmRequestChange}
-        onOpenChange={setRequestChangeDialogOpen}
-        open={requestChangeDialogOpen}
-        requireComment={true}
-        title="Request trip changes"
-      />
-
-      {/* Approve Dialog - Optional comment */}
-      <ApprovalActionDialog
-        comment={approveComment}
-        commentLabel="Approval Note"
-        commentPlaceholder="Add an optional note for the requester..."
-        confirmLabel="Approve"
-        description="Add an optional note before approving this trip request."
-        isPending={isPending}
-        onCommentChange={setApproveComment}
-        onConfirm={confirmApprove}
-        onOpenChange={setApproveDialogOpen}
-        open={approveDialogOpen}
-        requireComment={false}
-        title="Approve trip"
+        onCommentChange={setComment}
+        onConfirm={confirmDialogAction}
+        onOpenChange={setDialogOpen}
+        open={dialogOpen}
+        requireComment={
+          dialogAction === "REJECT" || dialogAction === "REQUEST_CHANGE"
+        }
+        title={dialogTitle}
       />
 
       {/* Header */}
-      <div className="shrink-0 border-b bg-card p-6">
+      <div className="shrink-0 border-b bg-card px-6 py-5">
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-3">
-              <h2 className="font-semibold text-xl tracking-tight">
+              <h2 className="truncate font-semibold text-xl tracking-tight">
                 {trip.city}, {trip.country}
               </h2>
               <Badge
                 appearance="light"
-                className="font-semibold shadow-none"
+                className="shrink-0 font-semibold shadow-none"
                 variant={status.variant}
               >
                 {status.label}
@@ -199,14 +163,14 @@ export function TripInboxDetailView({
           </Button>
         </div>
         {trip.requester ? (
-          <div className="mt-4 flex items-center gap-3">
-            <Avatar className="h-8 w-8 border">
+          <div className="mt-3 flex items-center gap-3">
+            <Avatar className="h-7 w-7 border">
               <AvatarImage src={trip.requester.image || ""} />
-              <AvatarFallback className="text-xs">
+              <AvatarFallback className="text-[10px]">
                 {trip.requester.name?.substring(0, 2).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="leading-tight">
               <p className="font-medium text-sm">{trip.requester.name}</p>
               <p className="text-muted-foreground text-xs">
                 {trip.requester.email}
@@ -216,8 +180,9 @@ export function TripInboxDetailView({
         ) : null}
       </div>
 
-      {/* Body */}
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
+      {/* Scrollable Body */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="space-y-5 p-6">
         <section className="space-y-3">
           <h3 className="flex items-center gap-2 font-medium text-sm">
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -388,25 +353,35 @@ export function TripInboxDetailView({
           </div>
         </section>
 
-        <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t bg-background/80 p-4 backdrop-blur-sm">
+          <p className="pb-2 text-center text-muted-foreground text-xs">
+            Submitted {format(new Date(trip.createdAt), "dd MMM yyyy 'at' HH:mm")}
+          </p>
+        </div>
+      </div>
+
+      {/* Fixed Action Footer */}
+      <div className="shrink-0 border-t bg-card px-6 py-3">
+        <div className="flex items-center justify-end gap-3">
           <Button
             disabled={isPending}
-            onClick={openRequestChangeDialog}
+            onClick={() => openDialog("REQUEST_CHANGE")}
+            size="sm"
             variant="outline"
           >
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Request Changes
+            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+            Request Change
           </Button>
           <Button
             disabled={isPending}
-            onClick={openRejectDialog}
+            onClick={() => openDialog("REJECT")}
+            size="sm"
             variant="destructive"
           >
-            <X className="mr-2 h-4 w-4" />
+            <X className="mr-2 h-3.5 w-3.5" />
             Reject
           </Button>
-          <Button disabled={isPending} onClick={openApproveDialog}>
-            <Check className="mr-2 h-4 w-4" />
+          <Button disabled={isPending} onClick={approve} size="sm">
+            <Check className="mr-2 h-3.5 w-3.5" />
             Approve
           </Button>
         </div>
