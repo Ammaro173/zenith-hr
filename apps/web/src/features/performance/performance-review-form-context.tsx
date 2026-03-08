@@ -1,11 +1,15 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { PerformanceReviewFormType } from "./types";
+import type {
+  PerformanceReviewFormType,
+  PerformanceReviewPermissions,
+} from "./types";
 
 interface PerformanceReviewFormContextValue {
   form: PerformanceReviewFormType;
   isEditing: boolean;
+  permissions: PerformanceReviewPermissions;
   reviewId?: string;
 }
 
@@ -16,18 +20,20 @@ interface PerformanceReviewFormProviderProps {
   children: React.ReactNode;
   form: PerformanceReviewFormType;
   isEditing?: boolean;
+  permissions: PerformanceReviewPermissions;
   reviewId?: string;
 }
 
 export function PerformanceReviewFormProvider({
   form,
+  permissions,
   reviewId,
   isEditing = false,
   children,
 }: PerformanceReviewFormProviderProps) {
   return (
     <PerformanceReviewFormContext.Provider
-      value={{ form, reviewId, isEditing }}
+      value={{ form, isEditing, permissions, reviewId }}
     >
       {children}
     </PerformanceReviewFormContext.Provider>
