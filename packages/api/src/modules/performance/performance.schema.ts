@@ -31,13 +31,18 @@ export type ReviewType = (typeof REVIEW_TYPES)[number]["value"];
  * Review status flow
  */
 export const REVIEW_STATUSES = [
-  { value: "DRAFT", label: "Draft", color: "gray" },
+  { value: "DUE", label: "Due", color: "red" },
+  { value: "SENT_TO_MANAGER", label: "Sent to Manager", color: "orange" },
   { value: "SELF_REVIEW", label: "Self Review", color: "blue" },
-  { value: "MANAGER_REVIEW", label: "Manager Review", color: "yellow" },
-  { value: "IN_REVIEW", label: "In Review", color: "orange" },
+  {
+    value: "AWAITING_MANAGER_REVIEW",
+    label: "Awaiting Manager Review",
+    color: "yellow",
+  },
   { value: "SUBMITTED", label: "Submitted", color: "purple" },
-  { value: "ACKNOWLEDGED", label: "Acknowledged", color: "green" },
+  { value: "HR_REVIEWED", label: "HR Reviewed", color: "blue" },
   { value: "COMPLETED", label: "Completed", color: "green" },
+  { value: "OVERDUE", label: "Overdue", color: "gray" },
 ] as const;
 
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number]["value"];
@@ -171,13 +176,14 @@ export const updateReviewSchema = z.object({
   reviewId: z.string().uuid(),
   status: z
     .enum([
-      "DRAFT",
+      "DUE",
+      "SENT_TO_MANAGER",
       "SELF_REVIEW",
-      "MANAGER_REVIEW",
-      "IN_REVIEW",
+      "AWAITING_MANAGER_REVIEW",
       "SUBMITTED",
-      "ACKNOWLEDGED",
+      "HR_REVIEWED",
       "COMPLETED",
+      "OVERDUE",
     ])
     .optional(),
   managerComment: z.string().optional(),
@@ -195,6 +201,32 @@ export const saveDraftSchema = z.object({
 
 export const submitReviewSchema = z.object({
   reviewId: z.string().uuid(),
+});
+
+export const transitionReviewSchema = z.object({
+  reviewId: z.string().uuid(),
+  status: z.enum([
+    "DUE",
+    "SENT_TO_MANAGER",
+    "SELF_REVIEW",
+    "AWAITING_MANAGER_REVIEW",
+    "SUBMITTED",
+    "HR_REVIEWED",
+    "COMPLETED",
+    "OVERDUE",
+  ]),
+  payload: z
+    .object({
+      probationConfirmationDecision: z
+        .enum([
+          "CONFIRM_EMPLOYMENT",
+          "EXTEND_PROBATION",
+          "RECOMMEND_TERMINATION",
+        ])
+        .optional(),
+      comment: z.string().optional(),
+    })
+    .optional(),
 });
 
 // --- Competency Schemas ---
@@ -293,13 +325,14 @@ export const getReviewsSchema = z.object({
   status: z
     .array(
       z.enum([
-        "DRAFT",
+        "DUE",
+        "SENT_TO_MANAGER",
         "SELF_REVIEW",
-        "MANAGER_REVIEW",
-        "IN_REVIEW",
+        "AWAITING_MANAGER_REVIEW",
         "SUBMITTED",
-        "ACKNOWLEDGED",
+        "HR_REVIEWED",
         "COMPLETED",
+        "OVERDUE",
       ]),
     )
     .optional(),
@@ -331,3 +364,5 @@ export type BatchUpdateCompetenciesInput = z.infer<
 
 export type CreateGoalInput = z.infer<typeof createGoalSchema>;
 export type UpdateGoalInput = z.infer<typeof updateGoalSchema>;
+
+export type TransitionReviewInput = z.infer<typeof transitionReviewSchema>;
