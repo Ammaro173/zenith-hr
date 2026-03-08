@@ -31,6 +31,7 @@ import type {
   createTripSchema,
   getMyTripsSchema,
   tripActionSchema,
+  updateTripSchema,
 } from "./business-trips.schema";
 
 type BusinessTripStatus = (typeof tripStatusEnum.enumValues)[number];
@@ -38,6 +39,7 @@ type BusinessTripStatus = (typeof tripStatusEnum.enumValues)[number];
 type CreateTripInput = z.infer<typeof createTripSchema>;
 type TripActionInput = z.infer<typeof tripActionSchema>;
 type AddExpenseInput = z.infer<typeof addExpenseSchema>;
+type UpdateTripInput = z.infer<typeof updateTripSchema>;
 
 import type { WorkflowService } from "../workflow/workflow.service";
 
@@ -300,6 +302,95 @@ export const createBusinessTripsService = (
       ...item.trip,
       requester: item.requester,
     }));
+  },
+
+  async update(
+    id: string,
+    data: UpdateTripInput,
+    version: number,
+    userId: string,
+  ) {
+    return await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(businessTrip)
+        .where(eq(businessTrip.id, id))
+        .limit(1);
+
+      if (!existing) {
+        throw AppError.notFound("Trip not found");
+      }
+
+      if (existing.version !== version) {
+        throw new AppError(
+          "CONFLICT",
+          "Version mismatch - please refresh",
+          409,
+        );
+      }
+
+      if (existing.requesterId !== userId) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Not authorized to edit this trip",
+          403,
+        );
+      }
+
+      if (
+        existing.status !== "DRAFT" &&
+        existing.status !== "CHANGE_REQUESTED"
+      ) {
+        throw AppError.forbidden(
+          "Only draft or change-requested trips can be edited",
+        );
+      }
+
+      const nextNeedsFlightBooking =
+        data.needsFlightBooking ?? existing.needsFlightBooking;
+      const nextPurposeType = data.purposeType ?? existing.purposeType;
+      const nextPurposeDetails = data.purposeDetails ?? existing.purposeDetails;
+      const nextStartDate = data.startDate ?? existing.startDate;
+      const nextEndDate = data.endDate ?? existing.endDate;
+      const nextDepartureCity = data.departureCity ?? existing.departureCity;
+      const nextArrivalCity = data.arrivalCity ?? existing.arrivalCity;
+
+      if (nextStartDate > nextEndDate) {
+        throw AppError.badRequest("End date must be after start date");
+      }
+
+      const hasFlightCities = Boolean(
+        nextDepartureCity?.trim() && nextArrivalCity?.trim(),
+      );
+
+      if (nextNeedsFlightBooking && !hasFlightCities) {
+        throw AppError.badRequest(
+          "Departure city and arrival city are required when flight booking is selected",
+        );
+      }
+
+      if (nextPurposeType === "OTHER" && !nextPurposeDetails?.trim()) {
+        throw AppError.badRequest(
+          "Please provide details when purpose is 'Other'",
+        );
+      }
+
+      const updateData = {
+        ...data,
+        estimatedCost: data.estimatedCost?.toString(),
+        perDiemAllowance: data.perDiemAllowance?.toString(),
+        version: existing.version + 1,
+        updatedAt: new Date(),
+      };
+
+      const [updated] = await tx
+        .update(businessTrip)
+        .set(updateData)
+        .where(eq(businessTrip.id, id))
+        .returning();
+
+      return updated;
+    });
   },
 
   async transition(input: TripActionInput, actorId: string) {

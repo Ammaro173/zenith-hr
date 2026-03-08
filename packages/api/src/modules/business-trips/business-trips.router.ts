@@ -1,11 +1,13 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { AppError } from "../../shared/errors";
 import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   addExpenseSchema,
   createTripSchema,
   getMyTripsSchema,
   tripActionSchema,
+  updateTripSchema,
 } from "./business-trips.schema";
 
 const create = requireRoles([
@@ -103,6 +105,47 @@ const transition = requireRoles([
     }
   });
 
+const update = protectedProcedure
+  .input(
+    z.object({
+      id: z.string().uuid(),
+      data: updateTripSchema,
+      version: z.number(),
+    }),
+  )
+  .handler(async ({ input, context }) => {
+    try {
+      const updated = await context.services.businessTrips.update(
+        input.id,
+        input.data,
+        input.version,
+        context.session.user.id,
+      );
+
+      if (!updated) {
+        throw new ORPCError("INTERNAL_SERVER_ERROR");
+      }
+
+      return updated;
+    } catch (error: unknown) {
+      if (error instanceof AppError) {
+        if (error.code === "CONFLICT") {
+          throw new ORPCError("CONFLICT", {
+            message: "Version mismatch. Please refresh and try again.",
+          });
+        }
+
+        throw error.toORPCError();
+      }
+
+      if (error instanceof ORPCError) {
+        throw error;
+      }
+
+      throw error;
+    }
+  });
+
 const addExpense = protectedProcedure
   .input(addExpenseSchema)
   .handler(
@@ -147,6 +190,7 @@ export const businessTripsRouter = o.router({
   getAllRelated,
   getPendingApprovals,
   transition,
+  update,
   addExpense,
   getExpenses,
   getApprovalHistory,

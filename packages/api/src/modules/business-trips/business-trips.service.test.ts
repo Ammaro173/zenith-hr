@@ -240,6 +240,106 @@ describe("BusinessTripsService", () => {
     );
   });
 
+  it("should update a change-requested trip for the requester", async () => {
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-edit-1",
+          status: "CHANGE_REQUESTED",
+          requesterId: "user-1",
+          version: 4,
+          startDate: new Date("2026-04-10T00:00:00Z"),
+          endDate: new Date("2026-04-12T00:00:00Z"),
+          needsFlightBooking: true,
+          departureCity: "Doha",
+          arrivalCity: "London",
+          purposeType: "CLIENT_MEETING",
+          purposeDetails: "Existing details",
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    mockDb.update.mockReturnValueOnce({
+      set: mock(() => ({
+        where: mock(() => ({
+          returning: mock(() =>
+            Promise.resolve([
+              {
+                id: "trip-edit-1",
+                status: "CHANGE_REQUESTED",
+                city: "Manchester",
+                version: 5,
+              },
+            ]),
+          ),
+        })),
+      })),
+    });
+
+    const result = await service.update(
+      "trip-edit-1",
+      {
+        city: "Manchester",
+        purposeDetails: "Updated details",
+      },
+      4,
+      "user-1",
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: "trip-edit-1",
+        city: "Manchester",
+        version: 5,
+      }),
+    );
+  });
+
+  it("should reject updates when the trip is not editable", async () => {
+    const tripLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          id: "trip-edit-2",
+          status: "PENDING_HR",
+          requesterId: "user-1",
+          version: 2,
+          startDate: new Date("2026-04-10T00:00:00Z"),
+          endDate: new Date("2026-04-12T00:00:00Z"),
+          needsFlightBooking: false,
+          departureCity: null,
+          arrivalCity: null,
+          purposeType: "CLIENT_MEETING",
+          purposeDetails: null,
+        },
+      ]),
+    );
+    const tripWhereMock = mock(() => ({
+      limit: tripLimitMock,
+      // biome-ignore lint/suspicious/noThenProperty: mock object
+      then: (resolve: any) => tripLimitMock().then(resolve),
+    }));
+    const tripFromMock = mock(() => ({ where: tripWhereMock }));
+    mockDb.select.mockReturnValueOnce({ from: tripFromMock });
+
+    await expect(
+      service.update(
+        "trip-edit-2",
+        {
+          city: "Paris",
+        },
+        2,
+        "user-1",
+      ),
+    ).rejects.toThrow("Only draft or change-requested trips can be edited");
+  });
+
   it("should transition a trip status via SUBMIT", async () => {
     const input = {
       tripId: "trip-123",
