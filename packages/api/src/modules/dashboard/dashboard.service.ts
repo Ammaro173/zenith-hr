@@ -6,8 +6,9 @@ import { contract } from "@zenith-hr/db/schema/contracts";
 import { manpowerRequest } from "@zenith-hr/db/schema/manpower-requests";
 import { performanceReview } from "@zenith-hr/db/schema/performance";
 import { separationRequest } from "@zenith-hr/db/schema/separations";
-import { and, count, eq, inArray, type SQL, sum } from "drizzle-orm";
+import { and, count, eq, inArray, or, type SQL, sum } from "drizzle-orm";
 import type { UserRole } from "../../shared/types";
+import { getActorPositionInfo, getActorRole } from "../../shared/utils";
 
 // --- Strategies ---
 // Open/Closed Principle: New roles can be added without modifying the base service logic significantly.
@@ -33,7 +34,6 @@ interface ActionFilterResult {
   link: string;
   title: string;
   type: "urgent" | "action" | "normal";
-  where: SQL;
 }
 
 type ActionFilterStrategy = (userId: string) => ActionFilterResult | null;
@@ -42,37 +42,31 @@ type ActionFilterStrategy = (userId: string) => ActionFilterResult | null;
 const ACTION_STRATEGIES = {
   EMPLOYEE: (_userId: string) => null,
   MANAGER: (_userId: string) => ({
-    where: eq(manpowerRequest.status, "PENDING_MANAGER"),
     title: "Manpower Requests",
     link: "/approvals",
     type: "urgent" as const,
   }),
   HOD: (_userId: string) => ({
-    where: eq(manpowerRequest.status, "PENDING_HOD"),
     title: "Department Approvals",
     link: "/approvals",
     type: "urgent" as const,
   }),
   HOD_HR: (_userId: string) => ({
-    where: eq(manpowerRequest.status, "PENDING_HR"),
     title: "Action Required",
     link: "/approvals",
     type: "urgent" as const,
   }),
   HOD_FINANCE: (_userId: string) => ({
-    where: eq(manpowerRequest.status, "PENDING_FINANCE"),
     title: "Budget Approvals",
     link: "/approvals",
     type: "urgent" as const,
   }),
   CEO: (_userId: string) => ({
-    where: eq(manpowerRequest.status, "PENDING_CEO"),
     title: "Final Approvals",
     link: "/approvals",
     type: "urgent" as const,
   }),
   HOD_IT: (_userId: string) => ({
-    where: eq(manpowerRequest.status, "PENDING_HOD"),
     title: "Department Approvals",
     link: "/approvals",
     type: "urgent" as const,
@@ -80,7 +74,138 @@ const ACTION_STRATEGIES = {
   ADMIN: (_userId: string) => null,
 } satisfies Record<UserRole, ActionFilterStrategy>;
 
+const PENDING_REQUEST_STATUSES = [
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+] as const;
+
+const PENDING_TRIP_STATUSES = [
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+] as const;
+
 export const createDashboardService = (db: DbOrTx) => {
+  const getActionableApprovalCounts = async (
+    userId: string,
+    role: UserRole,
+  ) => {
+    if (role === "EMPLOYEE") {
+      return { requestCount: 0, tripCount: 0, total: 0 };
+    }
+
+    if (role === "ADMIN") {
+      const [requestResult, tripResult] = await Promise.all([
+        db
+          .select({ count: count() })
+          .from(manpowerRequest)
+          .where(inArray(manpowerRequest.status, PENDING_REQUEST_STATUSES)),
+        db
+          .select({ count: count() })
+          .from(businessTrip)
+          .where(inArray(businessTrip.status, PENDING_TRIP_STATUSES)),
+      ]);
+
+      const requestCount = requestResult[0]?.count || 0;
+      const tripCount = tripResult[0]?.count || 0;
+
+      return {
+        requestCount,
+        tripCount,
+        total: requestCount + tripCount,
+      };
+    }
+
+    const actorPosInfo = await getActorPositionInfo(db, userId);
+    if (!actorPosInfo) {
+      return { requestCount: 0, tripCount: 0, total: 0 };
+    }
+
+    const actorRole = await getActorRole(db, userId);
+
+    const requestVisibilityConditions: SQL[] = [];
+    if (actorPosInfo.positionId) {
+      requestVisibilityConditions.push(
+        eq(manpowerRequest.currentApproverPositionId, actorPosInfo.positionId),
+      );
+    }
+
+    if (["HOD_HR", "HOD_FINANCE", "CEO"].includes(actorRole)) {
+      requestVisibilityConditions.push(
+        eq(manpowerRequest.requiredApproverRole, actorPosInfo.positionRole),
+      );
+
+      const requestStatusesByRole = {
+        HOD_HR: ["PENDING_HR"],
+        HOD_FINANCE: ["PENDING_FINANCE"],
+        CEO: ["PENDING_CEO"],
+      } as const;
+
+      const statusesForRole =
+        requestStatusesByRole[actorRole as keyof typeof requestStatusesByRole];
+
+      if (statusesForRole) {
+        requestVisibilityConditions.push(
+          inArray(manpowerRequest.status, statusesForRole),
+        );
+      }
+    }
+
+    const tripVisibilityConditions: SQL[] = [];
+    if (actorPosInfo.positionId) {
+      tripVisibilityConditions.push(
+        eq(businessTrip.currentApproverPositionId, actorPosInfo.positionId),
+      );
+    }
+
+    if (["HOD", "HOD_IT", "HOD_HR", "HOD_FINANCE", "CEO"].includes(actorRole)) {
+      tripVisibilityConditions.push(
+        eq(businessTrip.requiredApproverRole, actorPosInfo.positionRole),
+      );
+    }
+
+    const [requestResult, tripResult] = await Promise.all([
+      requestVisibilityConditions.length > 0
+        ? db
+            .select({ count: count() })
+            .from(manpowerRequest)
+            .where(
+              and(
+                inArray(manpowerRequest.status, PENDING_REQUEST_STATUSES),
+                or(...requestVisibilityConditions),
+              ),
+            )
+            .then(([result]) => result ?? { count: 0 })
+        : Promise.resolve({ count: 0 }),
+      tripVisibilityConditions.length > 0
+        ? db
+            .select({ count: count() })
+            .from(businessTrip)
+            .where(
+              and(
+                inArray(businessTrip.status, PENDING_TRIP_STATUSES),
+                or(...tripVisibilityConditions),
+              ),
+            )
+            .then(([result]) => result ?? { count: 0 })
+        : Promise.resolve({ count: 0 }),
+    ]);
+
+    const requestCount = requestResult?.count || 0;
+    const tripCount = tripResult?.count || 0;
+
+    return {
+      requestCount,
+      tripCount,
+      total: requestCount + tripCount,
+    };
+  };
+
   return {
     async getTotalRequests(userId: string, role: UserRole): Promise<number> {
       const strategy = REQUEST_FILTERS[role];
@@ -101,19 +226,11 @@ export const createDashboardService = (db: DbOrTx) => {
       if (role === "EMPLOYEE") {
         whereClause = eq(manpowerRequest.requesterId, userId);
       } else if (role === "HOD_IT") {
-        whereClause = eq(manpowerRequest.requesterId, userId);
-      } else if (role === "ADMIN") {
-        whereClause = inArray(manpowerRequest.status, [
-          "PENDING_MANAGER",
-          "PENDING_HOD",
-          "PENDING_HR",
-          "PENDING_FINANCE",
-          "PENDING_CEO",
-        ]);
+        const counts = await getActionableApprovalCounts(userId, role);
+        return counts.total;
       } else {
-        // MANAGER, HOD, HOD_HR, HOD_FINANCE, CEO — items waiting for this role
-        const config = ACTION_STRATEGIES[role](userId);
-        whereClause = config?.where;
+        const counts = await getActionableApprovalCounts(userId, role);
+        return counts.total;
       }
 
       const [result] = await db
@@ -226,8 +343,10 @@ export const createDashboardService = (db: DbOrTx) => {
           and(
             eq(businessTrip.requesterId, userId),
             inArray(businessTrip.status, [
+              "CHANGE_REQUESTED",
               "APPROVED",
               "PENDING_MANAGER",
+              "PENDING_HOD",
               "PENDING_HR",
               "PENDING_FINANCE",
               "PENDING_CEO",
@@ -314,23 +433,36 @@ export const createDashboardService = (db: DbOrTx) => {
         return [];
       }
 
-      const [pendingCount] = await db
-        .select({ count: count() })
-        .from(manpowerRequest)
-        .where(config.where);
+      const counts = await getActionableApprovalCounts(userId, role);
+      const actions: Array<{
+        title: string;
+        count: number;
+        type: "urgent" | "action" | "normal";
+        link: string;
+        description: string;
+      }> = [];
 
-      if ((pendingCount?.count ?? 0) > 0) {
-        return [
-          {
-            title: config.title,
-            count: pendingCount?.count ?? 0,
-            type: config.type,
-            link: config.link,
-          },
-        ];
+      if (counts.requestCount > 0) {
+        actions.push({
+          title: config.title,
+          count: counts.requestCount,
+          type: config.type,
+          link: config.link,
+          description: "Pending manpower approvals",
+        });
       }
 
-      return [];
+      if (counts.tripCount > 0) {
+        actions.push({
+          title: "Business Trips",
+          count: counts.tripCount,
+          type: counts.requestCount > 0 ? "action" : config.type,
+          link: config.link,
+          description: "Pending trip approvals",
+        });
+      }
+
+      return actions;
     },
 
     async getAverageTimeToHire() {
