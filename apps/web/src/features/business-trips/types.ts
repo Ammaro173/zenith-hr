@@ -2,3 +2,4 @@ import type { createTripSchema } from "@zenith-hr/api/modules/business-trips/bus
 import type { z } from "zod";
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
+export type FormValues = z.infer<typeof createTripSchema>;
