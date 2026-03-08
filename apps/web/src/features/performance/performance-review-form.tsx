@@ -1,13 +1,16 @@
 "use client";
 
-import { Loader2, Save } from "lucide-react";
+import { Eye, Loader2, Save } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   CompetencyRatingsSection,
   FutureGoalsSection,
   ManagerCommentsSection,
+  ProbationDecisionSection,
   ReviewLogisticsSection,
+  SelfReviewCommentsSection,
 } from "./form-sections";
 import { PerformanceReviewFormProvider } from "./performance-review-form-context";
 import { usePerformanceReviewForm } from "./use-performance-review-form";
@@ -30,6 +33,7 @@ export function PerformanceReviewForm({
     review,
     isLoading,
     isPending,
+    permissions,
     isSaving,
     handleCancel,
     handleSaveDraft,
@@ -55,6 +59,16 @@ export function PerformanceReviewForm({
     );
   }
 
+  const isReadOnly = ![
+    permissions.canEditCompetencies,
+    permissions.canEditManagerComment,
+    permissions.canEditProbationDecision,
+    permissions.canEditSelfComment,
+    permissions.canManageGoals,
+    permissions.canSaveDraft,
+    permissions.canSubmit,
+  ].some((value) => value);
+
   return (
     <div
       className={cn(
@@ -73,12 +87,32 @@ export function PerformanceReviewForm({
         <PerformanceReviewFormProvider
           form={form}
           isEditing={true}
+          permissions={permissions}
           reviewId={reviewId}
         >
           <div className="space-y-10">
+            {isReadOnly && (
+              <Alert>
+                <Eye className="size-4" />
+                <AlertTitle>Read-only review</AlertTitle>
+                <AlertDescription>
+                  You can view this review, but you cannot edit fields or take
+                  review actions in its current state.
+                </AlertDescription>
+              </Alert>
+            )}
             <ReviewLogisticsSection review={review} />
+            {review.reviewType === "PROBATION" &&
+              (permissions.canEditProbationDecision ||
+                review.probationConfirmationDecision ||
+                review.managerComment) && <ProbationDecisionSection />}
             <CompetencyRatingsSection competencies={review.competencies} />
-            <ManagerCommentsSection />
+            {(permissions.canEditSelfComment || review.selfComment) && (
+              <SelfReviewCommentsSection />
+            )}
+            {(permissions.canEditManagerComment || review.managerComment) && (
+              <ManagerCommentsSection />
+            )}
             <FutureGoalsSection goals={review.goals} reviewId={reviewId} />
           </div>
         </PerformanceReviewFormProvider>
@@ -105,40 +139,44 @@ export function PerformanceReviewForm({
 
           {/* Right side: Actions */}
           <div className="flex items-center gap-3">
-            <Button
-              disabled={isSaving}
-              onClick={handleSaveDraft}
-              type="button"
-              variant="outline"
-            >
-              {isSaving ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 size-4" />
-              )}
-              Save Draft
-            </Button>
+            {permissions.canSaveDraft && (
+              <Button
+                disabled={isSaving}
+                onClick={handleSaveDraft}
+                type="button"
+                variant="outline"
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 size-4" />
+                )}
+                Save Draft
+              </Button>
+            )}
             <Button onClick={handleCancel} type="button" variant="ghost">
               Cancel
             </Button>
-            <form.Subscribe
-              selector={(state) => ({
-                canSubmit: state.canSubmit,
-                isSubmitting: state.isSubmitting,
-              })}
-            >
-              {({ canSubmit, isSubmitting }) => (
-                <Button
-                  disabled={!canSubmit || isSubmitting || isPending}
-                  type="submit"
-                >
-                  {(isSubmitting || isPending) && (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  )}
-                  Submit Review
-                </Button>
-              )}
-            </form.Subscribe>
+            {permissions.canSubmit && (
+              <form.Subscribe
+                selector={(state) => ({
+                  canSubmit: state.canSubmit,
+                  isSubmitting: state.isSubmitting,
+                })}
+              >
+                {({ canSubmit, isSubmitting }) => (
+                  <Button
+                    disabled={!canSubmit || isSubmitting || isPending}
+                    type="submit"
+                  >
+                    {(isSubmitting || isPending) && (
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                    )}
+                    Submit Review
+                  </Button>
+                )}
+              </form.Subscribe>
+            )}
           </div>
         </div>
       </form>

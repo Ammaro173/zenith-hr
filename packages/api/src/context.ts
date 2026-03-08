@@ -18,7 +18,10 @@ import { createDashboardService } from "./modules/dashboard";
 import { createDepartmentsService } from "./modules/departments";
 import { createImportsService } from "./modules/imports";
 import { createNotificationsService } from "./modules/notifications";
-import { createPerformanceService } from "./modules/performance";
+import {
+  createPerformanceCronService,
+  createPerformanceService,
+} from "./modules/performance";
 import { createPositionsService } from "./modules/positions";
 import { createRequestsService } from "./modules/requests";
 import { createSeparationsService } from "./modules/separations";
@@ -63,6 +66,10 @@ export async function createContext({ context }: CreateContextOptions) {
     candidates: createCandidatesService(db, storage),
     businessTrips: createBusinessTripsService(db, workflow, notifications),
     performance: createPerformanceService(db),
+    performanceCron: createPerformanceCronService(
+      db,
+      createPerformanceService(db),
+    ),
     positions: createPositionsService(db),
     separations: createSeparationsService(db, storage),
     imports: createImportsService(db),

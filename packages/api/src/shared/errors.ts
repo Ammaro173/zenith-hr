@@ -19,6 +19,10 @@ export class AppError extends Error {
     return new AppError("UNAUTHORIZED", message, 401);
   }
 
+  static forbidden(message = "Forbidden") {
+    return new AppError("FORBIDDEN", message, 403);
+  }
+
   static badRequest(message: string) {
     return new AppError("BAD_REQUEST", message, 400);
   }

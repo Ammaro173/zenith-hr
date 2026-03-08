@@ -24,13 +24,14 @@ export const performanceCycleStatusEnum = pgEnum("performance_cycle_status", [
 ]);
 
 export const performanceReviewStatusEnum = pgEnum("performance_review_status", [
-  "DRAFT",
+  "DUE",
+  "SENT_TO_MANAGER",
   "SELF_REVIEW",
-  "MANAGER_REVIEW",
-  "IN_REVIEW",
+  "AWAITING_MANAGER_REVIEW",
   "SUBMITTED",
-  "ACKNOWLEDGED",
+  "HR_REVIEWED",
   "COMPLETED",
+  "OVERDUE",
 ]);
 
 export const performanceReviewTypeEnum = pgEnum("performance_review_type", [
@@ -86,16 +87,21 @@ export const performanceReview = pgTable(
     reviewType: performanceReviewTypeEnum("review_type")
       .default("ANNUAL_PERFORMANCE")
       .notNull(),
-    status: performanceReviewStatusEnum("status").default("DRAFT").notNull(),
+    status: performanceReviewStatusEnum("status").default("DUE").notNull(),
     // Review period (may differ from cycle dates for probation reviews)
     reviewPeriodStart: timestamp("review_period_start"),
     reviewPeriodEnd: timestamp("review_period_end"),
+    dueAt: timestamp("due_at"),
+
     // Ratings and Comments
     overallRating: decimal("overall_rating", { precision: 3, scale: 2 }), // 1.00 - 5.00 scale
     managerComment: text("manager_comment"),
     selfComment: text("self_comment"),
     // Additional feedback as JSON for flexibility
     feedback: jsonb("feedback"),
+    probationConfirmationDecision: text("probation_confirmation_decision"),
+    // Evaluates against this objective review
+    linkedObjectiveReviewId: uuid("linked_objective_review_id"),
     // Calculated fields
     totalScore: decimal("total_score", { precision: 5, scale: 2 }),
     completionPercentage: integer("completion_percentage").default(0),

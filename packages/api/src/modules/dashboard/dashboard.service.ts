@@ -263,9 +263,12 @@ export const createDashboardService = (db: DbOrTx) => {
           and(
             eq(performanceReview.employeeId, userId),
             inArray(performanceReview.status, [
+              "DUE",
               "SELF_REVIEW",
-              "MANAGER_REVIEW",
-              "IN_REVIEW",
+              "AWAITING_MANAGER_REVIEW",
+              "SUBMITTED",
+              "HR_REVIEWED",
+              "OVERDUE",
             ]),
           ),
         );
@@ -279,7 +282,10 @@ export const createDashboardService = (db: DbOrTx) => {
         .where(
           and(
             eq(performanceReview.reviewerId, managerId),
-            eq(performanceReview.status, "MANAGER_REVIEW"),
+            inArray(performanceReview.status, [
+              "SENT_TO_MANAGER",
+              "AWAITING_MANAGER_REVIEW",
+            ]),
           ),
         );
       return result?.count || 0;

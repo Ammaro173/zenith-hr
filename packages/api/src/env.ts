@@ -16,6 +16,7 @@ export const env = createPackageEnv({
   ...vapidEnvSchema,
   LOG_LEVEL: serverEnvSchema.LOG_LEVEL,
   NODE_ENV: serverEnvSchema.NODE_ENV,
+  PERFORMANCE_CRON_SECRET: serverEnvSchema.PERFORMANCE_CRON_SECRET,
 });
 
 export type ApiEnv = typeof env;

@@ -11,6 +11,19 @@ export type {
   UpdateReviewInput,
 } from "@zenith-hr/api/modules/performance/performance.schema";
 
+export interface PerformanceReviewPermissions {
+  canCreateCompetencies: boolean;
+  canDirectlyEditStatus: boolean;
+  canEditCompetencies: boolean;
+  canEditManagerComment: boolean;
+  canEditOverallRating: boolean;
+  canEditProbationDecision: boolean;
+  canEditSelfComment: boolean;
+  canManageGoals: boolean;
+  canSaveDraft: boolean;
+  canSubmit: boolean;
+}
+
 // Form values type for the performance review form
 export interface ReviewFormValues {
   competencyRatings: {
@@ -19,15 +32,20 @@ export interface ReviewFormValues {
     justification: string;
   }[];
   managerComment: string;
+  probationConfirmationDecision?:
+    | "CONFIRM_EMPLOYMENT"
+    | "EXTEND_PROBATION"
+    | "RECOMMEND_TERMINATION";
   selfComment: string;
   status:
-    | "DRAFT"
+    | "DUE"
+    | "SENT_TO_MANAGER"
     | "SELF_REVIEW"
-    | "MANAGER_REVIEW"
-    | "IN_REVIEW"
+    | "AWAITING_MANAGER_REVIEW"
     | "SUBMITTED"
-    | "ACKNOWLEDGED"
+    | "HR_REVIEWED"
     | "COMPLETED"
+    | "OVERDUE"
     | undefined;
 }
 
