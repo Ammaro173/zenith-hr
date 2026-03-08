@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePerformanceReviewFormContext } from "../performance-review-form-context";
 
 export function ManagerCommentsSection() {
-  const { form } = usePerformanceReviewFormContext();
+  const { form, permissions } = usePerformanceReviewFormContext();
 
   return (
     <section className="space-y-4">
@@ -27,12 +27,17 @@ export function ManagerCommentsSection() {
             </Label>
             <Textarea
               className="min-h-36"
+              disabled={!permissions.canEditManagerComment}
               id={field.name}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
               placeholder="Enter your overall assessment of the employee's performance..."
+              readOnly={!permissions.canEditManagerComment}
               value={field.state.value || ""}
             />
+            {!permissions.canEditManagerComment && field.state.value && (
+              <p className="text-muted-foreground text-xs">Read only</p>
+            )}
             <p className="text-muted-foreground text-xs">
               Use formatting: <strong>**bold**</strong> for emphasis,{" "}
               <em>*italic*</em> for notes

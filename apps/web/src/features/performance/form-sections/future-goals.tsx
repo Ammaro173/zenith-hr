@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { client } from "@/utils/orpc";
+import { usePerformanceReviewFormContext } from "../performance-review-form-context";
 
 interface Goal {
   description: string | null;
@@ -43,6 +44,7 @@ export function FutureGoalsSection({
   reviewId,
   goals,
 }: FutureGoalsSectionProps) {
+  const { permissions } = usePerformanceReviewFormContext();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
@@ -96,58 +98,60 @@ export function FutureGoalsSection({
         <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">
           Future Goals
         </h3>
-        <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline">
-              <Plus className="mr-2 size-4" />
-              Add Goal
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Future Goal</DialogTitle>
-              <DialogDescription>
-                Set a goal for the employee to work towards.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="goal-title">Goal Title *</Label>
-                <Input
-                  id="goal-title"
-                  onChange={(e) => setNewGoalTitle(e.target.value)}
-                  placeholder="e.g., Lead the automated testing migration"
-                  value={newGoalTitle}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="goal-description">Description</Label>
-                <Textarea
-                  id="goal-description"
-                  onChange={(e) => setNewGoalDescription(e.target.value)}
-                  placeholder="Description and success metrics..."
-                  value={newGoalDescription}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                onClick={() => setIsDialogOpen(false)}
-                type="button"
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={createGoalMutation.isPending}
-                onClick={handleAddGoal}
-                type="button"
-              >
+        {permissions.canManageGoals && (
+          <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Plus className="mr-2 size-4" />
                 Add Goal
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Future Goal</DialogTitle>
+                <DialogDescription>
+                  Set a goal for the employee to work towards.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="goal-title">Goal Title *</Label>
+                  <Input
+                    id="goal-title"
+                    onChange={(e) => setNewGoalTitle(e.target.value)}
+                    placeholder="e.g., Lead the automated testing migration"
+                    value={newGoalTitle}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="goal-description">Description</Label>
+                  <Textarea
+                    id="goal-description"
+                    onChange={(e) => setNewGoalDescription(e.target.value)}
+                    placeholder="Description and success metrics..."
+                    value={newGoalDescription}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => setIsDialogOpen(false)}
+                  type="button"
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={createGoalMutation.isPending}
+                  onClick={handleAddGoal}
+                  type="button"
+                >
+                  Add Goal
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {goals.length === 0 ? (
@@ -168,14 +172,16 @@ export function FutureGoalsSection({
                     </span>
                     <CardTitle className="text-base">{goal.title}</CardTitle>
                   </div>
-                  <Button
-                    disabled={deleteGoalMutation.isPending}
-                    onClick={() => deleteGoalMutation.mutate(goal.id)}
-                    size="icon"
-                    variant="ghost"
-                  >
-                    <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-                  </Button>
+                  {permissions.canManageGoals && (
+                    <Button
+                      disabled={deleteGoalMutation.isPending}
+                      onClick={() => deleteGoalMutation.mutate(goal.id)}
+                      size="icon"
+                      variant="ghost"
+                    >
+                      <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               {goal.description && (

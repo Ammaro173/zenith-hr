@@ -67,7 +67,7 @@ function CompetencyRatingCard({
   competency,
   index,
 }: CompetencyRatingCardProps) {
-  const { form } = usePerformanceReviewFormContext();
+  const { form, permissions } = usePerformanceReviewFormContext();
   const [localRating, setLocalRating] = useState<number | undefined>(
     competency.rating ?? undefined,
   );
@@ -146,6 +146,7 @@ function CompetencyRatingCard({
                     ? getRatingButtonActiveClass(rating.value)
                     : "hover:bg-muted",
                 )}
+                disabled={!permissions.canEditCompetencies}
                 key={rating.value}
                 onClick={() => handleRatingChange(rating.value)}
                 title={rating.label}
@@ -179,11 +180,17 @@ function CompetencyRatingCard({
             </Label>
             <Textarea
               className="min-h-20"
+              disabled={!permissions.canEditCompetencies}
               onChange={(e) => handleJustificationChange(e.target.value)}
               placeholder="Provide specific examples and areas for improvement..."
+              readOnly={!permissions.canEditCompetencies}
               value={localJustification}
             />
           </div>
+        )}
+
+        {!permissions.canEditCompetencies && (
+          <p className="text-muted-foreground text-xs">Read only</p>
         )}
       </CardContent>
     </Card>
