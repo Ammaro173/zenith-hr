@@ -550,12 +550,23 @@ export function RequestDetailClientPage({
                 </p>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
+                <Button
+                  asChild
+                  className="w-full"
+                  type="button"
+                  variant="outline"
+                >
+                  <Link href={`/requests/${request.id}/edit` as Route}>
+                    <Edit className="mr-2 size-4" />
+                    Edit Request
+                  </Link>
+                </Button>
                 <div className="space-y-2">
                   <Label className="font-bold text-xs uppercase tracking-wider">
                     COMMENTS (optional)
                   </Label>
                   <Textarea
-                    className="min-h-[80px] resize-none"
+                    className="min-h-20 resize-none"
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Add a note about your changes..."
                     value={comment}
