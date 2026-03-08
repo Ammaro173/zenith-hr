@@ -833,7 +833,7 @@ describe("BusinessTripsService", () => {
     const runE2ETransition = async (
       service: any,
       tripId: string,
-      action: "SUBMIT" | "APPROVE" | "REJECT",
+      action: "SUBMIT" | "APPROVE" | "REJECT" | "REQUEST_CHANGE",
       actorId: string,
       currentStatus: string,
       nextStatus: string,
@@ -1116,25 +1116,24 @@ describe("BusinessTripsService", () => {
       );
       expect(result.status).toBe("PENDING_HR");
 
-      // Step 3: RETURN TO REQUESTER / REJECT (PENDING_HR -> REJECTED)
-      // Note: Zenith HR uses REJECTED/CHANGE_REQUESTED synonymously via the transition hook
+      // Step 3: REQUEST_CHANGE (PENDING_HR -> CHANGE_REQUESTED)
       result = await runE2ETransition(
         service,
         "trip-e2e-4",
-        "REJECT",
+        "REQUEST_CHANGE",
         "hr-1",
         "PENDING_HR",
-        "REJECTED",
+        "CHANGE_REQUESTED",
       );
-      expect(result.status).toBe("REJECTED");
+      expect(result.status).toBe("CHANGE_REQUESTED");
 
-      // Step 4: RESUBMIT (REJECTED -> PENDING_MANAGER)
+      // Step 4: RESUBMIT (CHANGE_REQUESTED -> PENDING_MANAGER)
       result = await runE2ETransition(
         service,
         "trip-e2e-4",
         "SUBMIT",
         "user-3",
-        "REJECTED",
+        "CHANGE_REQUESTED",
         "PENDING_MANAGER",
       );
       expect(result.status).toBe("PENDING_MANAGER");

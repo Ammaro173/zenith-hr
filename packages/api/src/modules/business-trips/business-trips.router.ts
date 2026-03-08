@@ -32,11 +32,24 @@ const create = requireRoles([
 const getById = protectedProcedure
   .input(z.object({ id: z.string().uuid() }))
   .handler(async ({ input, context }) => {
-    const trip = await context.services.businessTrips.getById(input.id);
-    if (!trip) {
-      throw new ORPCError("NOT_FOUND");
+    try {
+      const trip = await context.services.businessTrips.getById(
+        input.id,
+        context.session.user.id,
+      );
+      if (!trip) {
+        throw new ORPCError("NOT_FOUND");
+      }
+      return trip;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error.toORPCError();
+      }
+      if (error instanceof ORPCError) {
+        throw error;
+      }
+      throw error;
     }
-    return trip;
   });
 
 const getMyTrips = protectedProcedure
