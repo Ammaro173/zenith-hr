@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { DbOrTx } from "@zenith-hr/db";
 import { user } from "@zenith-hr/db/schema/auth";
 import {
@@ -64,4 +65,8 @@ export async function getActor(
   }
   const role = await getActorRole(db, userId);
   return { ...result, role };
+}
+
+export function generateIdempotencyKey(seed: string): string {
+  return createHash("sha256").update(seed).digest("hex");
 }
