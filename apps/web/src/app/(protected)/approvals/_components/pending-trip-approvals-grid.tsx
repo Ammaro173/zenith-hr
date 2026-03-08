@@ -41,7 +41,7 @@ import { STATUS_OPTIONS, STATUS_VARIANTS } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { ApprovalActionDialog } from "./approval-action-dialog";
 
-type TripApprovalAction = "APPROVE" | "REJECT";
+type TripApprovalAction = "APPROVE" | "REJECT" | "REQUEST_CHANGE";
 
 type PendingTripItem = PendingTripApprovalsResult[number];
 
@@ -276,6 +276,12 @@ export function PendingTripApprovalsGrid() {
                   Approve
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => openDialog(trip.id, "REQUEST_CHANGE")}
+                >
+                  Request change…
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   className="cursor-pointer text-destructive focus:text-destructive"
                   onClick={() => openDialog(trip.id, "REJECT")}
                 >
@@ -352,11 +358,22 @@ export function PendingTripApprovalsGrid() {
     );
   }
 
+  let dialogConfirmLabel = "Confirm";
+  let dialogTitle = "Update trip";
+
+  if (dialogAction === "REQUEST_CHANGE") {
+    dialogConfirmLabel = "Request change";
+    dialogTitle = "Request trip changes";
+  } else if (dialogAction === "REJECT") {
+    dialogConfirmLabel = "Reject";
+    dialogTitle = "Reject trip";
+  }
+
   return (
     <>
       <ApprovalActionDialog
         comment={comment}
-        confirmLabel={dialogAction === "REJECT" ? "Reject" : "Confirm"}
+        confirmLabel={dialogConfirmLabel}
         confirmVariant={dialogAction === "REJECT" ? "destructive" : "default"}
         description="This will notify the requester and update the trip status."
         isPending={isTransitionPending}
@@ -364,8 +381,10 @@ export function PendingTripApprovalsGrid() {
         onConfirm={confirmDialogAction}
         onOpenChange={setDialogOpen}
         open={dialogOpen}
-        requireComment={false}
-        title={dialogAction === "REJECT" ? "Reject trip" : "Update trip"}
+        requireComment={
+          dialogAction === "REJECT" || dialogAction === "REQUEST_CHANGE"
+        }
+        title={dialogTitle}
       />
 
       <DataGrid
