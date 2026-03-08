@@ -53,6 +53,7 @@ export const user = pgTable("user", {
   passwordHash: text("password_hash"),
   signatureUrl: text("signature_url"),
   failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+  joiningDate: timestamp("joining_date"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
 });
