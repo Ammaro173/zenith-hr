@@ -1,6 +1,13 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
+import { env } from "../../env";
+import {
+  o,
+  protectedProcedure,
+  publicProcedure,
+  requireRoles,
+} from "../../shared/middleware";
+import { getActorRole } from "../../shared/utils";
 import {
   batchUpdateCompetenciesSchema,
   createCompetencySchema,
@@ -12,6 +19,7 @@ import {
   getReviewsSchema,
   saveDraftSchema,
   submitReviewSchema,
+  transitionReviewSchema,
   updateCompetencySchema,
   updateCycleSchema,
   updateGoalSchema,
@@ -90,6 +98,7 @@ export const performanceRouter = o.router({
     .handler(async ({ input, context }) => {
       const review = await context.services.performance.getReview(
         input.reviewId,
+        context.session.user.id,
       );
       if (!review) {
         throw new ORPCError("NOT_FOUND", { message: "Review not found" });
@@ -103,7 +112,10 @@ export const performanceRouter = o.router({
   getReviews: protectedProcedure
     .input(getReviewsSchema)
     .handler(async ({ input, context }) => {
-      return await context.services.performance.getReviews(input);
+      return await context.services.performance.getReviews(
+        input,
+        context.session.user.id,
+      );
     }),
 
   /**
@@ -118,10 +130,13 @@ export const performanceRouter = o.router({
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-      return await context.services.performance.getReviews({
-        ...input,
-        employeeId: userId,
-      });
+      return await context.services.performance.getReviews(
+        {
+          ...input,
+          employeeId: userId,
+        },
+        userId,
+      );
     }),
 
   /**
@@ -136,12 +151,47 @@ export const performanceRouter = o.router({
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-      return await context.services.performance.getReviews({
-        ...input,
-        reviewerId: userId,
-        status: ["DRAFT", "SELF_REVIEW", "MANAGER_REVIEW", "IN_REVIEW"],
-      });
+      return await context.services.performance.getReviews(
+        {
+          ...input,
+          reviewerId: userId,
+          status: [
+            "DUE",
+            "SENT_TO_MANAGER",
+            "SELF_REVIEW",
+            "AWAITING_MANAGER_REVIEW",
+          ],
+        },
+        userId,
+      );
     }),
+
+  // ==========================================================================
+  // Operational Dashboard Endpoints
+  // ==========================================================================
+
+  /**
+   * Get Manager Dashboard summaries
+   */
+  getManagerDashboard: requireRoles(["MANAGER", "HOD_HR", "ADMIN"]).handler(
+    async ({ context }) => {
+      const userId = context.session.user.id;
+      return await context.services.performance.getManagerDashboard(userId);
+    },
+  ),
+
+  /**
+   * Get HR Dashboard summaries
+   */
+  getHrDashboard: requireRoles(["HOD_HR", "ADMIN"]).handler(
+    async ({ context }) => {
+      return await context.services.performance.getHrDashboard();
+    },
+  ),
+
+  // ==========================================================================
+  // Review Execution Endpoints
+  // ==========================================================================
 
   /**
    * Update a review
@@ -150,7 +200,10 @@ export const performanceRouter = o.router({
     .input(updateReviewSchema)
     .handler(async ({ input, context }) => {
       try {
-        return await context.services.performance.updateReview(input);
+        return await context.services.performance.updateReview(
+          input,
+          context.session.user.id,
+        );
       } catch (error: unknown) {
         if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND", { message: "Review not found" });
@@ -165,7 +218,10 @@ export const performanceRouter = o.router({
   saveDraft: protectedProcedure
     .input(saveDraftSchema)
     .handler(async ({ input, context }) => {
-      return await context.services.performance.saveDraft(input);
+      return await context.services.performance.saveDraft(
+        input,
+        context.session.user.id,
+      );
     }),
 
   /**
@@ -202,6 +258,20 @@ export const performanceRouter = o.router({
       }
     }),
 
+  /**
+   * State machine driven transition mechanism
+   */
+  transitionReview: protectedProcedure
+    .input(transitionReviewSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.performance.transitionReviewStatus(
+        input.reviewId,
+        input.status,
+        context.session.user.id,
+        input.payload,
+      );
+    }),
+
   // ==========================================================================
   // Competency Endpoints
   // ==========================================================================
@@ -212,7 +282,10 @@ export const performanceRouter = o.router({
   createCompetency: requireRoles(["HOD_HR", "ADMIN"])
     .input(createCompetencySchema)
     .handler(async ({ input, context }) => {
-      return await context.services.performance.createCompetency(input);
+      return await context.services.performance.createCompetency(
+        input,
+        context.session.user.id,
+      );
     }),
 
   /**
@@ -249,6 +322,61 @@ export const performanceRouter = o.router({
     }),
 
   // ==========================================================================
+  // Cron Automation
+  // ==========================================================================
+
+  /**
+   * Run the daily cron job automation for performance reviews
+   */
+  processCron: publicProcedure
+    .route({
+      path: "/cron/process",
+      method: "POST",
+      summary: "Process Daily Performance Rules",
+      description:
+        "Triggers the daily performance state machine. (Can also be hit securely by external scheduler)",
+    })
+    .input(
+      z.object({
+        secret: z.string().optional(),
+      }),
+    )
+    .handler(async ({ input, context }) => {
+      const authorizationHeader = context.request.headers.get("authorization");
+      const bearerSecret = authorizationHeader?.startsWith("Bearer ")
+        ? authorizationHeader.slice(7)
+        : authorizationHeader;
+      const headerSecret = context.request.headers.get("x-cron-secret");
+      const providedSecret = input.secret ?? headerSecret ?? bearerSecret;
+
+      if (
+        env.PERFORMANCE_CRON_SECRET &&
+        providedSecret === env.PERFORMANCE_CRON_SECRET
+      ) {
+        return await context.services.performanceCron.runDailyChecks();
+      }
+
+      if (!context.session?.user) {
+        throw new ORPCError("UNAUTHORIZED", {
+          message: "Cron processing requires a valid session or cron secret",
+        });
+      }
+
+      if (context.session.user.role === "ADMIN") {
+        return await context.services.performanceCron.runDailyChecks();
+      }
+
+      const actorRole = await getActorRole(context.db, context.session.user.id);
+      if (actorRole !== "HOD_HR") {
+        throw new ORPCError("FORBIDDEN", {
+          message: "Only Admin or Head of HR can process the performance cron",
+        });
+      }
+
+      return await context.services.performanceCron.runDailyChecks();
+    }),
+
+  // ==========================================================================
   // Goal Endpoints
   // ==========================================================================
 
@@ -258,7 +386,10 @@ export const performanceRouter = o.router({
   createGoal: protectedProcedure
     .input(createGoalSchema)
     .handler(async ({ input, context }) => {
-      return await context.services.performance.createGoal(input);
+      return await context.services.performance.createGoal(
+        input,
+        context.session.user.id,
+      );
     }),
 
   /**
@@ -268,7 +399,10 @@ export const performanceRouter = o.router({
     .input(updateGoalSchema)
     .handler(async ({ input, context }) => {
       try {
-        return await context.services.performance.updateGoal(input);
+        return await context.services.performance.updateGoal(
+          input,
+          context.session.user.id,
+        );
       } catch (error: unknown) {
         if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND", { message: "Goal not found" });
@@ -284,7 +418,10 @@ export const performanceRouter = o.router({
     .input(deleteGoalSchema)
     .handler(async ({ input, context }) => {
       try {
-        return await context.services.performance.deleteGoal(input.goalId);
+        return await context.services.performance.deleteGoal(
+          input.goalId,
+          context.session.user.id,
+        );
       } catch (error: unknown) {
         if (error instanceof Error && error.message === "NOT_FOUND") {
           throw new ORPCError("NOT_FOUND", { message: "Goal not found" });
@@ -299,7 +436,10 @@ export const performanceRouter = o.router({
   getGoals: protectedProcedure
     .input(z.object({ reviewId: z.string().uuid() }))
     .handler(async ({ input, context }) => {
-      return await context.services.performance.getGoals(input.reviewId);
+      return await context.services.performance.getGoals(
+        input.reviewId,
+        context.session.user.id,
+      );
     }),
 
   // ==========================================================================
