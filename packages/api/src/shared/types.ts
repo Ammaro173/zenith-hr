@@ -24,6 +24,7 @@ export type TripStatus =
   | "PENDING_HR"
   | "PENDING_FINANCE"
   | "PENDING_CEO"
+  | "CHANGE_REQUESTED"
   | "APPROVED"
   | "REJECTED"
   | "COMPLETED"

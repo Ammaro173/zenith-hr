@@ -1,4 +1,12 @@
 import type { GetMyTripsInput } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
+import type { TripStatus as ApiTripStatus } from "@zenith-hr/api/shared/types";
+
+export type TripFilterStatus = GetMyTripsInput["status"] extends
+  | (infer T)[]
+  | undefined
+  ? T
+  : never;
+export type TripStatus = ApiTripStatus;
 
 export interface BusinessTrip {
   arrivalCity: string | null;
@@ -23,21 +31,15 @@ export interface BusinessTrip {
   requiredApproverRole: string | null;
   revisionVersion: number;
   startDate: string | Date;
-  status: string;
+  status: TripStatus;
   travelClass: string | null;
   updatedAt: string | Date;
   version: number;
   visaRequired: boolean;
 }
 
-export type TripStatus = GetMyTripsInput["status"] extends
-  | (infer T)[]
-  | undefined
-  ? T
-  : never;
-
 export const STATUS_VARIANTS: Record<
-  string,
+  TripStatus,
   {
     variant:
       | "default"
@@ -56,18 +58,31 @@ export const STATUS_VARIANTS: Record<
   PENDING_HR: { variant: "warning", label: "Pending HR" },
   PENDING_FINANCE: { variant: "warning", label: "Pending Finance" },
   PENDING_CEO: { variant: "warning", label: "Pending CEO" },
+  CHANGE_REQUESTED: { variant: "warning", label: "Change Requested" },
   APPROVED: { variant: "success", label: "Approved" },
   REJECTED: { variant: "destructive", label: "Rejected" },
   COMPLETED: { variant: "secondary", label: "Completed" },
   CANCELLED: { variant: "secondary", label: "Cancelled" },
 };
 
-export const STATUS_OPTIONS = Object.entries(STATUS_VARIANTS).map(
-  ([key, value]) => ({
-    label: value.label,
-    value: key,
-  }),
-);
+const FILTERABLE_STATUSES: TripFilterStatus[] = [
+  "DRAFT",
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+  "CHANGE_REQUESTED",
+  "APPROVED",
+  "REJECTED",
+  "COMPLETED",
+  "CANCELLED",
+];
+
+export const STATUS_OPTIONS = FILTERABLE_STATUSES.map((status) => ({
+  label: STATUS_VARIANTS[status].label,
+  value: status,
+}));
 
 /** Human-readable labels for approval history step names (raw status → display) */
 export const TRIP_STEP_LABELS: Record<string, string> = {
@@ -77,6 +92,7 @@ export const TRIP_STEP_LABELS: Record<string, string> = {
   PENDING_HR: "HR Review",
   PENDING_FINANCE: "Finance Review",
   PENDING_CEO: "CEO Review",
+  CHANGE_REQUESTED: "Change Requested",
   APPROVED: "Approved",
   REJECTED: "Rejected",
   COMPLETED: "Completed",

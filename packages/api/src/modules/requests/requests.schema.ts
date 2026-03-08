@@ -41,6 +41,21 @@ export const EMPLOYMENT_TYPES = [
   { value: "TEMPORARY", label: "Temporary" },
 ] as const;
 
+export const REQUEST_STATUSES = [
+  "DRAFT",
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+  "CHANGE_REQUESTED",
+  "APPROVED_OPEN",
+  "HIRING_IN_PROGRESS",
+  "REJECTED",
+  "ARCHIVED",
+  "COMPLETED",
+] as const;
+
 // Base schema without refinements (needed for .partial() in Zod v4)
 const baseRequestSchema = z.object({
   requestType: z.enum(["NEW_POSITION", "REPLACEMENT"]),
@@ -104,22 +119,7 @@ export const getMyRequestsSchema = z.object({
   page: z.number().min(1).default(1),
   pageSize: z.number().min(1).max(100).default(10),
   search: z.string().optional(),
-  status: z
-    .array(
-      z.enum([
-        "DRAFT",
-        "PENDING_MANAGER",
-        "PENDING_HR",
-        "PENDING_FINANCE",
-        "PENDING_CEO",
-        "APPROVED_OPEN",
-        "HIRING_IN_PROGRESS",
-        "REJECTED",
-        "ARCHIVED",
-        "COMPLETED",
-      ]),
-    )
-    .optional(),
+  status: z.array(z.enum(REQUEST_STATUSES)).optional(),
   requestType: z.array(z.enum(["NEW_POSITION", "REPLACEMENT"])).optional(),
   sortBy: z
     .enum([

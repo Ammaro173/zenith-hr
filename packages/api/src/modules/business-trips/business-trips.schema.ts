@@ -30,6 +30,20 @@ export const TRAVEL_CLASS_OPTIONS = [
   { value: "FIRST", label: "First" },
 ] as const;
 
+export const TRIP_STATUSES = [
+  "DRAFT",
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+  "CHANGE_REQUESTED",
+  "APPROVED",
+  "REJECTED",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+
 // Base schema without refinements (needed for .partial() in Zod v4)
 const baseTripSchema = z.object({
   // Destination (split into country + city)
@@ -132,7 +146,7 @@ export const createTripDefaults: z.input<typeof baseTripSchema> = {
 
 export const tripActionSchema = z.object({
   tripId: z.string().uuid(),
-  action: z.enum(["SUBMIT", "APPROVE", "REJECT", "CANCEL"]),
+  action: z.enum(["SUBMIT", "APPROVE", "REJECT", "REQUEST_CHANGE", "CANCEL"]),
   comment: z.string().optional(),
 });
 
@@ -150,21 +164,7 @@ export const getMyTripsSchema = z.object({
   page: z.number().min(1).default(1),
   pageSize: z.number().min(1).max(100).default(10),
   search: z.string().optional(),
-  status: z
-    .array(
-      z.enum([
-        "DRAFT",
-        "PENDING_MANAGER",
-        "PENDING_HR",
-        "PENDING_FINANCE",
-        "PENDING_CEO",
-        "APPROVED",
-        "REJECTED",
-        "COMPLETED",
-        "CANCELLED",
-      ]),
-    )
-    .optional(),
+  status: z.array(z.enum(TRIP_STATUSES)).optional(),
   sortBy: z
     .enum(["createdAt", "country", "status", "startDate", "estimatedCost"])
     .default("createdAt"),
