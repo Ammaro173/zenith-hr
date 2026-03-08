@@ -6,11 +6,14 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  Edit,
   History,
   Loader2,
   MapPin,
+  MessageSquare,
   User,
 } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -22,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { STATUS_VARIANTS } from "@/types/requests";
 import { client, orpc } from "@/utils/orpc";
 
 interface RequestDetailClientPageProps {
@@ -36,6 +40,7 @@ export function RequestDetailClientPage({
   const params = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
+  const [note, setNote] = useState("");
 
   const { data: request, isLoading: isRequestLoading } = useQuery(
     orpc.requests.getById.queryOptions({ input: { id: params.id } }),
@@ -44,6 +49,22 @@ export function RequestDetailClientPage({
   const { data: history } = useQuery(
     orpc.workflow.getRequestHistory.queryOptions({ input: { id: params.id } }),
   );
+
+  const addNoteMutation = useMutation({
+    mutationFn: () =>
+      client.workflow.addRequestNote({
+        requestId: params.id,
+        comment: note,
+      }),
+    onSuccess: async () => {
+      toast.success("Note added");
+      setNote("");
+      await queryClient.invalidateQueries();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to add note");
+    },
+  });
 
   const transitionMutation = useMutation({
     mutationFn: (
@@ -104,6 +125,9 @@ export function RequestDetailClientPage({
     request.status === "HIRING_IN_PROGRESS" &&
     (currentUserRole === "HOD_HR" || currentUserRole === "ADMIN");
 
+  const canAddNotes =
+    currentUserRole === "HOD_HR" || currentUserRole === "ADMIN" || isApprover;
+
   const positionDetails = request.positionDetails as {
     title?: string;
     department?: string;
@@ -113,8 +137,17 @@ export function RequestDetailClientPage({
   };
   const budgetDetails = request.budgetDetails as {
     currency: string;
+    notes?: string;
   };
   const position = request.position;
+  const notes =
+    history?.filter(
+      (log) => log.stepName === "Internal Note" && log.comment?.trim(),
+    ) ?? [];
+  const status = STATUS_VARIANTS[request.status] || {
+    variant: "secondary" as const,
+    label: request.status,
+  };
 
   const getApproverNameForStep = (stepName: string): string | undefined => {
     return history
@@ -147,7 +180,7 @@ export function RequestDetailClientPage({
                 request.status.startsWith("PENDING") && "bg-orange-500",
               )}
             >
-              {request.status.replace(/_/g, " ")}
+              {status.label}
             </Badge>
           </div>
           <h1 className="font-bold text-3xl tracking-tight">
@@ -210,7 +243,13 @@ export function RequestDetailClientPage({
               />
               <DetailItem
                 label="EMPLOYMENT TYPE"
-                value={request.contractDuration.replace("_", " ")}
+                value={
+                  request.employmentType?.replace(/_/g, " ") || "Not specified"
+                }
+              />
+              <DetailItem
+                label="CONTRACT DURATION"
+                value={request.contractDuration.replace(/_/g, " ")}
               />
               <DetailItem
                 label="ASSIGNED ROLE"
@@ -290,6 +329,17 @@ export function RequestDetailClientPage({
                   {request.justificationText}
                 </p>
               </div>
+
+              {budgetDetails.notes ? (
+                <div className="space-y-2 md:col-span-2">
+                  <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                    BUDGET NOTES
+                  </span>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {budgetDetails.notes}
+                  </p>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -311,6 +361,81 @@ export function RequestDetailClientPage({
                   {budgetDetails.currency}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/30 pb-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="size-4 text-muted-foreground" />
+                <CardTitle className="font-bold text-base">Notes</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              {notes.length ? (
+                <div className="space-y-4">
+                  {notes.map((log) => (
+                    <div
+                      className="rounded-lg border bg-muted/30 p-4"
+                      key={log.id}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold text-sm">
+                          {log.actor?.name || "Unknown"}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {format(
+                            new Date(log.performedAt),
+                            "MMM d, yyyy h:mm a",
+                          )}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed">
+                        {log.comment}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm italic">
+                  No internal notes yet.
+                </p>
+              )}
+
+              {canAddNotes ? (
+                <div className="space-y-3 rounded-lg border border-dashed p-4">
+                  <div className="space-y-1">
+                    <Label className="font-bold text-xs uppercase tracking-wider">
+                      Add Internal Note
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      Notes are visible on the request timeline with your name
+                      and timestamp.
+                    </p>
+                  </div>
+                  <Textarea
+                    className="min-h-25 resize-none"
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Add context, reminders, or internal review comments..."
+                    value={note}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      disabled={
+                        addNoteMutation.isPending || note.trim().length === 0
+                      }
+                      onClick={() => addNoteMutation.mutate()}
+                      type="button"
+                      variant="outline"
+                    >
+                      {addNoteMutation.isPending ? (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      ) : null}
+                      Save Note
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -371,7 +496,7 @@ export function RequestDetailClientPage({
                     COMMENTS
                   </Label>
                   <Textarea
-                    className="min-h-[100px] resize-none"
+                    className="min-h-25 resize-none"
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Add a note..."
                     value={comment}
@@ -467,7 +592,7 @@ export function RequestDetailClientPage({
                     COMMENTS
                   </Label>
                   <Textarea
-                    className="min-h-[80px] resize-none"
+                    className="min-h-20 resize-none"
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Add a closing note..."
                     value={comment}
