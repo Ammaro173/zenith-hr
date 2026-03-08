@@ -1235,27 +1235,40 @@ export const createWorkflowService = (
         newStatus: nextStep.nextStatus,
         requestCode: request.requestCode,
         requesterId: request.requesterId,
+        transitionComment: comment,
       };
     });
 
     // Send notifications outside the transaction so a notification failure
     // does not roll back the state change.
     try {
+      const [requester] = await db
+        .select({ email: user.email })
+        .from(user)
+        .where(eq(user.id, result.requesterId))
+        .limit(1);
+
+      const commentSuffix = result.transitionComment?.trim()
+        ? ` Reason: ${result.transitionComment.trim()}`
+        : "";
+
       if (result.newStatus === "REJECTED") {
         await notificationsService.createNotification(
           result.requesterId,
           "Manpower Request Rejected",
-          `Your manpower request ${result.requestCode} has been rejected. Please check the comments for details.`,
+          `Your manpower request ${result.requestCode} has been rejected.${commentSuffix}`,
           "INFO",
           `/requests/${requestId}`,
+          requester?.email,
         );
       } else if (result.newStatus === "CHANGE_REQUESTED") {
         await notificationsService.createNotification(
           result.requesterId,
           "Changes Requested",
-          `Your manpower request ${result.requestCode} requires changes. Please review the comments and resubmit.`,
+          `Your manpower request ${result.requestCode} requires changes. Please review the comments, update the request, and resubmit.${commentSuffix}`,
           "ACTION_REQUIRED",
           `/requests/${requestId}`,
+          requester?.email,
         );
       }
     } catch (notifyError) {
