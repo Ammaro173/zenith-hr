@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   CalendarIcon,
   Check,
+  Edit,
   Loader2,
   MapPin,
   MessageSquare,
@@ -19,6 +20,7 @@ import {
   Plus,
   User,
 } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -94,6 +96,8 @@ const PENDING_TRIP_STATUSES = [
   "PENDING_CEO",
 ] as const;
 
+const EDITABLE_TRIP_STATUSES = ["DRAFT", "CHANGE_REQUESTED"] as const;
+
 interface BusinessTripDetailClientPageProps {
   currentUserId?: string;
   currentUserRole?: string;
@@ -133,6 +137,8 @@ export function BusinessTripDetailClientPage({
     switch (action) {
       case "REJECT":
         return "destructive";
+      case "REQUEST_CHANGE":
+        return "secondary";
       case "APPROVE":
         return "default";
       default:
@@ -149,6 +155,15 @@ export function BusinessTripDetailClientPage({
             queryKey: orpc.businessTrips.getById.key({
               input: { id: params.id },
             }),
+          });
+          queryClient.invalidateQueries({
+            queryKey: orpc.businessTrips.getMyTrips.key(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: orpc.businessTrips.getAllRelated.key(),
+          });
+          queryClient.invalidateQueries({
+            queryKey: orpc.dashboard.getActionsRequired.key(),
           });
         },
         onError: (error) => {
@@ -214,7 +229,24 @@ export function BusinessTripDetailClientPage({
   // const isApprover =
   //   isPending && !isRequester && (matchByPosition || matchByRole);
   const canSubmit =
-    trip.status === "DRAFT" && trip.requesterId === currentUserId;
+    (trip.status === "DRAFT" || trip.status === "CHANGE_REQUESTED") &&
+    trip.requesterId === currentUserId;
+  const canResubmit =
+    trip.status === "CHANGE_REQUESTED" && trip.requesterId === currentUserId;
+  const canEdit =
+    trip.requesterId === currentUserId &&
+    EDITABLE_TRIP_STATUSES.includes(
+      trip.status as (typeof EDITABLE_TRIP_STATUSES)[number],
+    );
+  const approvalHistoryCommentLabel = (action: string) => {
+    if (action === "REJECT") {
+      return "Rejection Reason:";
+    }
+    if (action === "REQUEST_CHANGE") {
+      return "Change Request:";
+    }
+    return "Note:";
+  };
 
   const hasExpenses = (expenses?.length ?? 0) > 0;
 
@@ -235,13 +267,21 @@ export function BusinessTripDetailClientPage({
           </p>
         </div>
         <div className="ml-auto flex gap-2">
+          {canEdit && (
+            <Button asChild type="button" variant="outline">
+              <Link href={`/business-trips/${trip.id}/edit` as Route}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Trip
+              </Link>
+            </Button>
+          )}
           {canSubmit && (
             <Button
               onClick={() =>
                 transitionTrip({ tripId: trip.id, action: "SUBMIT" })
               }
             >
-              Submit for Approval
+              {canResubmit ? "Resubmit for Approval" : "Submit for Approval"}
             </Button>
           )}
         </div>
@@ -261,12 +301,12 @@ export function BusinessTripDetailClientPage({
           <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
               <Label className="font-bold text-xs uppercase tracking-wider">
-                COMMENTS (required for rejection)
+                COMMENTS (required for rejection or change request)
               </Label>
               <Textarea
                 className="min-h-25 resize-none"
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a note (required when rejecting)..."
+                placeholder="Add a note (required when rejecting or requesting changes)..."
                 value={comment}
               />
             </div>
@@ -287,24 +327,92 @@ export function BusinessTripDetailClientPage({
                 ) : null}
                 Approve
               </Button>
-              <Button
-                className="w-full text-destructive hover:bg-destructive/5"
-                disabled={isTransitionPending || !comment.trim()}
-                onClick={() =>
-                  transitionTrip({
-                    tripId: trip.id,
-                    action: "REJECT",
-                    comment: comment.trim(),
-                  }).then(() => setComment(""))
-                }
-                variant="outline"
-              >
-                {isTransitionPending ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : null}
-                Reject
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  className="w-full"
+                  disabled={isTransitionPending || !comment.trim()}
+                  onClick={() =>
+                    transitionTrip({
+                      tripId: trip.id,
+                      action: "REQUEST_CHANGE",
+                      comment: comment.trim(),
+                    }).then(() => setComment(""))
+                  }
+                  variant="outline"
+                >
+                  {isTransitionPending ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : null}
+                  Request Changes
+                </Button>
+                <Button
+                  className="w-full text-destructive hover:bg-destructive/5"
+                  disabled={isTransitionPending || !comment.trim()}
+                  onClick={() =>
+                    transitionTrip({
+                      tripId: trip.id,
+                      action: "REJECT",
+                      comment: comment.trim(),
+                    }).then(() => setComment(""))
+                  }
+                  variant="outline"
+                >
+                  {isTransitionPending ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : null}
+                  Reject
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {canResubmit && (
+        <Card className="border-amber-200 shadow-amber-500/5 shadow-lg">
+          <CardHeader className="bg-amber-50 pb-4">
+            <CardTitle className="font-bold text-base">
+              Changes Requested
+            </CardTitle>
+            <p className="text-muted-foreground text-xs">
+              Review the approval history comments, then resubmit this trip when
+              ready.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <Button asChild className="w-full" type="button" variant="outline">
+              <Link href={`/business-trips/${trip.id}/edit` as Route}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Trip
+              </Link>
+            </Button>
+            <div className="space-y-2">
+              <Label className="font-bold text-xs uppercase tracking-wider">
+                COMMENTS (optional)
+              </Label>
+              <Textarea
+                className="min-h-20 resize-none"
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Add a note about the updates you made..."
+                value={comment}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={isTransitionPending}
+              onClick={() =>
+                transitionTrip({
+                  tripId: trip.id,
+                  action: "SUBMIT",
+                  comment: comment.trim() || undefined,
+                }).then(() => setComment(""))
+              }
+            >
+              {isTransitionPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : null}
+              Resubmit Trip
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -513,9 +621,7 @@ export function BusinessTripDetailClientPage({
                   {log.comment && (
                     <div className="mt-2 rounded bg-background p-2 text-sm">
                       <p className="mb-1 text-muted-foreground text-xs">
-                        {log.action === "REJECT"
-                          ? "Rejection Reason:"
-                          : "Note:"}
+                        {approvalHistoryCommentLabel(log.action)}
                       </p>
                       <p>{log.comment}</p>
                     </div>
