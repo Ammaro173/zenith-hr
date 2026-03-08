@@ -1,4 +1,12 @@
 import type { GetMyRequestsInput } from "@zenith-hr/api/modules/requests/requests.schema";
+import type { RequestStatus as ApiRequestStatus } from "@zenith-hr/api/shared/types";
+
+export type RequestFilterStatus = GetMyRequestsInput["status"] extends
+  | (infer T)[]
+  | undefined
+  ? T
+  : never;
+export type RequestStatus = ApiRequestStatus;
 
 export interface ManpowerRequest {
   budgetDetails: unknown;
@@ -50,14 +58,8 @@ export interface ManpowerRequest {
   requiredApproverRole: string | null;
   salaryRangeMax?: string | number;
   salaryRangeMin?: string | number;
-  status: string;
+  status: RequestStatus;
 }
-
-export type RequestStatus = GetMyRequestsInput["status"] extends
-  | (infer T)[]
-  | undefined
-  ? T
-  : never;
 export type RequestType = GetMyRequestsInput["requestType"] extends
   | (infer T)[]
   | undefined
@@ -65,7 +67,7 @@ export type RequestType = GetMyRequestsInput["requestType"] extends
   : never;
 
 export const STATUS_VARIANTS: Record<
-  string,
+  RequestStatus,
   {
     variant:
       | "success"
@@ -78,22 +80,40 @@ export const STATUS_VARIANTS: Record<
   }
 > = {
   DRAFT: { variant: "secondary", label: "Draft" },
+  PENDING_MANAGER: { variant: "warning", label: "Pending Manager" },
+  PENDING_HOD: { variant: "warning", label: "Pending Head of Department" },
   PENDING_HR: { variant: "warning", label: "Pending HR" },
   PENDING_FINANCE: { variant: "warning", label: "Pending Finance" },
   PENDING_CEO: { variant: "warning", label: "Pending CEO" },
+  CHANGE_REQUESTED: { variant: "warning", label: "Change Requested" },
   APPROVED_OPEN: { variant: "success", label: "Approved" },
+  APPROVED: { variant: "success", label: "Approved" },
   REJECTED: { variant: "destructive", label: "Rejected" },
   HIRING_IN_PROGRESS: { variant: "info", label: "Hiring" },
   COMPLETED: { variant: "success", label: "Completed" },
+  CANCELLED: { variant: "secondary", label: "Cancelled" },
   ARCHIVED: { variant: "secondary", label: "Archived" },
 };
 
-export const STATUS_OPTIONS = Object.entries(STATUS_VARIANTS).map(
-  ([key, value]) => ({
-    label: value.label,
-    value: key,
-  }),
-);
+const FILTERABLE_STATUSES: RequestFilterStatus[] = [
+  "DRAFT",
+  "PENDING_MANAGER",
+  "PENDING_HOD",
+  "PENDING_HR",
+  "PENDING_FINANCE",
+  "PENDING_CEO",
+  "CHANGE_REQUESTED",
+  "APPROVED_OPEN",
+  "HIRING_IN_PROGRESS",
+  "REJECTED",
+  "ARCHIVED",
+  "COMPLETED",
+];
+
+export const STATUS_OPTIONS = FILTERABLE_STATUSES.map((status) => ({
+  label: STATUS_VARIANTS[status].label,
+  value: status,
+}));
 
 export const TYPE_OPTIONS = [
   { label: "New Position", value: "NEW_POSITION" },

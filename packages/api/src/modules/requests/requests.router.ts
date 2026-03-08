@@ -1,5 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
+import { AppError } from "../../shared/errors";
 import { o, protectedProcedure, requireRoles } from "../../shared/middleware";
 import {
   createRequestSchema,
@@ -93,6 +94,20 @@ const update = protectedProcedure
       await context.cache.deletePattern("dashboard:stats:*");
       return updated;
     } catch (error: unknown) {
+      if (error instanceof AppError) {
+        if (error.code === "CONFLICT") {
+          throw new ORPCError("CONFLICT", {
+            message: "Version mismatch. Please refresh and try again.",
+          });
+        }
+
+        throw error.toORPCError();
+      }
+
+      if (error instanceof ORPCError) {
+        throw error;
+      }
+
       const message = getErrorMessage(error);
       if (message === "NOT_FOUND") {
         throw new ORPCError("NOT_FOUND");

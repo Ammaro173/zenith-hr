@@ -2,21 +2,46 @@ import { describe, expect, it, mock } from "bun:test";
 import { createDashboardService } from "./dashboard.service";
 
 describe("DashboardService RBAC", () => {
-  // A mock query builder that is both Thenable (for direct await) and has query methods
-  const mockQueryBuilder = {
-    where: mock(() => Promise.resolve([{ count: 10 }])),
-    leftJoin: mock(() => ({
-      where: mock(() => Promise.resolve([{ count: 10 }])),
-    })),
-    // biome-ignore lint/suspicious/noThenProperty: Mocking a Thenable
-    then: (onfulfilled: any) =>
-      Promise.resolve([{ count: 10 }]).then(onfulfilled),
+  const getMockRows = (selection?: Record<string, unknown>) => {
+    if (selection && "positionId" in selection) {
+      return [
+        {
+          positionId: "pos-1",
+          positionRole: "MANAGER",
+          departmentId: "dep-1",
+          reportsToPositionId: null,
+        },
+      ];
+    }
+
+    if (selection && "role" in selection) {
+      return [{ role: "MANAGER" }];
+    }
+
+    return [{ count: 10 }];
+  };
+
+  const createQueryBuilder = (selection?: Record<string, unknown>) => {
+    const rows = getMockRows(selection);
+
+    const queryBuilder: any = {
+      from: mock(() => queryBuilder),
+      innerJoin: mock(() => queryBuilder),
+      leftJoin: mock(() => queryBuilder),
+      where: mock(() => queryBuilder),
+      limit: mock(() => queryBuilder),
+      orderBy: mock(() => queryBuilder),
+      // biome-ignore lint/suspicious/noThenProperty: Mocking a Thenable
+      then: (onfulfilled: any) => Promise.resolve(rows).then(onfulfilled),
+    };
+
+    return queryBuilder;
   };
 
   const mockDb = {
-    select: mock(() => ({
-      from: mock(() => mockQueryBuilder),
-    })),
+    select: mock((selection?: Record<string, unknown>) =>
+      createQueryBuilder(selection),
+    ),
   } as any;
 
   const service = createDashboardService(mockDb);

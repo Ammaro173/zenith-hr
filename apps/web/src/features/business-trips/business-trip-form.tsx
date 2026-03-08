@@ -38,6 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 // import { orpc } from "@/utils/orpc";
 import { BusinessTripFormProvider } from "./business-trip-form-context";
+import type { FormValues } from "./types";
 import { useBusinessTripForm } from "./use-business-trip-form";
 
 // function formatRole(role: string): string {
@@ -48,19 +49,33 @@ import { useBusinessTripForm } from "./use-business-trip-form";
 // }
 
 interface BusinessTripFormProps {
+  initialValues?: Partial<FormValues>;
   mode?: "page" | "sheet";
   onCancel?: () => void;
   onSuccess?: () => void;
+  requestId?: string;
+  submitLabel?: string;
+  successMessage?: string;
+  version?: number;
 }
 
 export function BusinessTripForm({
+  initialValues,
   mode = "page",
   onSuccess,
   onCancel,
+  requestId,
+  submitLabel,
+  successMessage,
+  version,
 }: BusinessTripFormProps) {
-  const { form, isPending, handleCancel } = useBusinessTripForm({
+  const { form, isEditing, isPending, handleCancel } = useBusinessTripForm({
+    initialValues,
     onSuccess,
     onCancel,
+    requestId,
+    successMessage,
+    version,
   });
 
   // const { data: session } = authClient.useSession();
@@ -659,7 +674,7 @@ export function BusinessTripForm({
                 {(isSubmitting || isPending) && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
-                Submit Request
+                {submitLabel ?? (isEditing ? "Save Changes" : "Submit Request")}
               </Button>
             )}
           </form.Subscribe>

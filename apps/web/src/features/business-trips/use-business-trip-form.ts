@@ -7,41 +7,81 @@ import {
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { client } from "@/utils/orpc";
-import type { CreateTripInput } from "./types";
+import type { CreateTripInput, FormValues } from "./types";
 
 interface UseBusinessTripFormProps {
+  initialValues?: Partial<FormValues>;
   onCancel?: () => void;
   onSuccess?: () => void;
+  requestId?: string;
+  successMessage?: string;
+  version?: number;
 }
 
+const mergeInitialValues = (
+  initialValues?: Partial<FormValues>,
+): FormValues => ({
+  ...createTripDefaults,
+  ...initialValues,
+});
+
 export function useBusinessTripForm({
+  initialValues,
   onSuccess,
   onCancel,
+  requestId,
+  successMessage,
+  version,
 }: UseBusinessTripFormProps = {}) {
   const queryClient = useQueryClient();
-  const createMutation = useMutation({
-    mutationFn: (data: CreateTripInput) => client.businessTrips.create(data),
+  const isEditing = Boolean(requestId);
+  const mutation = useMutation({
+    mutationFn: async (data: CreateTripInput) => {
+      if (isEditing) {
+        if (!(requestId && typeof version === "number")) {
+          throw new Error("Missing trip version for update");
+        }
+
+        return await client.businessTrips.update({
+          id: requestId,
+          data,
+          version,
+        });
+      }
+
+      return await client.businessTrips.create(data);
+    },
     onSuccess: async () => {
-      toast.success("Business trip request submitted successfully");
+      toast.success(
+        successMessage ??
+          (isEditing
+            ? "Business trip updated successfully"
+            : "Business trip request submitted successfully"),
+      );
       await queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to submit request");
+      toast.error(
+        error.message ||
+          (isEditing ? "Failed to update trip" : "Failed to submit request"),
+      );
     },
   });
 
   // We explicitly recreate `new Date()` here to avoid stale default dates.
   // Because `createTripDefaults.startDate` is initialized exactly once when the schema file loads,
   // forms left open across midnight would default to yesterday's date, tripping past-date validation.
-  const defaultValues = useMemo(
-    () => ({
-      ...createTripDefaults,
-      startDate: new Date(),
-      endDate: new Date(),
-    }),
-    [],
-  );
+  const defaultValues = useMemo((): FormValues => {
+    const now = new Date();
+    const mergedValues = mergeInitialValues(initialValues);
+
+    return {
+      ...mergedValues,
+      startDate: initialValues?.startDate ?? now,
+      endDate: initialValues?.endDate ?? now,
+    };
+  }, [initialValues]);
 
   const form = useForm({
     defaultValues,
@@ -49,7 +89,7 @@ export function useBusinessTripForm({
       onChange: createTripSchema,
     },
     onSubmit: async ({ value }) => {
-      await createMutation.mutateAsync(value);
+      await mutation.mutateAsync(value);
     },
   });
 
@@ -60,9 +100,10 @@ export function useBusinessTripForm({
 
   return {
     form,
-    createMutation,
+    mutation,
     handleCancel,
-    isPending: createMutation.isPending,
+    isEditing,
+    isPending: mutation.isPending,
   };
 }
 

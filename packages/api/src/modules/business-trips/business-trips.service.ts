@@ -31,6 +31,7 @@ import type {
   createTripSchema,
   getMyTripsSchema,
   tripActionSchema,
+  updateTripSchema,
 } from "./business-trips.schema";
 
 type BusinessTripStatus = (typeof tripStatusEnum.enumValues)[number];
@@ -38,6 +39,7 @@ type BusinessTripStatus = (typeof tripStatusEnum.enumValues)[number];
 type CreateTripInput = z.infer<typeof createTripSchema>;
 type TripActionInput = z.infer<typeof tripActionSchema>;
 type AddExpenseInput = z.infer<typeof addExpenseSchema>;
+type UpdateTripInput = z.infer<typeof updateTripSchema>;
 
 import type { WorkflowService } from "../workflow/workflow.service";
 
@@ -102,7 +104,45 @@ export const createBusinessTripsService = (
     return trip;
   },
 
-  async getById(id: string) {
+  async getById(id: string, actorId: string) {
+    const actorRole = await getActorRole(db, actorId);
+    const actorPosInfo = await getActorPositionInfo(db, actorId);
+
+    const visibilityConditions: SQL[] = [
+      eq(businessTrip.requesterId, actorId),
+      sql`${businessTrip.id} IN (SELECT request_id FROM approval_log WHERE actor_id = ${actorId})`,
+    ];
+
+    if (actorRole !== "ADMIN" && actorPosInfo?.positionId) {
+      const descendantsResult = await db.execute(sql`
+        WITH RECURSIVE descendants AS (
+          SELECT id AS position_id FROM job_position WHERE id = ${actorPosInfo.positionId}
+          UNION ALL
+          SELECT jp.id FROM job_position jp INNER JOIN descendants d ON jp.reports_to_position_id = d.position_id
+        )
+        SELECT position_id FROM descendants
+      `);
+      const descendantIds = descendantsResult.rows.map(
+        (row) => row.position_id as string,
+      );
+
+      if (descendantIds.length > 0) {
+        visibilityConditions.push(
+          inArray(businessTrip.requesterPositionId, descendantIds),
+          inArray(businessTrip.currentApproverPositionId, descendantIds),
+        );
+      }
+
+      if (actorPosInfo.positionRole) {
+        visibilityConditions.push(
+          eq(
+            businessTrip.requiredApproverRole,
+            actorPosInfo.positionRole as PositionRole,
+          ),
+        );
+      }
+    }
+
     const [trip] = await db
       .select({
         id: businessTrip.id,
@@ -146,7 +186,12 @@ export const createBusinessTripsService = (
       .from(businessTrip)
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
       .leftJoin(department, eq(user.departmentId, department.id))
-      .where(eq(businessTrip.id, id))
+      .where(
+        and(
+          eq(businessTrip.id, id),
+          actorRole === "ADMIN" ? undefined : or(...visibilityConditions),
+        ),
+      )
       .limit(1);
 
     if (!trip) {
@@ -302,6 +347,95 @@ export const createBusinessTripsService = (
     }));
   },
 
+  async update(
+    id: string,
+    data: UpdateTripInput,
+    version: number,
+    userId: string,
+  ) {
+    return await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(businessTrip)
+        .where(eq(businessTrip.id, id))
+        .limit(1);
+
+      if (!existing) {
+        throw AppError.notFound("Trip not found");
+      }
+
+      if (existing.version !== version) {
+        throw new AppError(
+          "CONFLICT",
+          "Version mismatch - please refresh",
+          409,
+        );
+      }
+
+      if (existing.requesterId !== userId) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Not authorized to edit this trip",
+          403,
+        );
+      }
+
+      if (
+        existing.status !== "DRAFT" &&
+        existing.status !== "CHANGE_REQUESTED"
+      ) {
+        throw AppError.forbidden(
+          "Only draft or change-requested trips can be edited",
+        );
+      }
+
+      const nextNeedsFlightBooking =
+        data.needsFlightBooking ?? existing.needsFlightBooking;
+      const nextPurposeType = data.purposeType ?? existing.purposeType;
+      const nextPurposeDetails = data.purposeDetails ?? existing.purposeDetails;
+      const nextStartDate = data.startDate ?? existing.startDate;
+      const nextEndDate = data.endDate ?? existing.endDate;
+      const nextDepartureCity = data.departureCity ?? existing.departureCity;
+      const nextArrivalCity = data.arrivalCity ?? existing.arrivalCity;
+
+      if (nextStartDate > nextEndDate) {
+        throw AppError.badRequest("End date must be after start date");
+      }
+
+      const hasFlightCities = Boolean(
+        nextDepartureCity?.trim() && nextArrivalCity?.trim(),
+      );
+
+      if (nextNeedsFlightBooking && !hasFlightCities) {
+        throw AppError.badRequest(
+          "Departure city and arrival city are required when flight booking is selected",
+        );
+      }
+
+      if (nextPurposeType === "OTHER" && !nextPurposeDetails?.trim()) {
+        throw AppError.badRequest(
+          "Please provide details when purpose is 'Other'",
+        );
+      }
+
+      const updateData = {
+        ...data,
+        estimatedCost: data.estimatedCost?.toString(),
+        perDiemAllowance: data.perDiemAllowance?.toString(),
+        version: existing.version + 1,
+        updatedAt: new Date(),
+      };
+
+      const [updated] = await tx
+        .update(businessTrip)
+        .set(updateData)
+        .where(eq(businessTrip.id, id))
+        .returning();
+
+      return updated;
+    });
+  },
+
   async transition(input: TripActionInput, actorId: string) {
     // Execute transaction first to persist state changes
     const result = await db.transaction(async (tx) => {
@@ -346,7 +480,7 @@ export const createBusinessTripsService = (
         if (!isRequester) {
           throw new AppError("FORBIDDEN", "Only requester can submit", 403);
         }
-        if (currentStatus !== "DRAFT" && currentStatus !== "REJECTED") {
+        if (currentStatus !== "DRAFT" && currentStatus !== "CHANGE_REQUESTED") {
           throw AppError.badRequest(
             `Invalid status transition from ${currentStatus}`,
           );
@@ -399,26 +533,27 @@ export const createBusinessTripsService = (
           );
         }
 
-        if (input.action === "REJECT") {
-          // Rejection reason is required - check if comment is provided
+        if (input.action === "REJECT" || input.action === "REQUEST_CHANGE") {
           const trimmedComment = input.comment?.trim() ?? "";
           if (trimmedComment.length === 0) {
             throw new AppError(
               "BAD_REQUEST",
-              "Rejection reason is required",
+              input.action === "REJECT"
+                ? "Rejection reason is required"
+                : "Change request reason is required",
               400,
             );
           }
-          // Enforce maximum comment length to prevent database bloat
           const MAX_COMMENT_LENGTH = 2000;
           if (trimmedComment.length > MAX_COMMENT_LENGTH) {
             throw new AppError(
               "BAD_REQUEST",
-              `Rejection reason exceeds maximum length of ${MAX_COMMENT_LENGTH} characters`,
+              `${input.action === "REJECT" ? "Rejection" : "Change request"} reason exceeds maximum length of ${MAX_COMMENT_LENGTH} characters`,
               400,
             );
           }
-          newStatus = "REJECTED";
+          newStatus =
+            input.action === "REJECT" ? "REJECTED" : "CHANGE_REQUESTED";
         } else if (input.action === "APPROVE") {
           // Use new trip workflow to determine next status
           if (!trip.requesterPositionId) {
@@ -448,6 +583,7 @@ export const createBusinessTripsService = (
       let nextApproverRole: PositionRole | null = null;
 
       if (
+        newStatus !== "CHANGE_REQUESTED" &&
         newStatus !== "REJECTED" &&
         newStatus !== "CANCELLED" &&
         trip.requesterPositionId
@@ -528,19 +664,58 @@ export const createBusinessTripsService = (
         trip,
         newStatus,
         nextApproverUserId,
+        action: input.action,
+        actionComment: input.comment?.trim() || null,
+        requesterEmail:
+          (
+            await tx
+              .select({ email: user.email })
+              .from(user)
+              .where(eq(user.id, trip.requesterId))
+              .limit(1)
+          )[0]?.email ?? null,
+        nextApproverEmail: nextApproverUserId
+          ? ((
+              await tx
+                .select({ email: user.email })
+                .from(user)
+                .where(eq(user.id, nextApproverUserId))
+                .limit(1)
+            )[0]?.email ?? null)
+          : null,
       };
     });
 
     // Send notifications outside transaction to avoid rollback on notification failure
-    const { trip, newStatus, nextApproverUserId } = result;
+    const {
+      trip,
+      newStatus,
+      nextApproverUserId,
+      action,
+      actionComment,
+      requesterEmail,
+      nextApproverEmail,
+    } = result;
+
+    let requesterBody = `Business trip to ${trip.city}, ${trip.country} updated to ${newStatus}.${actionComment ? ` Note: ${actionComment}` : ""}`;
+    let requesterNotificationType: "INFO" | "ACTION_REQUIRED" = "INFO";
+    if (action === "REJECT") {
+      requesterBody = `Business trip to ${trip.city}, ${trip.country} was rejected.${actionComment ? ` Reason: ${actionComment}` : ""}`;
+    } else if (action === "REQUEST_CHANGE") {
+      requesterBody = `Changes were requested for your business trip to ${trip.city}, ${trip.country}.${actionComment ? ` Reason: ${actionComment}` : ""}`;
+      requesterNotificationType = "ACTION_REQUIRED";
+    } else if (action === "APPROVE" && newStatus === "APPROVED") {
+      requesterBody = `Business trip to ${trip.city}, ${trip.country} was approved.${actionComment ? ` Note: ${actionComment}` : ""}`;
+    }
 
     try {
       await notificationsService.createNotification(
         trip.requesterId,
         "Business Trip Updated",
-        `Business trip to ${trip.city}, ${trip.country} updated to ${newStatus}`,
-        "INFO",
+        requesterBody,
+        requesterNotificationType,
         `/business-trips/${trip.id}`,
+        requesterEmail ?? undefined,
       );
 
       if (nextApproverUserId && nextApproverUserId !== trip.requesterId) {
@@ -550,6 +725,7 @@ export const createBusinessTripsService = (
           `New Business Trip Approval Required: ${trip.city}, ${trip.country}`,
           "ACTION_REQUIRED",
           `/business-trips/${trip.id}`,
+          nextApproverEmail ?? undefined,
         );
       }
     } catch (notifyError) {

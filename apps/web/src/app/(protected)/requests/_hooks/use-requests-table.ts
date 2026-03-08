@@ -8,7 +8,7 @@ import { useDataTable } from "@/hooks/use-data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type {
   ManpowerRequest,
-  RequestStatus,
+  RequestFilterStatus,
   RequestType,
 } from "@/types/requests";
 import { orpc } from "@/utils/orpc";
@@ -93,7 +93,9 @@ export function useRequestsTable() {
       pageSize: pagination.pageSize,
       search: debouncedSearch || undefined,
       status:
-        statusFilter.length > 0 ? (statusFilter as RequestStatus[]) : undefined,
+        statusFilter.length > 0
+          ? (statusFilter as RequestFilterStatus[])
+          : undefined,
       requestType:
         requestTypeFilter.length > 0
           ? (requestTypeFilter as RequestType[])

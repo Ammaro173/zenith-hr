@@ -7,6 +7,14 @@ export default async function ApprovalsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireRoles(["MANAGER", "HOD_HR", "HOD_FINANCE", "CEO", "ADMIN"]);
+  await requireRoles([
+    "MANAGER",
+    "HOD",
+    "HOD_IT",
+    "HOD_HR",
+    "HOD_FINANCE",
+    "CEO",
+    "ADMIN",
+  ]);
   return children;
 }

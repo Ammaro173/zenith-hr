@@ -6,7 +6,7 @@ import { useCallback, useMemo } from "react";
 import type { Filter } from "@/components/ui/filters";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import type { TripStatus } from "@/types/business-trips";
+import type { TripFilterStatus } from "@/types/business-trips";
 import { orpc } from "@/utils/orpc";
 import { columns } from "../_components/columns";
 
@@ -75,7 +75,9 @@ export function useBusinessTripsTable() {
       pageSize: pagination.pageSize,
       search: debouncedSearch || undefined,
       status:
-        statusFilter.length > 0 ? (statusFilter as TripStatus[]) : undefined,
+        statusFilter.length > 0
+          ? (statusFilter as TripFilterStatus[])
+          : undefined,
       sortBy: (validSortFields.includes(sorting[0]?.id as SortByField)
         ? sorting[0]?.id
         : "createdAt") as SortByField,

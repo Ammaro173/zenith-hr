@@ -706,6 +706,15 @@ export const createRequestsService = (
           );
         }
 
+        if (
+          existing.status !== "DRAFT" &&
+          existing.status !== "CHANGE_REQUESTED"
+        ) {
+          throw AppError.forbidden(
+            "Only draft or change-requested requests can be edited",
+          );
+        }
+
         const nextSalaryMin =
           data.salaryRangeMin ?? Number(existing.salaryRangeMin);
         const nextSalaryMax =
