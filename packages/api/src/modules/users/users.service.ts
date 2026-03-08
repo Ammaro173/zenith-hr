@@ -67,12 +67,13 @@ const SEPARATION_OPERATIONAL_STATUSES = [
 ] as const;
 
 const PERFORMANCE_OPERATIONAL_STATUSES = [
-  "DRAFT",
+  "DUE",
+  "SENT_TO_MANAGER",
   "SELF_REVIEW",
-  "MANAGER_REVIEW",
-  "IN_REVIEW",
+  "AWAITING_MANAGER_REVIEW",
   "SUBMITTED",
-  "ACKNOWLEDGED",
+  "HR_REVIEWED",
+  "OVERDUE",
 ] as const;
 
 function createEmptyPrecheck(userId: string): OffboardingPrecheckResult {
