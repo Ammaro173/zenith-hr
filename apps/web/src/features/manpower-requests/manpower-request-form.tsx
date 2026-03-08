@@ -10,22 +10,37 @@ import {
   PositionDetailsSection,
 } from "./form-sections";
 import { ManpowerRequestFormProvider } from "./manpower-request-form-context";
+import type { FormValues } from "./use-manpower-request-form";
 import { useManpowerRequestForm } from "./use-manpower-request-form";
 
 interface ManpowerRequestFormProps {
+  initialValues?: Partial<FormValues>;
   mode?: "page" | "sheet";
   onCancel?: () => void;
   onSuccess?: () => void;
+  requestId?: string;
+  submitLabel?: string;
+  successMessage?: string;
+  version?: number;
 }
 
 export function ManpowerRequestForm({
+  initialValues,
   mode = "page",
   onSuccess,
   onCancel,
+  requestId,
+  submitLabel,
+  successMessage,
+  version,
 }: ManpowerRequestFormProps) {
-  const { form, isPending, handleCancel } = useManpowerRequestForm({
+  const { form, isEditing, isPending, handleCancel } = useManpowerRequestForm({
+    initialValues,
     onSuccess,
     onCancel,
+    requestId,
+    successMessage,
+    version,
   });
 
   return (
@@ -70,7 +85,7 @@ export function ManpowerRequestForm({
                 {(isSubmitting || isPending) && (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 )}
-                Submit Request
+                {submitLabel ?? (isEditing ? "Save Changes" : "Submit Request")}
               </Button>
             )}
           </form.Subscribe>

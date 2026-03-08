@@ -11,35 +11,80 @@ import { client } from "@/utils/orpc";
 export type FormValues = z.infer<typeof createRequestSchema>;
 
 interface UseManpowerRequestFormProps {
+  initialValues?: Partial<FormValues>;
   onCancel?: () => void;
   onSuccess?: () => void;
+  requestId?: string;
+  successMessage?: string;
+  version?: number;
 }
 
+const mergeInitialValues = (
+  initialValues?: Partial<FormValues>,
+): FormValues => ({
+  ...createRequestDefaults,
+  ...initialValues,
+  positionDetails: {
+    ...createRequestDefaults.positionDetails,
+    ...initialValues?.positionDetails,
+  },
+  budgetDetails: {
+    ...createRequestDefaults.budgetDetails,
+    ...initialValues?.budgetDetails,
+  },
+});
+
 export function useManpowerRequestForm({
+  initialValues,
   onSuccess,
   onCancel,
+  requestId,
+  successMessage,
+  version,
 }: UseManpowerRequestFormProps = {}) {
   const queryClient = useQueryClient();
-  const createMutation = useMutation({
-    mutationFn: (data: z.infer<typeof createRequestSchema>) =>
-      client.requests.create(data),
+  const isEditing = Boolean(requestId);
+  const mutation = useMutation({
+    mutationFn: async (data: z.infer<typeof createRequestSchema>) => {
+      if (isEditing) {
+        if (!(requestId && typeof version === "number")) {
+          throw new Error("Missing request version for update");
+        }
+
+        return await client.requests.update({
+          id: requestId,
+          data,
+          version,
+        });
+      }
+
+      return await client.requests.create(data);
+    },
     onSuccess: async () => {
-      toast.success("Manpower request submitted successfully");
+      toast.success(
+        successMessage ??
+          (isEditing
+            ? "Manpower request updated successfully"
+            : "Manpower request submitted successfully"),
+      );
       await queryClient.invalidateQueries();
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to submit request");
+      toast.error(
+        error.message ||
+          (isEditing ? "Failed to update request" : "Failed to submit request"),
+      );
     },
   });
 
   const form = useForm({
-    defaultValues: createRequestDefaults,
+    defaultValues: mergeInitialValues(initialValues),
     validators: {
       onChange: createRequestSchema,
     },
     onSubmit: async ({ value }) => {
-      await createMutation.mutateAsync(value);
+      await mutation.mutateAsync(value);
     },
   });
 
@@ -50,8 +95,9 @@ export function useManpowerRequestForm({
 
   return {
     form,
-    createMutation,
+    mutation,
     handleCancel,
-    isPending: createMutation.isPending,
+    isEditing,
+    isPending: mutation.isPending,
   };
 }
