@@ -5,12 +5,9 @@ import { format } from "date-fns";
 import {
   Banknote,
   Briefcase,
-  Check,
   ExternalLink,
   FileText,
-  RotateCcw,
   Users,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -23,6 +20,7 @@ import type { ManpowerRequest } from "@/types/requests";
 import { STATUS_VARIANTS } from "@/types/requests";
 import { orpc } from "@/utils/orpc";
 import { ApprovalActionDialog } from "../approval-action-dialog";
+import { ApprovalDetailActionFooter } from "./approval-detail-action-footer";
 
 type DialogAction = "REJECT" | "REQUEST_CHANGE";
 
@@ -309,33 +307,12 @@ export function RequestInboxDetailView({
         </div>
       </div>
 
-      {/* Fixed Action Footer */}
-      <div className="shrink-0 border-t bg-card px-6 py-3">
-        <div className="flex items-center justify-end gap-3">
-          <Button
-            disabled={isPending}
-            onClick={() => openDialog("REQUEST_CHANGE")}
-            size="sm"
-            variant="outline"
-          >
-            <RotateCcw className="mr-2 h-3.5 w-3.5" />
-            Request Change
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={() => openDialog("REJECT")}
-            size="sm"
-            variant="destructive"
-          >
-            <X className="mr-2 h-3.5 w-3.5" />
-            Reject
-          </Button>
-          <Button disabled={isPending} onClick={approve} size="sm">
-            <Check className="mr-2 h-3.5 w-3.5" />
-            Approve
-          </Button>
-        </div>
-      </div>
+      <ApprovalDetailActionFooter
+        disabled={isPending}
+        onApprove={approve}
+        onReject={() => openDialog("REJECT")}
+        onRequestChange={() => openDialog("REQUEST_CHANGE")}
+      />
     </div>
   );
 }
