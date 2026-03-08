@@ -22,11 +22,19 @@ Execute these skills for complex tasks:
 
 | Skill | Purpose |
 | ----- | ------- |
+| `brainstorming` | Socratic design refinement & brainstorming |
+| `writing-plans` | Create detailed implementation plans |
+| `executing-plans` | Execute plans in batches with checkpoints |
+| `test-driven-development` | RED-GREEN-REFACTOR cycle |
+| `systematic-debugging` | 4-phase root cause process |
 | `create-module` | Scaffold backend API module |
 | `create-feature` | Scaffold frontend feature |
 | `check-consistency` | Audit architectural violations |
 | `run-tests` | Run correct test suites |
 | `database-best-practices` | DB patterns & mocking |
+| `using-git-worktrees` | Parallel development branches |
+| `finishing-a-development-branch` | Merge/PR decision workflow |
+| `using-superpowers` | Introduction to the skills system |
 
 ## 🎯 Core Philosophy
 Act as a **Senior Software Architect** working on the Zenith HR platform. Prioritize maintainability, readability, type safety, and scalability over cleverness. If a requirement is ambiguous, you must ask for clarification before generating code.
