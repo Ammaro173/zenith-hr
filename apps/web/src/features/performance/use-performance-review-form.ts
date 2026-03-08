@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { client, orpc } from "@/utils/orpc";
-import type { ReviewFormValues } from "./types";
+import type { PerformanceReviewPermissions, ReviewFormValues } from "./types";
 
 // Default values for the form
 const defaultFormValues: ReviewFormValues = {
@@ -11,6 +11,7 @@ const defaultFormValues: ReviewFormValues = {
   managerComment: "",
   selfComment: "",
   competencyRatings: [],
+  probationConfirmationDecision: undefined,
 };
 
 interface UsePerformanceReviewFormProps {
@@ -37,6 +38,44 @@ export function usePerformanceReviewForm({
     }),
   );
 
+  const permissions: PerformanceReviewPermissions = review?.permissions ?? {
+    canCreateCompetencies: false,
+    canDirectlyEditStatus: false,
+    canEditCompetencies: false,
+    canEditManagerComment: false,
+    canEditOverallRating: false,
+    canEditProbationDecision: false,
+    canEditSelfComment: false,
+    canManageGoals: false,
+    canSaveDraft: false,
+    canSubmit: false,
+  };
+
+  const buildDraftPayload = useCallback(
+    (values: ReviewFormValues) => {
+      const competencyRatings = permissions.canEditCompetencies
+        ? values.competencyRatings
+            .filter((c) => c.rating !== undefined)
+            .map((c) => ({
+              competencyId: c.competencyId,
+              rating: c.rating as number,
+              justification: c.justification || undefined,
+            }))
+        : [];
+
+      return {
+        competencyRatings,
+        managerComment: permissions.canEditManagerComment
+          ? values.managerComment || undefined
+          : undefined,
+        selfComment: permissions.canEditSelfComment
+          ? values.selfComment || undefined
+          : undefined,
+      };
+    },
+    [permissions],
+  );
+
   // Save draft mutation
   const saveDraftMutation = useMutation({
     mutationFn: (data: {
@@ -54,6 +93,37 @@ export function usePerformanceReviewForm({
     },
     onError: (error) => {
       console.error("Auto-save failed:", error);
+    },
+  });
+
+  // Transition review mutation
+  const transitionMutation = useMutation({
+    mutationFn: (data: {
+      reviewId: string;
+      status:
+        | "DUE"
+        | "SENT_TO_MANAGER"
+        | "SELF_REVIEW"
+        | "AWAITING_MANAGER_REVIEW"
+        | "SUBMITTED"
+        | "HR_REVIEWED"
+        | "COMPLETED"
+        | "OVERDUE";
+      payload?: {
+        probationConfirmationDecision?:
+          | "CONFIRM_EMPLOYMENT"
+          | "EXTEND_PROBATION"
+          | "RECOMMEND_TERMINATION";
+        comment?: string;
+      };
+    }) => client.performance.transitionReview(data),
+    onSuccess: async () => {
+      toast.success("Review status updated");
+      await queryClient.invalidateQueries();
+      onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update review status");
     },
   });
 
@@ -76,13 +146,14 @@ export function usePerformanceReviewForm({
     mutationFn: (data: {
       reviewId: string;
       status?:
-        | "DRAFT"
+        | "DUE"
+        | "SENT_TO_MANAGER"
         | "SELF_REVIEW"
-        | "MANAGER_REVIEW"
-        | "IN_REVIEW"
+        | "AWAITING_MANAGER_REVIEW"
         | "SUBMITTED"
-        | "ACKNOWLEDGED"
-        | "COMPLETED";
+        | "HR_REVIEWED"
+        | "COMPLETED"
+        | "OVERDUE";
       managerComment?: string;
       selfComment?: string;
       overallRating?: number;
@@ -106,26 +177,46 @@ export function usePerformanceReviewForm({
         return;
       }
 
-      // First save the current draft
-      const competencyRatingsToSave = value.competencyRatings
-        .filter((c) => c.rating !== undefined)
-        .map((c) => ({
-          competencyId: c.competencyId,
-          rating: c.rating as number,
-          justification: c.justification || undefined,
-        }));
+      if (!permissions.canSubmit) {
+        toast.error("You cannot submit this review");
+        return;
+      }
 
-      if (competencyRatingsToSave.length > 0 || value.managerComment) {
+      // First save the current draft
+      const draftPayload = buildDraftPayload(value);
+
+      if (
+        permissions.canSaveDraft &&
+        (draftPayload.competencyRatings.length > 0 ||
+          draftPayload.managerComment ||
+          draftPayload.selfComment)
+      ) {
         await saveDraftMutation.mutateAsync({
           reviewId,
-          competencyRatings: competencyRatingsToSave,
-          managerComment: value.managerComment || undefined,
-          selfComment: value.selfComment || undefined,
+          ...draftPayload,
         });
       }
 
-      // Then submit the review
-      await submitMutation.mutateAsync({ reviewId });
+      // Then transition or submit the review
+      // For probation, if we have a decision, we should use transition
+      if (
+        review?.reviewType === "PROBATION" &&
+        permissions.canEditProbationDecision &&
+        value.probationConfirmationDecision
+      ) {
+        await transitionMutation.mutateAsync({
+          reviewId,
+          status: "SUBMITTED",
+          payload: {
+            probationConfirmationDecision: value.probationConfirmationDecision,
+            comment: permissions.canEditManagerComment
+              ? value.managerComment
+              : undefined,
+          },
+        });
+      } else {
+        await submitMutation.mutateAsync({ reviewId });
+      }
     },
   });
 
@@ -134,6 +225,13 @@ export function usePerformanceReviewForm({
     if (review) {
       form.setFieldValue("managerComment", review.managerComment || "");
       form.setFieldValue("selfComment", review.selfComment || "");
+      form.setFieldValue(
+        "probationConfirmationDecision",
+        (review.probationConfirmationDecision as
+          | "CONFIRM_EMPLOYMENT"
+          | "EXTEND_PROBATION"
+          | "RECOMMEND_TERMINATION") || undefined,
+      );
 
       if (review.competencies) {
         form.setFieldValue(
@@ -154,6 +252,10 @@ export function usePerformanceReviewForm({
       return;
     }
 
+    if (!permissions.canSaveDraft) {
+      return;
+    }
+
     // Clear existing timeout
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
@@ -162,22 +264,29 @@ export function usePerformanceReviewForm({
     // Set new timeout for debounced save
     autoSaveTimeoutRef.current = setTimeout(() => {
       const values = form.state.values;
-      const competencyRatingsToSave = values.competencyRatings
-        .filter((c) => c.rating !== undefined)
-        .map((c) => ({
-          competencyId: c.competencyId,
-          rating: c.rating as number,
-          justification: c.justification || undefined,
-        }));
+      const draftPayload = buildDraftPayload(values);
+
+      if (
+        draftPayload.competencyRatings.length === 0 &&
+        !draftPayload.managerComment &&
+        !draftPayload.selfComment
+      ) {
+        return;
+      }
 
       saveDraftMutation.mutate({
         reviewId,
-        competencyRatings: competencyRatingsToSave,
-        managerComment: values.managerComment || undefined,
-        selfComment: values.selfComment || undefined,
+        ...draftPayload,
       });
     }, 2000);
-  }, [reviewId, autoSaveEnabled, form.state.values, saveDraftMutation]);
+  }, [
+    autoSaveEnabled,
+    buildDraftPayload,
+    form.state.values,
+    permissions.canSaveDraft,
+    reviewId,
+    saveDraftMutation,
+  ]);
 
   // Cancel handler
   const handleCancel = useCallback(() => {
@@ -187,28 +296,34 @@ export function usePerformanceReviewForm({
 
   // Save draft manually
   const handleSaveDraft = useCallback(async () => {
-    if (!reviewId) {
+    if (!(reviewId && permissions.canSaveDraft)) {
       return;
     }
 
     const values = form.state.values;
-    const competencyRatingsToSave = values.competencyRatings
-      .filter((c) => c.rating !== undefined)
-      .map((c) => ({
-        competencyId: c.competencyId,
-        rating: c.rating as number,
-        justification: c.justification || undefined,
-      }));
+    const draftPayload = buildDraftPayload(values);
+
+    if (
+      draftPayload.competencyRatings.length === 0 &&
+      !draftPayload.managerComment &&
+      !draftPayload.selfComment
+    ) {
+      return;
+    }
 
     await saveDraftMutation.mutateAsync({
       reviewId,
-      competencyRatings: competencyRatingsToSave,
-      managerComment: values.managerComment || undefined,
-      selfComment: values.selfComment || undefined,
+      ...draftPayload,
     });
 
     toast.success("Draft saved");
-  }, [reviewId, form.state.values, saveDraftMutation]);
+  }, [
+    buildDraftPayload,
+    form.state.values,
+    permissions.canSaveDraft,
+    reviewId,
+    saveDraftMutation,
+  ]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -222,6 +337,7 @@ export function usePerformanceReviewForm({
   return {
     form,
     review,
+    permissions,
     isLoading: isLoadingReview,
     isPending:
       saveDraftMutation.isPending ||
