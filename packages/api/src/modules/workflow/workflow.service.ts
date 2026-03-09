@@ -79,9 +79,8 @@ const MPR_ROUTES: Record<
     sequence: ["PENDING_HR", "PENDING_CEO", "HIRING_IN_PROGRESS", "COMPLETED"],
   },
   HOD_IT: {
-    initialStatus: "PENDING_HOD",
+    initialStatus: "PENDING_HR",
     sequence: [
-      "PENDING_HOD",
       "PENDING_HR",
       "PENDING_FINANCE",
       "PENDING_CEO",
@@ -733,7 +732,43 @@ export const createWorkflowService = (
       );
     }
 
-    if (currentStatus === "PENDING_HOD" || currentStatus === "PENDING_HR") {
+    if (currentStatus === "PENDING_HOD") {
+      // Go to HR first so HOD-family approvals follow the same path.
+      const [hrPosition] = await txOrDb
+        .select({ id: jobPosition.id, role: jobPosition.role })
+        .from(jobPosition)
+        .where(
+          and(
+            inArray(jobPosition.role, ["HOD_HR"] as PositionRole[]),
+            eq(jobPosition.active, true),
+          ),
+        )
+        .limit(1);
+
+      if (hrPosition) {
+        const users = await getPositionUsers(hrPosition.id, txOrDb);
+        if (users.length === 0) {
+          throw new AppError(
+            "CONFIGURATION_ERROR",
+            `HR position ${hrPosition.id} has no assigned users. Cannot route trip approval.`,
+            500,
+          );
+        }
+        return await maybeSkip({
+          approverPositionId: null,
+          approverRole: hrPosition.role as PositionRole,
+          nextStatus: "PENDING_HR",
+        });
+      }
+
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        "No HR position available for trip approval.",
+        500,
+      );
+    }
+
+    if (currentStatus === "PENDING_HR") {
       // Go to Finance
       const [financePosition] = await txOrDb
         .select({ id: jobPosition.id, role: jobPosition.role })
@@ -968,8 +1003,7 @@ export const createWorkflowService = (
     // Check shared role queue access (NOT including PENDING_HOD —
     // that relies on currentApproverPositionId match above)
     if (
-      (currentStatus === "PENDING_HR" &&
-        (actorPositionRole === "HOD" || actorPositionRole === "HOD_HR")) ||
+      (currentStatus === "PENDING_HR" && actorPositionRole === "HOD_HR") ||
       (currentStatus === "PENDING_FINANCE" &&
         actorPositionRole === "HOD_FINANCE") ||
       (currentStatus === "PENDING_CEO" && actorPositionRole === "CEO")
