@@ -648,8 +648,9 @@ export function BusinessTripForm({
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground text-sm">
-                  Your request will be routed through: Direct Manager → Head of
-                  Department → HR Head → Finance Head → CEO
+                  Depending on your role, your request may be routed through:
+                  Direct Manager → Head of Department → HR Head → Finance Head →
+                  CEO
                 </p>
               </CardContent>
             </Card>

@@ -29,6 +29,9 @@ export function PositionsDataGrid() {
   const canManage =
     currentRole === "ADMIN" ||
     currentRole === "HOD_HR" ||
+    // currentRole === "HOD_IT" ||
+    // currentRole === "HOD_FINANCE" ||
+    // currentRole === "CEO" ||
     currentRole === "MANAGER";
 
   const [deleteItem, setDeleteItem] = useState<PositionListItem | null>(null);

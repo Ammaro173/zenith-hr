@@ -71,7 +71,14 @@ export const protectedNavigationItems: {
     href: "/users",
     icon: UsersRound,
     description: "View organization users",
-    allowedRoles: ["ADMIN", "HOD_HR", "CEO", "HOD_FINANCE", "HOD", "MANAGER"],
+    allowedRoles: [
+      "ADMIN",
+      "HOD_HR",
+      "CEO",
+      // "HOD_IT",
+      "HOD_FINANCE",
+      "MANAGER",
+    ],
   },
   {
     title: "Departments",
@@ -86,7 +93,15 @@ export const protectedNavigationItems: {
     icon: ClipboardList,
     description:
       "Manage positions, hierarchy levels, and department assignments",
-    allowedRoles: ["ADMIN", "HOD_HR", "HOD", "MANAGER", "CEO"],
+    allowedRoles: [
+      "ADMIN",
+      "HOD_HR",
+      "CEO",
+      "HOD",
+      "HOD_IT",
+      "HOD_FINANCE",
+      "MANAGER",
+    ],
   },
   {
     title: "Organization Chart",
