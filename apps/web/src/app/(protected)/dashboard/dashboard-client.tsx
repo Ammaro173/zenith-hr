@@ -35,6 +35,8 @@ const ROLE_VIEWS: Record<
 > = {
   EMPLOYEE: RequesterView,
   MANAGER: ManagerView,
+  HOD: ManagerView,
+  HOD_IT: ManagerView,
   HOD_HR: HRView,
   HOD_FINANCE: FinanceView,
   CEO: CEOView,

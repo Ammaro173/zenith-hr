@@ -8,6 +8,8 @@ export default async function DashboardPage() {
   const role = session?.user?.role || "EMPLOYEE";
   const canCreateRequest = [
     "MANAGER",
+    "HOD",
+    "HOD_IT",
     "ADMIN",
     "CEO",
     "HOD_HR",
