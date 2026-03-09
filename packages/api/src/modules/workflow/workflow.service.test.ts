@@ -148,6 +148,47 @@ function createMockDb(
   return mockDb;
 }
 
+function createSequentialSelectDb(
+  selectResponses: unknown[],
+  managerChain: Array<{
+    position_id: string;
+    position_role: string;
+    depth: number;
+  }> = [],
+) {
+  let selectCallCount = 0;
+
+  const mockDb: any = {
+    select: mock(() => {
+      const response = selectResponses[selectCallCount++] ?? [];
+      const qb: any = {
+        from: mock(() => qb),
+        innerJoin: mock(() => qb),
+        where: mock(() => qb),
+        limit: mock(() => Promise.resolve(response)),
+        // biome-ignore lint/suspicious/noThenProperty: mock object
+        then: (onFulfilled: any) => Promise.resolve(response).then(onFulfilled),
+      };
+      return qb;
+    }),
+    insert: mock(() => ({
+      values: mock(() => Promise.resolve()),
+    })),
+    update: mock(() => ({
+      set: mock(() => ({
+        where: mock(() => Promise.resolve()),
+      })),
+    })),
+    execute: mock(() => Promise.resolve({ rows: managerChain })),
+    transaction: mock(async (cb: (tx: typeof mockDb) => Promise<unknown>) => {
+      selectCallCount = 0;
+      return await cb(mockDb);
+    }),
+  };
+
+  return mockDb;
+}
+
 // ============================================================================
 // Tests: getApproverForStatus
 // ============================================================================
@@ -252,6 +293,24 @@ describe("WorkflowService", () => {
 
       expect(result.previousStatus).toBe("DRAFT");
       expect(result.newStatus).toBe("PENDING_FINANCE");
+    });
+
+    it("SUBMIT by HOD_IT → PENDING_HR (matches standard HOD flow)", async () => {
+      const mockDb = createMockDb({
+        request: { status: "DRAFT", requesterId: "hod-it-1" },
+        actor: { id: "hod-it-1", role: "HOD_IT" },
+        requester: { id: "hod-it-1", role: "HOD_IT" },
+      });
+      const service = createWorkflowService(mockDb, mockNotificationsService);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-it-1",
+        "SUBMIT",
+      );
+
+      expect(result.previousStatus).toBe("DRAFT");
+      expect(result.newStatus).toBe("PENDING_HR");
     });
 
     it("throws BadRequest for APPROVE action from DRAFT", async () => {
@@ -704,6 +763,35 @@ describe("WorkflowService", () => {
       expect(result.newStatus).toBe("PENDING_HR");
     });
 
+    it("APPROVE by HOD_IT at PENDING_HOD → PENDING_HR", async () => {
+      const mockDb = createMockDb({
+        request: {
+          status: "PENDING_HOD" as RequestStatus,
+          requiredApproverRole: "HOD_IT" as PositionRole,
+          currentApproverPositionId: "hod-it-pos-1",
+        },
+        actor: { id: "hod-it-1", role: "HOD_IT" },
+        requester: { id: "user-1", role: "EMPLOYEE" },
+        managerChain: [
+          {
+            position_id: "hod-it-pos-1",
+            position_role: "HOD_IT",
+            depth: 1,
+          },
+        ],
+      });
+      const service = createWorkflowService(mockDb, mockNotificationsService);
+
+      const result = await service.transitionRequest(
+        "request-123",
+        "hod-it-1",
+        "APPROVE",
+      );
+
+      expect(result.previousStatus).toBe("PENDING_HOD");
+      expect(result.newStatus).toBe("PENDING_HR");
+    });
+
     it("REJECT by HOD at PENDING_HOD → REJECTED", async () => {
       const mockDb = createMockDb({
         request: {
@@ -835,6 +923,74 @@ describe("WorkflowService", () => {
       expect(result.previousStatus).toBe("PENDING_MANAGER");
       // PENDING_HOD skipped because no dept HOD found
       expect(result.newStatus).toBe("PENDING_HR");
+    });
+  });
+
+  describe("trip workflow helpers", () => {
+    it("routes trip PENDING_HOD approvals to HR", async () => {
+      const mockDb = createSequentialSelectDb([
+        [{ role: "EMPLOYEE" }],
+        [{ id: "hr-pos-1", role: "HOD_HR" }],
+        [{ userId: "hr-1" }],
+      ]);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
+
+      const result = await service.getNextTripApprover(
+        "requester-pos-1",
+        "PENDING_HOD",
+      );
+
+      expect(result).toEqual({
+        approverPositionId: null,
+        approverRole: "HOD_HR",
+        nextStatus: "PENDING_HR",
+      });
+    });
+
+    it("routes HOD_IT requester trips to HR after skipping manager stage", async () => {
+      const mockDb = createSequentialSelectDb(
+        [
+          [{ role: "HOD_IT" }],
+          [{ role: "HOD_IT" }],
+          [{ id: "hr-pos-1", role: "HOD_HR" }],
+          [{ userId: "hr-1" }],
+        ],
+        [{ position_id: "ceo-pos-1", position_role: "CEO", depth: 1 }],
+      );
+      const service = createWorkflowService(mockDb, mockNotificationsService);
+
+      const result = await service.getNextTripApprover("hod-it-pos-1", "DRAFT");
+
+      expect(result).toEqual({
+        approverPositionId: null,
+        approverRole: "HOD_HR",
+        nextStatus: "PENDING_HR",
+      });
+    });
+
+    it("does not allow generic HOD to act on HR-stage trip approvals", async () => {
+      const mockDb = createSequentialSelectDb([
+        [
+          {
+            positionId: "hod-pos-1",
+            positionRole: "HOD",
+            departmentId: "dept-1",
+            reportsToPositionId: null,
+          },
+        ],
+        [{ role: "HOD" }],
+      ]);
+      const service = createWorkflowService(mockDb, mockNotificationsService);
+
+      const canTransition = await service.canActorTransition(
+        "hod-1",
+        null,
+        "HOD_HR",
+        "PENDING_HR",
+        "APPROVE",
+      );
+
+      expect(canTransition).toBe(false);
     });
   });
 

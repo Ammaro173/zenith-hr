@@ -469,6 +469,64 @@ describe("BusinessTripsService", () => {
     expect(approvalsOrderByMock).toHaveBeenCalled();
   });
 
+  it("should return shared-queue trip approvals for HOD_IT without a position match", async () => {
+    const actorId = "hod-it-1";
+
+    const roleLimitMock = mock(() =>
+      Promise.resolve([
+        {
+          role: "HOD_IT",
+          positionRole: "HOD_IT",
+          positionId: null,
+          departmentId: "dep-it",
+          reportsToPositionId: null,
+        },
+      ]),
+    );
+    const roleWhereMock = mock(() => ({ limit: roleLimitMock }));
+    const roleInnerJoinMock = mock(() => ({ where: roleWhereMock }));
+    const roleFromMock = mock(() => ({ innerJoin: roleInnerJoinMock }));
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+    mockDb.select.mockReturnValueOnce({ from: roleFromMock });
+
+    const approvalsOrderByMock = mock(() =>
+      Promise.resolve([
+        {
+          trip: {
+            id: "trip-hod-it-1",
+            requesterId: "user-1",
+            requiredApproverRole: "HOD_IT",
+            currentApproverPositionId: null,
+          },
+          requester: {
+            id: "user-1",
+            name: "IT Employee",
+            email: "it@example.com",
+            image: null,
+          },
+        },
+      ]),
+    );
+    const approvalsWhereMock = mock(() => ({ orderBy: approvalsOrderByMock }));
+    const approvalsInnerJoinMock = mock(() => ({ where: approvalsWhereMock }));
+    const approvalsFromMock = mock(() => ({
+      innerJoin: approvalsInnerJoinMock,
+    }));
+    mockDb.select.mockReturnValueOnce({ from: approvalsFromMock });
+
+    const result = await service.getPendingApprovals(actorId);
+
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "trip-hod-it-1" }),
+      ]),
+    );
+    expect(approvalsFromMock).toHaveBeenCalled();
+    expect(approvalsInnerJoinMock).toHaveBeenCalled();
+    expect(approvalsWhereMock).toHaveBeenCalled();
+    expect(approvalsOrderByMock).toHaveBeenCalled();
+  });
+
   // --- Transition: APPROVE ---
 
   it("APPROVE should advance employee trip from PENDING_MANAGER to PENDING_HR", async () => {
