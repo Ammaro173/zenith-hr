@@ -607,7 +607,8 @@ export const createRequestsService = (
       let conditions: SQL[];
 
       if (isHeadOfHr) {
-        conditions = [sql`1=1`];
+        // No position filter: HOD_HR sees all manpower requests in this tab.
+        conditions = [sql`true`];
       } else {
         const descendantsResult = await db.execute(sql`
           WITH RECURSIVE descendants AS (
