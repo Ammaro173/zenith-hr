@@ -12,6 +12,14 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+/** Integer clamp for numeric inputs (weights, percentages). */
+export function clampInt(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.max(min, Math.min(max, Math.trunc(value)));
+}
+
 //TODO reloacte this
 const STRIP_PREFIX_REGEX = /^\+?974/;
 const NON_DIGIT_REGEX = /\D/g;

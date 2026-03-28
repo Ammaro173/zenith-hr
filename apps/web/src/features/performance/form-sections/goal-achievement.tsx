@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { usePerformanceReviewFormContext } from "@/features/performance/performance-review-form-context";
+import { clampInt } from "@/lib/utils";
 import { client, orpc } from "@/utils";
 
 interface AnnualReview {
@@ -26,13 +27,6 @@ interface AnnualReview {
 interface GoalAssessment {
   achievedPercentage: number;
   comment: string;
-}
-
-function clampInt(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) {
-    return min;
-  }
-  return Math.max(min, Math.min(max, Math.trunc(value)));
 }
 
 export function GoalAchievementSection({

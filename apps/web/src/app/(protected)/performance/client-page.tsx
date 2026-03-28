@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
+import { clampInt } from "@/lib/utils";
 import { client, orpc } from "@/utils";
 
 interface EmployeeRow {
@@ -75,13 +76,6 @@ type ObjectiveStateByEmployee = Record<
 
 interface PerformanceClientPageProps {
   canViewEmployeeTabs: boolean;
-}
-
-function clampInt(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) {
-    return min;
-  }
-  return Math.max(min, Math.min(max, Math.trunc(value)));
 }
 
 function CreateObjectiveDialog({
