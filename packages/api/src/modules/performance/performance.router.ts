@@ -12,70 +12,147 @@ import {
   batchUpdateCompetenciesSchema,
   createCompetencySchema,
   createCompetencyTemplateSchema,
-  createCycleSchema,
   createGoalSchema,
+  createObjectiveSettingForEmployeeSchema,
   createReviewSchema,
   deleteGoalSchema,
   getReviewsSchema,
   saveDraftSchema,
+  submitGoalReviewAsAnnualSchema,
   submitReviewSchema,
   transitionReviewSchema,
   updateCompetencySchema,
-  updateCycleSchema,
   updateGoalSchema,
   updateReviewSchema,
 } from "./performance.schema";
 
 export const performanceRouter = o.router({
   // ==========================================================================
-  // Cycle Endpoints
+  // Employee actions (Performance landing)
   // ==========================================================================
 
-  /**
-   * Create a new performance cycle (HR/Admin only)
-   */
-  createCycle: requireRoles(["HOD_HR", "ADMIN"])
-    .input(createCycleSchema)
+  getEmployeeObjectiveReviewState: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ])
+    .input(z.object({ employeeId: z.string() }))
     .handler(async ({ input, context }) => {
-      const userId = context.session.user.id;
-      return await context.services.performance.createCycle(input, userId);
+      return await context.services.performance.getEmployeeObjectiveReviewState(
+        context.session.user.id,
+        input.employeeId,
+      );
+    }),
+
+  getEmployeesObjectiveReviewStates: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ])
+    .input(z.object({ employeeIds: z.array(z.string()).min(1) }))
+    .handler(async ({ input, context }) => {
+      return await context.services.performance.getEmployeesObjectiveReviewStates(
+        context.session.user.id,
+        input.employeeIds,
+      );
+    }),
+
+  createObjectiveReviewForEmployee: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ])
+    .input(z.object({ employeeId: z.string() }))
+    .handler(async ({ input, context }) => {
+      return await context.services.performance.createObjectiveReviewForEmployee(
+        context.session.user.id,
+        input.employeeId,
+      );
+    }),
+
+  createObjectiveSettingForEmployee: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ])
+    .input(createObjectiveSettingForEmployeeSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.performance.createObjectiveSettingForEmployee(
+        context.session.user.id,
+        input,
+      );
+    }),
+
+  createProbationForEmployee: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ])
+    .input(z.object({ employeeId: z.string() }))
+    .handler(async ({ input, context }) => {
+      return await context.services.performance.createProbationForEmployee(
+        context.session.user.id,
+        input.employeeId,
+      );
     }),
 
   /**
-   * Get all cycles
+   * Submit goal review as annual (convert OBJECTIVE_SETTING in place to ANNUAL_PERFORMANCE)
    */
-  getCycles: protectedProcedure.handler(
-    async ({ context }) => await context.services.performance.getCycles(),
-  ),
-
-  /**
-   * Get a single cycle with reviews
-   */
-  getCycle: protectedProcedure
-    .input(z.object({ id: z.string().uuid() }))
+  submitGoalReviewAsAnnual: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ])
+    .input(submitGoalReviewAsAnnualSchema)
     .handler(async ({ input, context }) => {
-      const cycle = await context.services.performance.getCycle(input.id);
-      if (!cycle) {
-        throw new ORPCError("NOT_FOUND", { message: "Cycle not found" });
-      }
-      return cycle;
+      return await context.services.performance.submitGoalReviewAsAnnual(
+        context.session.user.id,
+        input,
+      );
     }),
 
   /**
-   * Update a cycle (HR/Admin only)
+   * Get employees for "All employees" tab (HR HOD/Admin: all; other HODs: department only)
    */
-  updateCycle: requireRoles(["HOD_HR", "ADMIN"])
-    .input(updateCycleSchema)
-    .handler(async ({ input, context }) => {
-      try {
-        return await context.services.performance.updateCycle(input);
-      } catch (error: unknown) {
-        if (error instanceof Error && error.message === "NOT_FOUND") {
-          throw new ORPCError("NOT_FOUND", { message: "Cycle not found" });
-        }
-        throw error;
-      }
-    }),
+  getPerformanceEmployeesAll: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ]).handler(async ({ context }) => {
+    return await context.services.performance.getPerformanceEmployeesAll(
+      context.session.user.id,
+    );
+  }),
+
+  /**
+   * Get employees for "Probation employees" tab (joined >6mo ago, no probation review done)
+   */
+  getPerformanceEmployeesProbation: requireRoles([
+    "HOD_HR",
+    "ADMIN",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+  ]).handler(async ({ context }) => {
+    return await context.services.performance.getPerformanceEmployeesProbation(
+      context.session.user.id,
+    );
+  }),
 
   // ==========================================================================
   // Review Endpoints
@@ -87,7 +164,10 @@ export const performanceRouter = o.router({
   createReview: requireRoles(["HOD_HR", "ADMIN", "MANAGER"])
     .input(createReviewSchema)
     .handler(async ({ input, context }) => {
-      return await context.services.performance.createReview(input);
+      return await context.services.performance.createReview(
+        input,
+        context.session.user.id,
+      );
     }),
 
   /**

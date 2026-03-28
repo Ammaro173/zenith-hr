@@ -9,7 +9,7 @@ describe("PerformanceService", () => {
         values: mock(() => ({
           onConflictDoNothing: mock(() => Promise.resolve([])),
           returning: mock(() =>
-            Promise.resolve([{ id: "cycle-123", status: "DRAFT" }]),
+            Promise.resolve([{ id: "review-123", status: "DUE" }]),
           ),
         })),
       })),
@@ -43,16 +43,6 @@ describe("PerformanceService", () => {
         })),
       })),
       query: {
-        performanceCycle: {
-          findFirst: mock(() =>
-            Promise.resolve({
-              endDate: new Date("2024-12-31T00:00:00Z"),
-              id: "cycle-123",
-              status: "ACTIVE",
-            }),
-          ),
-          findMany: mock(() => Promise.resolve([])),
-        },
         performanceReview: {
           findFirst: mock(() =>
             Promise.resolve({
@@ -167,30 +157,11 @@ describe("PerformanceService", () => {
     }));
   }
 
-  it("should create a performance cycle", async () => {
-    const mockDb = createMockDb();
-    const service = createPerformanceService(mockDb);
-
-    const input = {
-      name: "Q4 2024",
-      startDate: "2024-10-01T00:00:00Z",
-      endDate: "2024-12-31T00:00:00Z",
-    };
-
-    const result = await service.createCycle(input);
-
-    expect(result).toEqual(
-      expect.objectContaining({ id: "cycle-123", status: "DRAFT" }),
-    );
-    expect(mockDb.insert).toHaveBeenCalled();
-  });
-
   it("should create a performance review", async () => {
     const mockDb = createMockDb();
     const service = createPerformanceService(mockDb);
 
     const input = {
-      cycleId: "cycle-123",
       employeeId: "emp-1",
       reviewerId: "mgr-1",
       reviewType: "ANNUAL_PERFORMANCE" as const,

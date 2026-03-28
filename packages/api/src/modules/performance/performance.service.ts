@@ -1,30 +1,35 @@
 import type { DbOrTx } from "@zenith-hr/db";
 import {
   competencyTemplate,
+  department,
   jobPosition,
   notificationOutbox,
   performanceCompetency,
-  performanceCycle,
   performanceGoal,
   performanceReview,
+  user,
   userPositionAssignment,
 } from "@zenith-hr/db";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
-import { generateIdempotencyKey, getActorRole } from "../../shared/utils";
+import {
+  generateIdempotencyKey,
+  getActorPositionInfo,
+  getActorRole,
+} from "../../shared/utils";
 import type {
   batchUpdateCompetenciesSchema,
   createCompetencySchema,
   createCompetencyTemplateSchema,
-  createCycleSchema,
   createGoalSchema,
+  createObjectiveSettingForEmployeeSchema,
   createReviewSchema,
   GetReviewsInput,
+  SubmitGoalReviewAsAnnualInput,
   saveDraftSchema,
   TransitionReviewInput,
   updateCompetencySchema,
-  updateCycleSchema,
   updateGoalSchema,
   updateReviewSchema,
 } from "./performance.schema";
@@ -33,8 +38,6 @@ import type {
 // Types
 // ============================================================================
 
-type CreateCycleInput = z.infer<typeof createCycleSchema>;
-type UpdateCycleInput = z.infer<typeof updateCycleSchema>;
 type CreateReviewInput = z.infer<typeof createReviewSchema>;
 type UpdateReviewInput = z.infer<typeof updateReviewSchema>;
 type SaveDraftInput = z.infer<typeof saveDraftSchema>;
@@ -44,12 +47,16 @@ type BatchUpdateCompetenciesInput = z.infer<
   typeof batchUpdateCompetenciesSchema
 >;
 type CreateGoalInput = z.infer<typeof createGoalSchema>;
+type CreateObjectiveSettingForEmployeeInput = z.infer<
+  typeof createObjectiveSettingForEmployeeSchema
+>;
 type UpdateGoalInput = z.infer<typeof updateGoalSchema>;
 type CreateCompetencyTemplateInput = z.infer<
   typeof createCompetencyTemplateSchema
 >;
 type ReviewType = "PROBATION" | "ANNUAL_PERFORMANCE" | "OBJECTIVE_SETTING";
 type ReviewStatus =
+  | "DRAFT"
   | "DUE"
   | "SENT_TO_MANAGER"
   | "SELF_REVIEW"
@@ -60,6 +67,7 @@ type ReviewStatus =
   | "OVERDUE";
 interface ReviewRecord {
   employeeId: string;
+  probationConfirmationDecision: string | null;
   reviewerId: string | null;
   reviewType: ReviewType;
   status: ReviewStatus;
@@ -166,6 +174,44 @@ export const createPerformanceService = (db: DbOrTx) => {
     };
   };
 
+  /**
+   * In some deployments, "Head of HR" may not be stored as `HOD_HR` role,
+   * but as a generic `HOD` position that belongs to the HR department.
+   * For viewing probation candidates, treat that as HR-equivalent.
+   */
+  const isHrDepartmentHeadForViewing = async (
+    actorId: string,
+    role: string,
+    positionInfo: Awaited<ReturnType<typeof getActorPositionInfo>>,
+  ) => {
+    const actorUser = await db.query.user.findFirst({
+      where: eq(user.id, actorId),
+      columns: { role: true },
+    });
+
+    const actorUserRole = actorUser?.role;
+    if (
+      role === "HOD_HR" ||
+      role === "ADMIN" ||
+      actorUserRole === "HOD_HR" ||
+      actorUserRole === "ADMIN"
+    ) {
+      return true;
+    }
+
+    if (role !== "HOD" || !positionInfo?.departmentId) {
+      return false;
+    }
+
+    const [hrDept] = await db
+      .select({ id: department.id })
+      .from(department)
+      .where(eq(department.name, "Human Resources"))
+      .limit(1);
+
+    return hrDept?.id === positionInfo.departmentId;
+  };
+
   const assertCanAccessReview = async (
     review: Pick<ReviewRecord, "employeeId" | "reviewerId">,
     actorId: string,
@@ -189,8 +235,23 @@ export const createPerformanceService = (db: DbOrTx) => {
     throw AppError.forbidden("You are not allowed to access this review");
   };
 
+  const canManagerEditProbation = (
+    review: Pick<ReviewRecord, "reviewType" | "probationConfirmationDecision">,
+    isManager: boolean,
+  ) =>
+    isManager &&
+    review.reviewType === "PROBATION" &&
+    review.probationConfirmationDecision !== "CONFIRM_EMPLOYMENT" &&
+    review.probationConfirmationDecision !== "RECOMMEND_TERMINATION";
+
   const assertCanWriteReview = async (
-    review: Pick<ReviewRecord, "employeeId" | "reviewerId">,
+    review: Pick<
+      ReviewRecord,
+      | "employeeId"
+      | "reviewerId"
+      | "reviewType"
+      | "probationConfirmationDecision"
+    >,
     actorId: string,
     allowedActors: ReviewWriteActor[] = ["employee", "reviewer"],
   ) => {
@@ -204,6 +265,10 @@ export const createPerformanceService = (db: DbOrTx) => {
     }
 
     if (allowedActors.includes("reviewer") && review.reviewerId === actorId) {
+      return access;
+    }
+
+    if (canManagerEditProbation(review, access.isManager)) {
       return access;
     }
 
@@ -230,7 +295,7 @@ export const createPerformanceService = (db: DbOrTx) => {
         OVERDUE: ["SENT_TO_MANAGER", "SUBMITTED", "HR_REVIEWED"],
       },
       ANNUAL_PERFORMANCE: {
-        DUE: ["SELF_REVIEW", "AWAITING_MANAGER_REVIEW", "OVERDUE"],
+        DUE: ["SELF_REVIEW", "AWAITING_MANAGER_REVIEW", "OVERDUE", "SUBMITTED"],
         SELF_REVIEW: ["AWAITING_MANAGER_REVIEW", "OVERDUE"],
         AWAITING_MANAGER_REVIEW: ["SUBMITTED", "OVERDUE"],
         SUBMITTED: ["HR_REVIEWED"],
@@ -389,21 +454,34 @@ export const createPerformanceService = (db: DbOrTx) => {
     const access = await assertCanAccessReview(review, actorId);
     const isEmployee = review.employeeId === actorId;
     const isReviewer = review.reviewerId === actorId;
-    const canEditSelfComment = access.isGlobal || isEmployee;
-    const canEditManagerComment = access.isGlobal || isReviewer;
-    const canEditOverallRating = canEditManagerComment;
-    const canEditCompetencies = access.isGlobal || isEmployee || isReviewer;
+    const managerCanEditProbation = canManagerEditProbation(
+      review,
+      access.isManager,
+    );
+    const isProbationSelfView = review.reviewType === "PROBATION" && isEmployee;
+    const canEditSelfComment = isProbationSelfView ? true : isEmployee;
+    const canEditManagerComment = isProbationSelfView
+      ? false
+      : access.isGlobal || isReviewer || managerCanEditProbation;
+    const canEditOverallRating = isProbationSelfView
+      ? false
+      : canEditManagerComment;
+    const canEditCompetencies = isProbationSelfView
+      ? false
+      : access.isGlobal || isEmployee || isReviewer || managerCanEditProbation;
     const canManageGoals = canEditCompetencies;
     const canCreateCompetencies = access.isGlobal;
     const canDirectlyEditStatus = access.isGlobal;
     const canEditProbationDecision =
-      review.reviewType === "PROBATION" && (access.isGlobal || isReviewer);
+      !isProbationSelfView &&
+      review.reviewType === "PROBATION" &&
+      (access.isGlobal || isReviewer || managerCanEditProbation);
     const canSaveDraft =
       canEditSelfComment || canEditManagerComment || canEditCompetencies;
 
     let canSubmit = false;
     if (review.reviewType === "PROBATION") {
-      canSubmit = access.isGlobal || isReviewer;
+      canSubmit = isProbationSelfView ? false : access.isGlobal || isReviewer;
     } else if (
       review.reviewType === "ANNUAL_PERFORMANCE" ||
       review.reviewType === "OBJECTIVE_SETTING"
@@ -502,7 +580,13 @@ export const createPerformanceService = (db: DbOrTx) => {
   };
 
   const buildReviewFieldUpdateData = async (
-    review: Pick<ReviewRecord, "employeeId" | "reviewerId">,
+    review: Pick<
+      ReviewRecord,
+      | "employeeId"
+      | "reviewerId"
+      | "reviewType"
+      | "probationConfirmationDecision"
+    >,
     actorId: string,
     input: {
       feedback?: Record<string, unknown>;
@@ -515,6 +599,10 @@ export const createPerformanceService = (db: DbOrTx) => {
     const access = await getActorAccess(actorId);
     const isEmployee = review.employeeId === actorId;
     const isReviewer = review.reviewerId === actorId;
+    const managerCanEditProbation = canManagerEditProbation(
+      review,
+      access.isManager,
+    );
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     let hasChanges = false;
 
@@ -529,7 +617,7 @@ export const createPerformanceService = (db: DbOrTx) => {
     }
 
     if (input.managerComment !== undefined) {
-      if (!(access.isGlobal || isReviewer)) {
+      if (!(access.isGlobal || isReviewer || managerCanEditProbation)) {
         throw AppError.forbidden(
           "Only the assigned reviewer can update manager comments",
         );
@@ -549,7 +637,7 @@ export const createPerformanceService = (db: DbOrTx) => {
     }
 
     if (input.overallRating !== undefined) {
-      if (!(access.isGlobal || isReviewer)) {
+      if (!(access.isGlobal || isReviewer || managerCanEditProbation)) {
         throw AppError.forbidden(
           "Only the assigned reviewer can update overall ratings",
         );
@@ -559,7 +647,7 @@ export const createPerformanceService = (db: DbOrTx) => {
     }
 
     if (input.feedback !== undefined) {
-      if (!(access.isGlobal || isReviewer)) {
+      if (!(access.isGlobal || isReviewer || managerCanEditProbation)) {
         throw AppError.forbidden(
           "Only the assigned reviewer can update review feedback",
         );
@@ -573,122 +661,82 @@ export const createPerformanceService = (db: DbOrTx) => {
 
   return {
     // ==========================================================================
-    // Cycle Operations
-    // ==========================================================================
-
-    /**
-     * Create a new performance cycle
-     */
-    async createCycle(input: CreateCycleInput, createdById?: string) {
-      const [cycle] = await db
-        .insert(performanceCycle)
-        .values({
-          name: input.name,
-          description: input.description,
-          startDate: new Date(input.startDate),
-          endDate: new Date(input.endDate),
-          status: "DRAFT",
-          createdById,
-        })
-        .returning();
-      if (!cycle) {
-        throw AppError.badRequest("Failed to create cycle");
-      }
-      return cycle;
-    },
-
-    /**
-     * Get all cycles ordered by creation date
-     */
-    async getCycles() {
-      return await db.query.performanceCycle.findMany({
-        orderBy: (cycles, { desc: descFn }) => [descFn(cycles.createdAt)],
-        with: {
-          createdBy: {
-            columns: { id: true, name: true, email: true },
-          },
-        },
-      });
-    },
-
-    /**
-     * Get a single cycle by ID
-     */
-    async getCycle(id: string) {
-      return await db.query.performanceCycle.findFirst({
-        where: eq(performanceCycle.id, id),
-        with: {
-          createdBy: {
-            columns: { id: true, name: true, email: true },
-          },
-          reviews: {
-            with: {
-              employee: {
-                columns: { id: true, name: true, email: true, image: true },
-              },
-              reviewer: {
-                columns: { id: true, name: true, email: true, image: true },
-              },
-            },
-          },
-        },
-      });
-    },
-
-    /**
-     * Update a cycle
-     */
-    async updateCycle(input: UpdateCycleInput) {
-      const updateData: Record<string, unknown> = { updatedAt: new Date() };
-      if (input.name) {
-        updateData.name = input.name;
-      }
-      if (input.description !== undefined) {
-        updateData.description = input.description;
-      }
-      if (input.startDate) {
-        updateData.startDate = new Date(input.startDate);
-      }
-      if (input.endDate) {
-        updateData.endDate = new Date(input.endDate);
-      }
-      if (input.status) {
-        updateData.status = input.status;
-      }
-
-      const [updated] = await db
-        .update(performanceCycle)
-        .set(updateData)
-        .where(eq(performanceCycle.id, input.cycleId))
-        .returning();
-      if (!updated) {
-        throw AppError.notFound("Cycle not found");
-      }
-      return updated;
-    },
-
-    // ==========================================================================
     // Review Operations
     // ==========================================================================
 
     /**
-     * Create a new performance review with default competencies from templates
+     * Create a new performance review with default competencies from templates.
+     * At most one open (DUE) OBJECTIVE_SETTING per employee; at most one PROBATION per employee.
      */
-    async createReview(input: CreateReviewInput) {
+    async createReview(input: CreateReviewInput, actorId?: string | null) {
       return await db.transaction(async (tx) => {
-        const cycle = await tx.query.performanceCycle.findFirst({
-          where: eq(performanceCycle.id, input.cycleId),
-        });
+        if (input.reviewType === "PROBATION" && actorId) {
+          const actorRole = await getActorRole(tx, actorId);
+          const positionInfo = await getActorPositionInfo(tx, actorId);
+          const isAdmin = actorRole === "ADMIN";
+          const isHodRole = actorRole.startsWith("HOD");
 
-        if (!cycle) {
-          throw AppError.notFound("Performance cycle not found");
+          // HR can view all probation-eligible employees, but only create probation
+          // reviews within their own department.
+          if (!isAdmin && isHodRole) {
+            if (!positionInfo?.departmentId) {
+              throw AppError.forbidden("No department scope for this actor");
+            }
+
+            const employee = await tx.query.user.findFirst({
+              where: eq(user.id, input.employeeId),
+              columns: { id: true, departmentId: true },
+            });
+
+            if (!employee) {
+              throw AppError.notFound("Employee not found");
+            }
+
+            if (employee.departmentId !== positionInfo.departmentId) {
+              throw AppError.forbidden(
+                "Employee is outside your department scope",
+              );
+            }
+          }
         }
 
-        // Create the review
+        if (input.reviewType === "OBJECTIVE_SETTING") {
+          const existing = await tx.query.performanceReview.findFirst({
+            where: and(
+              eq(performanceReview.employeeId, input.employeeId),
+              eq(performanceReview.reviewType, "OBJECTIVE_SETTING"),
+              sql`${performanceReview.status} IN ('DUE', 'SENT_TO_MANAGER', 'SELF_REVIEW', 'AWAITING_MANAGER_REVIEW', 'OVERDUE')`,
+            ),
+            columns: { id: true },
+          });
+          if (existing) {
+            throw AppError.badRequest(
+              "Employee already has an open goal review. Edit it or submit as annual.",
+            );
+          }
+        }
+        if (input.reviewType === "PROBATION") {
+          const existing = await tx.query.performanceReview.findFirst({
+            where: and(
+              eq(performanceReview.employeeId, input.employeeId),
+              eq(performanceReview.reviewType, "PROBATION"),
+            ),
+            columns: { id: true },
+          });
+          if (existing) {
+            throw AppError.badRequest(
+              "Employee already has a probation review. Only one probation per user.",
+            );
+          }
+        }
+
+        const dueAt = input.reviewPeriodEnd
+          ? new Date(input.reviewPeriodEnd)
+          : undefined;
+
         const [review] = await tx
           .insert(performanceReview)
           .values({
-            cycleId: input.cycleId,
             employeeId: input.employeeId,
             reviewerId: input.reviewerId,
             reviewType: input.reviewType,
@@ -698,9 +746,7 @@ export const createPerformanceService = (db: DbOrTx) => {
             reviewPeriodEnd: input.reviewPeriodEnd
               ? new Date(input.reviewPeriodEnd)
               : undefined,
-            dueAt: input.reviewPeriodEnd
-              ? new Date(input.reviewPeriodEnd)
-              : cycle.endDate,
+            dueAt,
             status: "DUE",
             completionPercentage: 0,
           })
@@ -756,7 +802,6 @@ export const createPerformanceService = (db: DbOrTx) => {
       const review = await db.query.performanceReview.findFirst({
         where: eq(performanceReview.id, reviewId),
         with: {
-          cycle: true,
           employee: {
             columns: {
               id: true,
@@ -811,15 +856,8 @@ export const createPerformanceService = (db: DbOrTx) => {
       },
       actorId: string,
     ) {
-      const {
-        cycleId,
-        employeeId,
-        reviewerId,
-        status,
-        reviewType,
-        page,
-        pageSize,
-      } = params;
+      const { employeeId, reviewerId, status, reviewType, page, pageSize } =
+        params;
 
       const conditions: ReturnType<typeof eq>[] = [];
 
@@ -875,9 +913,6 @@ export const createPerformanceService = (db: DbOrTx) => {
         }
       }
 
-      if (cycleId) {
-        conditions.push(eq(performanceReview.cycleId, cycleId));
-      }
       if (status && status.length > 0) {
         conditions.push(inArray(performanceReview.status, status));
       }
@@ -897,9 +932,6 @@ export const createPerformanceService = (db: DbOrTx) => {
             },
             reviewer: {
               columns: { id: true, name: true, email: true },
-            },
-            cycle: {
-              columns: { id: true, name: true },
             },
           },
           orderBy: (r, { desc: descFn }) => [descFn(r.updatedAt)],
@@ -1156,6 +1188,45 @@ export const createPerformanceService = (db: DbOrTx) => {
         return review;
       }
 
+      // For annual reviews, compute completion % from goal achievements when feedback is updated
+      const linkedObjectiveReviewId = review.linkedObjectiveReviewId;
+      if (
+        review.reviewType === "ANNUAL_PERFORMANCE" &&
+        linkedObjectiveReviewId &&
+        input.feedback &&
+        typeof input.feedback === "object" &&
+        "goalAchievements" in input.feedback
+      ) {
+        const goalAchievements = input.feedback.goalAchievements as Record<
+          string,
+          { achievedPercentage?: number }
+        >;
+        if (goalAchievements && typeof goalAchievements === "object") {
+          const objectiveGoals = await db.query.performanceGoal.findMany({
+            where: eq(performanceGoal.reviewId, linkedObjectiveReviewId),
+            columns: { id: true, weight: true },
+          });
+          const weightById = new Map(
+            objectiveGoals.map((g) => [g.id, g.weight ?? 0]),
+          );
+          let weightedSum = 0;
+          let totalWeight = 0;
+          for (const [goalId, assessment] of Object.entries(goalAchievements)) {
+            const weight = weightById.get(goalId) ?? 0;
+            const achieved =
+              typeof assessment?.achievedPercentage === "number"
+                ? assessment.achievedPercentage
+                : 0;
+            weightedSum += (achieved / 100) * weight;
+            totalWeight += weight;
+          }
+          const completionPercentage =
+            totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) : 0;
+          (updateData as Record<string, unknown>).completionPercentage =
+            Math.min(100, Math.max(0, completionPercentage));
+        }
+      }
+
       const [updated] = await db
         .update(performanceReview)
         .set(updateData)
@@ -1177,6 +1248,7 @@ export const createPerformanceService = (db: DbOrTx) => {
 
         // Update review fields
         const updateData = await buildReviewFieldUpdateData(review, actorId, {
+          feedback: input.feedback,
           managerComment: input.managerComment,
           selfComment: input.selfComment,
         });
@@ -1634,6 +1706,543 @@ export const createPerformanceService = (db: DbOrTx) => {
       }
 
       return metrics;
+    },
+
+    // ==========================================================================
+    // Employee Lists (Performance landing)
+    // ==========================================================================
+
+    /**
+     * Get employees for the "All employees" performance tab.
+     * HR HOD / Admin: all active employees. Other HODs: only employees in their department.
+     */
+    async getPerformanceEmployeesAll(userId: string) {
+      const role = await getActorRole(db, userId);
+      const positionInfo = await getActorPositionInfo(db, userId);
+      const isHrOrAdmin = await isHrDepartmentHeadForViewing(
+        userId,
+        role,
+        positionInfo,
+      );
+
+      const conditions = [eq(user.status, "ACTIVE")];
+      if (!isHrOrAdmin && positionInfo?.departmentId) {
+        conditions.push(eq(user.departmentId, positionInfo.departmentId));
+      }
+      if (!(isHrOrAdmin || positionInfo?.departmentId)) {
+        return [];
+      }
+
+      const rows = await db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          departmentId: user.departmentId,
+          joiningDate: user.joiningDate,
+        })
+        .from(user)
+        .where(and(...conditions))
+        .orderBy(user.name);
+
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        departmentId: r.departmentId ?? undefined,
+        joiningDate: r.joiningDate?.toISOString() ?? undefined,
+      }));
+    },
+
+    /**
+     * Get employees for the "Probation employees" tab: joined more than 6 months ago
+     * regardless of whether they already have a probation review.
+     */
+    async getPerformanceEmployeesProbation(userId: string) {
+      const role = await getActorRole(db, userId);
+      const positionInfo = await getActorPositionInfo(db, userId);
+      const isHrOrAdmin = await isHrDepartmentHeadForViewing(
+        userId,
+        role,
+        positionInfo,
+      );
+
+      const conditions = [eq(user.status, "ACTIVE")];
+      if (!isHrOrAdmin && positionInfo?.departmentId) {
+        conditions.push(eq(user.departmentId, positionInfo.departmentId));
+      }
+      if (!(isHrOrAdmin || positionInfo?.departmentId)) {
+        return [];
+      }
+
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      conditions.push(lt(user.joiningDate, sixMonthsAgo));
+
+      const rows = await db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          departmentId: user.departmentId,
+          joiningDate: user.joiningDate,
+        })
+        .from(user)
+        .where(and(...conditions))
+        .orderBy(user.name);
+
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        departmentId: r.departmentId ?? undefined,
+        joiningDate: r.joiningDate?.toISOString() ?? undefined,
+      }));
+    },
+
+    // ==========================================================================
+    // Objective / Annual Review actions from employee list
+    // ==========================================================================
+
+    async getEmployeeObjectiveReviewState(actorId: string, employeeId: string) {
+      const role = await getActorRole(db, actorId);
+      const positionInfo = await getActorPositionInfo(db, actorId);
+      const isHrOrAdmin = await isHrDepartmentHeadForViewing(
+        actorId,
+        role,
+        positionInfo,
+      );
+
+      if (!isHrOrAdmin) {
+        if (!positionInfo?.departmentId) {
+          throw AppError.forbidden("No department scope for this actor");
+        }
+        const employee = await db.query.user.findFirst({
+          where: eq(user.id, employeeId),
+          columns: { id: true, departmentId: true },
+        });
+        if (!employee) {
+          throw AppError.notFound("Employee not found");
+        }
+        if (employee.departmentId !== positionInfo.departmentId) {
+          throw AppError.forbidden("Employee is outside your department scope");
+        }
+      }
+
+      const openStatuses = [
+        "DUE",
+        "SENT_TO_MANAGER",
+        "SELF_REVIEW",
+        "AWAITING_MANAGER_REVIEW",
+        "OVERDUE",
+      ] as const;
+      const activeObjective = await db.query.performanceReview.findFirst({
+        where: and(
+          eq(performanceReview.employeeId, employeeId),
+          eq(performanceReview.reviewType, "OBJECTIVE_SETTING"),
+          inArray(performanceReview.status, openStatuses),
+        ),
+        orderBy: (r, { desc }) => [desc(r.createdAt)],
+        columns: { id: true, status: true, createdAt: true },
+      });
+
+      const latestGoalOrAnnual = await db.query.performanceReview.findFirst({
+        where: and(
+          eq(performanceReview.employeeId, employeeId),
+          inArray(performanceReview.reviewType, [
+            "OBJECTIVE_SETTING",
+            "ANNUAL_PERFORMANCE",
+          ]),
+        ),
+        orderBy: (r, { desc }) => [desc(r.updatedAt)],
+        columns: { id: true },
+      });
+
+      const probationReview = await db.query.performanceReview.findFirst({
+        where: and(
+          eq(performanceReview.employeeId, employeeId),
+          eq(performanceReview.reviewType, "PROBATION"),
+        ),
+        orderBy: (r, { desc }) => [desc(r.createdAt)],
+        columns: { id: true, probationConfirmationDecision: true },
+      });
+
+      return {
+        activeObjectiveReviewId: activeObjective?.id ?? null,
+        activeObjectiveStatus: activeObjective?.status ?? null,
+        latestObjectiveReviewId: latestGoalOrAnnual?.id ?? null,
+        probationReviewId: probationReview?.id ?? null,
+        probationConfirmationDecision:
+          probationReview?.probationConfirmationDecision ?? null,
+      };
+    },
+
+    async getEmployeesObjectiveReviewStates(
+      actorId: string,
+      employeeIds: string[],
+    ) {
+      const uniqueIds = [...new Set(employeeIds)].filter(Boolean);
+      if (uniqueIds.length === 0) {
+        return {};
+      }
+
+      const role = await getActorRole(db, actorId);
+      const positionInfo = await getActorPositionInfo(db, actorId);
+      const isHrOrAdmin = await isHrDepartmentHeadForViewing(
+        actorId,
+        role,
+        positionInfo,
+      );
+
+      if (!isHrOrAdmin) {
+        if (!positionInfo?.departmentId) {
+          throw AppError.forbidden("No department scope for this actor");
+        }
+        const scopedEmployees = await db
+          .select({ id: user.id })
+          .from(user)
+          .where(
+            and(
+              inArray(user.id, uniqueIds),
+              eq(user.departmentId, positionInfo.departmentId),
+            ),
+          );
+        const allowed = new Set(scopedEmployees.map((e) => e.id));
+        const filtered = uniqueIds.filter((id) => allowed.has(id));
+        if (filtered.length === 0) {
+          return {};
+        }
+        uniqueIds.splice(0, uniqueIds.length, ...filtered);
+      }
+
+      const openStatuses = [
+        "DUE",
+        "SENT_TO_MANAGER",
+        "SELF_REVIEW",
+        "AWAITING_MANAGER_REVIEW",
+        "OVERDUE",
+      ] as const;
+      const allGoalOrAnnual = await db
+        .select({
+          id: performanceReview.id,
+          employeeId: performanceReview.employeeId,
+          reviewType: performanceReview.reviewType,
+          status: performanceReview.status,
+          updatedAt: performanceReview.updatedAt,
+        })
+        .from(performanceReview)
+        .where(
+          and(
+            inArray(performanceReview.employeeId, uniqueIds),
+            inArray(performanceReview.reviewType, [
+              "OBJECTIVE_SETTING",
+              "ANNUAL_PERFORMANCE",
+            ]),
+          ),
+        )
+        .orderBy(desc(performanceReview.updatedAt));
+
+      const allProbation = await db
+        .select({
+          id: performanceReview.id,
+          employeeId: performanceReview.employeeId,
+          probationConfirmationDecision:
+            performanceReview.probationConfirmationDecision,
+          createdAt: performanceReview.createdAt,
+        })
+        .from(performanceReview)
+        .where(
+          and(
+            inArray(performanceReview.employeeId, uniqueIds),
+            eq(performanceReview.reviewType, "PROBATION"),
+          ),
+        )
+        .orderBy(desc(performanceReview.createdAt));
+
+      const result: Record<
+        string,
+        {
+          activeObjectiveReviewId: string | null;
+          activeObjectiveStatus: string | null;
+          latestObjectiveReviewId: string | null;
+          probationReviewId: string | null;
+          probationConfirmationDecision:
+            | "CONFIRM_EMPLOYMENT"
+            | "EXTEND_PROBATION"
+            | "RECOMMEND_TERMINATION"
+            | null;
+        }
+      > = {};
+
+      for (const id of uniqueIds) {
+        result[id] = {
+          activeObjectiveReviewId: null,
+          activeObjectiveStatus: null,
+          latestObjectiveReviewId: null,
+          probationReviewId: null,
+          probationConfirmationDecision: null,
+        };
+      }
+
+      for (const row of allGoalOrAnnual) {
+        const bucket = result[row.employeeId];
+        if (!bucket) {
+          continue;
+        }
+        if (!bucket.latestObjectiveReviewId) {
+          bucket.latestObjectiveReviewId = row.id;
+        }
+        if (
+          !bucket.activeObjectiveReviewId &&
+          row.reviewType === "OBJECTIVE_SETTING" &&
+          (openStatuses as readonly string[]).includes(row.status)
+        ) {
+          bucket.activeObjectiveReviewId = row.id;
+          bucket.activeObjectiveStatus = row.status;
+        }
+      }
+
+      for (const row of allProbation) {
+        const bucket = result[row.employeeId];
+        if (bucket && !bucket.probationReviewId) {
+          bucket.probationReviewId = row.id;
+          bucket.probationConfirmationDecision =
+            (row.probationConfirmationDecision ?? null) as
+              | "CONFIRM_EMPLOYMENT"
+              | "EXTEND_PROBATION"
+              | "RECOMMEND_TERMINATION"
+              | null;
+        }
+      }
+
+      return result;
+    },
+
+    async createObjectiveReviewForEmployee(
+      actorId: string,
+      employeeId: string,
+    ) {
+      const role = await getActorRole(db, actorId);
+      const positionInfo = await getActorPositionInfo(db, actorId);
+      const isHrOrAdmin = role === "HOD_HR" || role === "ADMIN";
+
+      if (!isHrOrAdmin) {
+        if (!positionInfo?.departmentId) {
+          throw AppError.forbidden("No department scope for this actor");
+        }
+        const employee = await db.query.user.findFirst({
+          where: eq(user.id, employeeId),
+          columns: { id: true, departmentId: true },
+        });
+        if (!employee) {
+          throw AppError.notFound("Employee not found");
+        }
+        if (employee.departmentId !== positionInfo.departmentId) {
+          throw AppError.forbidden("Employee is outside your department scope");
+        }
+      }
+
+      const review = await this.createReview(
+        {
+          employeeId,
+          reviewerId: actorId,
+          reviewType: "OBJECTIVE_SETTING",
+        },
+        actorId,
+      );
+
+      return { reviewId: review.id };
+    },
+
+    async createObjectiveSettingForEmployee(
+      actorId: string,
+      input: CreateObjectiveSettingForEmployeeInput,
+    ) {
+      const role = await getActorRole(db, actorId);
+      const positionInfo = await getActorPositionInfo(db, actorId);
+      const isHrOrAdmin = role === "HOD_HR" || role === "ADMIN";
+
+      if (!isHrOrAdmin) {
+        if (!positionInfo?.departmentId) {
+          throw AppError.forbidden("No department scope for this actor");
+        }
+        const employee = await db.query.user.findFirst({
+          where: eq(user.id, input.employeeId),
+          columns: { id: true, departmentId: true },
+        });
+        if (!employee) {
+          throw AppError.notFound("Employee not found");
+        }
+        if (employee.departmentId !== positionInfo.departmentId) {
+          throw AppError.forbidden("Employee is outside your department scope");
+        }
+      }
+
+      const review = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(performanceReview)
+          .values({
+            employeeId: input.employeeId,
+            reviewerId: actorId,
+            reviewType: "OBJECTIVE_SETTING",
+            status: "DUE",
+            reviewPeriodStart: input.reviewPeriodStart
+              ? new Date(input.reviewPeriodStart)
+              : null,
+            reviewPeriodEnd: input.reviewPeriodEnd
+              ? new Date(input.reviewPeriodEnd)
+              : null,
+            completionPercentage: 0,
+            feedback: {
+              objectiveMainGoal: input.objectiveMainGoal,
+            },
+          })
+          .returning();
+
+        if (!created) {
+          throw AppError.badRequest("Failed to create objective review");
+        }
+
+        await tx.insert(performanceGoal).values(
+          input.goals.map((g) => ({
+            reviewId: created.id,
+            title: g.title,
+            description: g.description ?? null,
+            weight: g.weight,
+            status: "PENDING" as const,
+          })),
+        );
+
+        return created;
+      });
+
+      return { reviewId: review.id };
+    },
+
+    async createProbationForEmployee(actorId: string, employeeId: string) {
+      const role = await getActorRole(db, actorId);
+      const positionInfo = await getActorPositionInfo(db, actorId);
+      const isAdmin = role === "ADMIN";
+      const employee = await db.query.user.findFirst({
+        where: eq(user.id, employeeId),
+        columns: { id: true, departmentId: true, joiningDate: true },
+      });
+      if (!employee) {
+        throw AppError.notFound("Employee not found");
+      }
+
+      if (!isAdmin) {
+        if (!positionInfo?.departmentId) {
+          throw AppError.forbidden("No department scope for this actor");
+        }
+        if (employee.departmentId !== positionInfo.departmentId) {
+          throw AppError.forbidden("Employee is outside your department scope");
+        }
+      }
+
+      const reviewPeriodStart = employee.joiningDate ?? new Date();
+      const reviewPeriodEnd = new Date();
+      const review = await this.createReview(
+        {
+          employeeId,
+          reviewerId: actorId,
+          reviewType: "PROBATION",
+          reviewPeriodStart: reviewPeriodStart.toISOString(),
+          reviewPeriodEnd: reviewPeriodEnd.toISOString(),
+        },
+        actorId,
+      );
+      return { reviewId: review.id };
+    },
+
+    /**
+     * Submit goal review as annual: convert OBJECTIVE_SETTING review in place to
+     * ANNUAL_PERFORMANCE, status SUBMITTED, keeping goal data and adding
+     * reflection + goal achievements (achieved %, comment per goal).
+     */
+    async submitGoalReviewAsAnnual(
+      actorId: string,
+      input: SubmitGoalReviewAsAnnualInput,
+    ) {
+      const review = await db.query.performanceReview.findFirst({
+        where: eq(performanceReview.id, input.reviewId),
+        with: { goals: true },
+      });
+      if (!review) {
+        throw AppError.notFound("Review not found");
+      }
+      if (review.reviewType !== "OBJECTIVE_SETTING") {
+        throw AppError.badRequest(
+          "Only a goal (objective) review can be submitted as annual",
+        );
+      }
+      const openStatuses = [
+        "DUE",
+        "SENT_TO_MANAGER",
+        "SELF_REVIEW",
+        "AWAITING_MANAGER_REVIEW",
+        "OVERDUE",
+      ] as const;
+      if (
+        !openStatuses.includes(review.status as (typeof openStatuses)[number])
+      ) {
+        throw AppError.badRequest("Goal review is already submitted or closed");
+      }
+      await assertCanAccessReview(review, actorId);
+
+      const now = new Date();
+      const currentFeedback = (
+        review.feedback && typeof review.feedback === "object"
+          ? (review.feedback as Record<string, unknown>)
+          : {}
+      ) as Record<string, unknown>;
+
+      // Total completion = sum of (goal weight * achieved%) / 100
+      let completionPercentage = 0;
+      if (review.goals.length > 0) {
+        let sum = 0;
+        for (const goal of review.goals) {
+          const weight = typeof goal.weight === "number" ? goal.weight : 0;
+          const achieved =
+            input.goalAchievements[goal.id]?.achievedPercentage ?? 0;
+          sum += (weight * achieved) / 100;
+        }
+        completionPercentage = Math.round(sum);
+      }
+
+      return await db.transaction(async (tx) => {
+        for (const goal of review.goals) {
+          const achievement = input.goalAchievements[goal.id];
+          if (achievement) {
+            await tx
+              .update(performanceGoal)
+              .set({
+                updatedAt: now,
+                status: "COMPLETED",
+                comment: achievement.comment ?? null,
+                rating: undefined,
+              })
+              .where(eq(performanceGoal.id, goal.id));
+          }
+        }
+        await tx
+          .update(performanceReview)
+          .set({
+            reviewType: "ANNUAL_PERFORMANCE",
+            status: "SUBMITTED",
+            submittedAt: now,
+            updatedAt: now,
+            completionPercentage,
+            selfComment: input.reflection ?? review.selfComment,
+            feedback: {
+              ...currentFeedback,
+              goalAchievements: input.goalAchievements,
+            },
+          })
+          .where(eq(performanceReview.id, input.reviewId));
+
+        return await this.getReview(input.reviewId, actorId);
+      });
     },
   };
 };

@@ -16,14 +16,8 @@ import { user } from "./auth";
 // Enums
 // ============================================================================
 
-export const performanceCycleStatusEnum = pgEnum("performance_cycle_status", [
-  "DRAFT",
-  "ACTIVE",
-  "COMPLETED",
-  "ARCHIVED",
-]);
-
 export const performanceReviewStatusEnum = pgEnum("performance_review_status", [
+  "DRAFT",
   "DUE",
   "SENT_TO_MANAGER",
   "SELF_REVIEW",
@@ -52,32 +46,12 @@ export const performanceGoalStatusEnum = pgEnum("performance_goal_status", [
 // ============================================================================
 
 /**
- * Performance Cycle - A defined period for reviews (e.g., Q1 2025, Annual 2025)
- */
-export const performanceCycle = pgTable("performance_cycle", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  description: text("description"),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  status: performanceCycleStatusEnum("status").default("DRAFT").notNull(),
-  createdById: text("created_by_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-/**
- * Performance Review - An individual employee's review within a cycle
+ * Performance Review - An individual employee's review (goal/annual or probation)
  */
 export const performanceReview = pgTable(
   "performance_review",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    cycleId: uuid("cycle_id")
-      .notNull()
-      .references(() => performanceCycle.id, { onDelete: "cascade" }),
     employeeId: text("employee_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -112,7 +86,6 @@ export const performanceReview = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    cycleIdIdx: index("performance_review_cycle_id_idx").on(table.cycleId),
     employeeIdIdx: index("performance_review_employee_id_idx").on(
       table.employeeId,
     ),
@@ -195,24 +168,9 @@ export const competencyTemplate = pgTable("competency_template", {
 // Relations
 // ============================================================================
 
-export const performanceCycleRelations = relations(
-  performanceCycle,
-  ({ one, many }) => ({
-    createdBy: one(user, {
-      fields: [performanceCycle.createdById],
-      references: [user.id],
-    }),
-    reviews: many(performanceReview),
-  }),
-);
-
 export const performanceReviewRelations = relations(
   performanceReview,
   ({ one, many }) => ({
-    cycle: one(performanceCycle, {
-      fields: [performanceReview.cycleId],
-      references: [performanceCycle.id],
-    }),
     employee: one(user, {
       fields: [performanceReview.employeeId],
       references: [user.id],
@@ -260,9 +218,6 @@ export const competencyTemplateRelations = relations(
 // ============================================================================
 // Type Exports
 // ============================================================================
-
-export type PerformanceCycle = typeof performanceCycle.$inferSelect;
-export type NewPerformanceCycle = typeof performanceCycle.$inferInsert;
 
 export type PerformanceReview = typeof performanceReview.$inferSelect;
 export type NewPerformanceReview = typeof performanceReview.$inferInsert;

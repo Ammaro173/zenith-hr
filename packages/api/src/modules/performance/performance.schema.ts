@@ -28,9 +28,10 @@ export const REVIEW_TYPES = [
 export type ReviewType = (typeof REVIEW_TYPES)[number]["value"];
 
 /**
- * Review status flow
+ * Review status flow (includes DRAFT to align with DB enum)
  */
 export const REVIEW_STATUSES = [
+  { value: "DRAFT", label: "Draft", color: "gray" },
   { value: "DUE", label: "Due", color: "red" },
   { value: "SENT_TO_MANAGER", label: "Sent to Manager", color: "orange" },
   { value: "SELF_REVIEW", label: "Self Review", color: "blue" },
@@ -105,51 +106,13 @@ export const GOAL_STATUSES = [
 
 export type GoalStatus = (typeof GOAL_STATUSES)[number]["value"];
 
-/**
- * Cycle status options
- */
-export const CYCLE_STATUSES = [
-  { value: "DRAFT", label: "Draft", color: "gray" },
-  { value: "ACTIVE", label: "Active", color: "green" },
-  { value: "COMPLETED", label: "Completed", color: "blue" },
-  { value: "ARCHIVED", label: "Archived", color: "gray" },
-] as const;
-
-export type CycleStatus = (typeof CYCLE_STATUSES)[number]["value"];
-
 // ============================================================================
 // Zod Schemas
 // ============================================================================
 
-// --- Cycle Schemas ---
-
-export const createCycleSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().optional(),
-  startDate: z.string().datetime(), // ISO date string
-  endDate: z.string().datetime(),
-});
-
-export const createCycleDefaults: z.input<typeof createCycleSchema> = {
-  name: "",
-  description: "",
-  startDate: "",
-  endDate: "",
-};
-
-export const updateCycleSchema = z.object({
-  cycleId: z.string().uuid(),
-  name: z.string().min(3).optional(),
-  description: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  status: z.enum(["DRAFT", "ACTIVE", "COMPLETED", "ARCHIVED"]).optional(),
-});
-
 // --- Review Schemas ---
 
 export const createReviewSchema = z.object({
-  cycleId: z.string().uuid(),
   employeeId: z.string(),
   reviewerId: z.string().optional(),
   reviewType: z.enum(["PROBATION", "ANNUAL_PERFORMANCE", "OBJECTIVE_SETTING"]),
@@ -158,7 +121,6 @@ export const createReviewSchema = z.object({
 });
 
 export const createReviewDefaults: z.input<typeof createReviewSchema> = {
-  cycleId: "",
   employeeId: "",
   reviewerId: undefined,
   reviewType: "ANNUAL_PERFORMANCE",
@@ -197,10 +159,24 @@ export const saveDraftSchema = z.object({
   competencyRatings: z.array(competencyRatingSchema).optional(),
   managerComment: z.string().optional(),
   selfComment: z.string().optional(),
+  feedback: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const submitReviewSchema = z.object({
   reviewId: z.string().uuid(),
+});
+
+/** Submit goal review as annual: convert OBJECTIVE_SETTING to ANNUAL_PERFORMANCE, set status SUBMITTED, persist reflection + goal achievements */
+export const submitGoalReviewAsAnnualSchema = z.object({
+  reviewId: z.string().uuid(),
+  reflection: z.string().optional(),
+  goalAchievements: z.record(
+    z.string(),
+    z.object({
+      achievedPercentage: z.number().min(0).max(100),
+      comment: z.string().optional(),
+    }),
+  ),
 });
 
 export const transitionReviewSchema = z.object({
@@ -303,6 +279,28 @@ export const deleteGoalSchema = z.object({
   goalId: z.string().uuid(),
 });
 
+// --- Objective Setting Creation (from employee list) ---
+
+export const createObjectiveSettingForEmployeeSchema = z.object({
+  employeeId: z.string(),
+  objectiveMainGoal: z.string().min(3, "Objective main goal is required"),
+  reviewPeriodStart: z.string().datetime().optional(),
+  reviewPeriodEnd: z.string().datetime().optional(),
+  goals: z
+    .array(
+      z.object({
+        title: z.string().min(3, "Title must be at least 3 characters"),
+        description: z.string().optional(),
+        weight: z.number().min(1).max(100),
+      }),
+    )
+    .min(1, "At least one goal is required")
+    .refine((goals) => goals.reduce((sum, g) => sum + g.weight, 0) === 100, {
+      message: "Goal weights must equal exactly 100%",
+      path: ["goals"],
+    }),
+});
+
 // --- Competency Template Schemas ---
 
 export const createCompetencyTemplateSchema = z.object({
@@ -319,7 +317,6 @@ export const createCompetencyTemplateSchema = z.object({
 // --- Query Schemas ---
 
 export const getReviewsSchema = z.object({
-  cycleId: z.string().uuid().optional(),
   employeeId: z.string().optional(),
   reviewerId: z.string().optional(),
   status: z
@@ -349,9 +346,6 @@ export type GetReviewsInput = z.infer<typeof getReviewsSchema>;
 // Type Exports - Infer types from schemas
 // ============================================================================
 
-export type CreateCycleInput = z.infer<typeof createCycleSchema>;
-export type UpdateCycleInput = z.infer<typeof updateCycleSchema>;
-
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 export type UpdateReviewInput = z.infer<typeof updateReviewSchema>;
 export type SaveDraftInput = z.infer<typeof saveDraftSchema>;
@@ -366,3 +360,6 @@ export type CreateGoalInput = z.infer<typeof createGoalSchema>;
 export type UpdateGoalInput = z.infer<typeof updateGoalSchema>;
 
 export type TransitionReviewInput = z.infer<typeof transitionReviewSchema>;
+export type SubmitGoalReviewAsAnnualInput = z.infer<
+  typeof submitGoalReviewAsAnnualSchema
+>;

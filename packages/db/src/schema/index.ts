@@ -42,7 +42,6 @@ export {
 export {
   competencyTemplateRelations,
   performanceCompetencyRelations,
-  performanceCycleRelations,
   performanceGoalRelations,
   performanceReviewRelations,
 } from "./performance";
