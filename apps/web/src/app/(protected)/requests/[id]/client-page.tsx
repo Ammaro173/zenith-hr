@@ -106,17 +106,24 @@ export function RequestDetailClientPage({
     );
   }
 
+  // Position-based step (e.g. PENDING_MANAGER, PENDING_HOD): current approver is a specific user.
+  // Role-based steps (PENDING_HR, PENDING_FINANCE, PENDING_CEO): backend stores no single approver;
+  // any user with requiredApproverRole can approve, so match by role.
+  const terminalStatuses = [
+    "APPROVED_OPEN",
+    "REJECTED",
+    "ARCHIVED",
+    "DRAFT",
+    "CHANGE_REQUESTED",
+    "COMPLETED",
+  ];
+  const isPositionApprover = request.currentApprover?.id === currentUserId;
+  const isRoleApprover =
+    ["PENDING_HR", "PENDING_FINANCE", "PENDING_CEO"].includes(request.status) &&
+    request.requiredApproverRole === currentUserRole;
   const isApprover =
-    request.currentApprover?.id === currentUserId &&
-    ![
-      "APPROVED_OPEN",
-      "REJECTED",
-      "ARCHIVED",
-      "DRAFT",
-      "CHANGE_REQUESTED",
-      "COMPLETED",
-    ].includes(request.status);
-
+    (isPositionApprover || isRoleApprover) &&
+    !terminalStatuses.includes(request.status);
   const canResubmit =
     request.status === "CHANGE_REQUESTED" &&
     request.requester?.id === currentUserId;
@@ -126,7 +133,10 @@ export function RequestDetailClientPage({
     (currentUserRole === "HOD_HR" || currentUserRole === "ADMIN");
 
   const canAddNotes =
-    currentUserRole === "HOD_HR" || currentUserRole === "ADMIN" || isApprover;
+    currentUserRole === "HOD_HR" ||
+    currentUserRole === "ADMIN" ||
+    currentUserRole === "HOD_FINANCE" ||
+    isApprover;
 
   const positionDetails = request.positionDetails as {
     title?: string;
@@ -138,6 +148,7 @@ export function RequestDetailClientPage({
   const budgetDetails = request.budgetDetails as {
     currency: string;
     notes?: string;
+    positionBudgeted?: "BUDGETED" | "NOT_BUDGETED";
   };
   const position = request.position;
   const notes =
@@ -350,7 +361,17 @@ export function RequestDetailClientPage({
                 Budget & Financials
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="space-y-6 pt-6">
+              <div className="space-y-1">
+                <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                  POSITION BUDGETED
+                </span>
+                <div className="font-medium">
+                  {budgetDetails.positionBudgeted === "NOT_BUDGETED"
+                    ? "Not Budgeted"
+                    : "Budgeted"}
+                </div>
+              </div>
               <div className="space-y-1">
                 <span className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
                   SALARY RANGE

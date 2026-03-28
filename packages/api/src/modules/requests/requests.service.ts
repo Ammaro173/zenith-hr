@@ -591,7 +591,8 @@ export const createRequestsService = (
 
     /**
      * Get all related requests and trips visible to the actor using dynamic CTE
-     * Shows visibility for all requested and involved workflows based on position hierarchy
+     * Shows visibility for all requested and involved workflows based on position hierarchy.
+     * Head of HR (HOD_HR) sees all manpower requests in the All Related tab.
      */
     async getAllRelated(actorId: string, params: GetMyRequestsInput) {
       const { page, pageSize, search, status, requestType, sortBy, sortOrder } =
@@ -602,27 +603,32 @@ export const createRequestsService = (
         return { data: [], total: 0, page, pageSize, pageCount: 0 };
       }
 
-      // We'll use Drizzle's relational querying with CTE for the IDs
-      const descendantsResult = await db.execute(sql`
-        WITH RECURSIVE descendants AS (
-          SELECT id AS position_id FROM job_position WHERE id = ${actorPosInfo.positionId}
-          UNION ALL
-          SELECT jp.id FROM job_position jp INNER JOIN descendants d ON jp.reports_to_position_id = d.position_id
-        )
-        SELECT position_id FROM descendants
-      `);
-      const descendantIds = descendantsResult.rows.map(
-        (r) => r.position_id as string,
-      );
+      const isHeadOfHr = actorPosInfo.positionRole === "HOD_HR";
+      let conditions: SQL[];
 
-      const conditions: SQL[] = [
-        or(
-          eq(manpowerRequest.requesterId, actorId),
-          inArray(manpowerRequest.requesterPositionId, descendantIds),
-          inArray(manpowerRequest.currentApproverPositionId, descendantIds),
-          eq(manpowerRequest.requiredApproverRole, actorPosInfo.positionRole),
-        ) as SQL,
-      ];
+      if (isHeadOfHr) {
+        conditions = [sql`1=1`];
+      } else {
+        const descendantsResult = await db.execute(sql`
+          WITH RECURSIVE descendants AS (
+            SELECT id AS position_id FROM job_position WHERE id = ${actorPosInfo.positionId}
+            UNION ALL
+            SELECT jp.id FROM job_position jp INNER JOIN descendants d ON jp.reports_to_position_id = d.position_id
+          )
+          SELECT position_id FROM descendants
+        `);
+        const descendantIds = descendantsResult.rows.map(
+          (r) => r.position_id as string,
+        );
+        conditions = [
+          or(
+            eq(manpowerRequest.requesterId, actorId),
+            inArray(manpowerRequest.requesterPositionId, descendantIds),
+            inArray(manpowerRequest.currentApproverPositionId, descendantIds),
+            eq(manpowerRequest.requiredApproverRole, actorPosInfo.positionRole),
+          ) as SQL,
+        ];
+      }
 
       if (status?.length) {
         conditions.push(inArray(manpowerRequest.status, status));

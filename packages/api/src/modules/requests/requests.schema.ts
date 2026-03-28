@@ -9,9 +9,15 @@ const positionDetailsSchema = z.object({
   reportingTo: z.string().optional(),
 });
 
+export const POSITION_BUDGETED_OPTIONS = [
+  { value: "BUDGETED", label: "Budgeted" },
+  { value: "NOT_BUDGETED", label: "Not Budgeted" },
+] as const;
+
 const budgetDetailsSchema = z.object({
   currency: z.string().min(1),
   notes: z.string().optional(),
+  positionBudgeted: z.enum(["BUDGETED", "NOT_BUDGETED"]).optional(),
 });
 
 export const REQUEST_TYPES = [
@@ -109,6 +115,7 @@ export const createRequestDefaults: z.infer<typeof createRequestSchema> = {
   budgetDetails: {
     currency: "QAR",
     notes: "",
+    positionBudgeted: "BUDGETED",
   },
 };
 

@@ -1418,11 +1418,12 @@ export const createWorkflowService = (
           tx,
         );
 
-        const isHrOrAdmin =
+        const isHrOrAdminOrHodFinance =
           actorRecord.role === "ADMIN" ||
-          actorPosInfo.positionRole === "HOD_HR";
+          actorPosInfo.positionRole === "HOD_HR" ||
+          actorPosInfo.positionRole === "HOD_FINANCE";
 
-        if (!(isHrOrAdmin || canActOnRequest)) {
+        if (!(isHrOrAdminOrHodFinance || canActOnRequest)) {
           throw new AppError(
             "FORBIDDEN",
             "Only HR or the active approver can add notes",

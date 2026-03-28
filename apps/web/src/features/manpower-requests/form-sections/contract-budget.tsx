@@ -1,6 +1,7 @@
 import {
   CONTRACT_DURATIONS,
   EMPLOYMENT_TYPES,
+  POSITION_BUDGETED_OPTIONS,
 } from "@zenith-hr/api/modules/requests/requests.schema";
 import { FormField } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,30 @@ export function ContractBudgetSection() {
           )}
         </form.Field>
       </div>
+
+      <form.Field name="budgetDetails.positionBudgeted">
+        {(field) => (
+          <FormField field={field} label="Position Budgeted">
+            <Select
+              onValueChange={(val) =>
+                field.handleChange(val as "BUDGETED" | "NOT_BUDGETED")
+              }
+              value={field.state.value ?? "BUDGETED"}
+            >
+              <SelectTrigger id={field.name}>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                {POSITION_BUDGETED_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
+      </form.Field>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <form.Field name="headcount">
