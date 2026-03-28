@@ -31,20 +31,8 @@ interface CompetencyRatingsSectionProps {
 export function CompetencyRatingsSection({
   competencies,
 }: CompetencyRatingsSectionProps) {
-  // Calculate weighted percentage for display
-  // const totalWeight = competencies.reduce((sum, c) => sum + c.weight, 0);
-
   return (
     <section className="space-y-4">
-      {/* <div className="flex items-center justify-between">
-        <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">
-          Core Competencies
-        </h3>
-        <span className="text-muted-foreground text-xs">
-          Weighted: {totalWeight}%
-        </span>
-      </div> */}
-
       <div className="space-y-4">
         {competencies.map((competency, index) => (
           <CompetencyRatingCard
