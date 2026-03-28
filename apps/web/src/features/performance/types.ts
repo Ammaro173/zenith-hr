@@ -36,6 +36,10 @@ export interface ReviewFormValues {
     | "CONFIRM_EMPLOYMENT"
     | "EXTEND_PROBATION"
     | "RECOMMEND_TERMINATION";
+  probationDecisionComment: string;
+  probationPerformanceRate: string;
+  probationStrengthness: string;
+  probationWeakness: string;
   selfComment: string;
   status:
     | "DUE"

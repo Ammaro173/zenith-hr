@@ -33,28 +33,37 @@ interface Goal {
   status: string;
   targetDate?: Date | string | null;
   title: string;
+  weight?: number | null;
 }
 
 interface FutureGoalsSectionProps {
   goals: Goal[];
   reviewId: string;
+  reviewType?: string;
 }
 
 export function FutureGoalsSection({
   reviewId,
   goals,
+  reviewType,
 }: FutureGoalsSectionProps) {
-  const { permissions } = usePerformanceReviewFormContext();
+  const { permissions, formReadOnly } = usePerformanceReviewFormContext();
+  const canEditGoals = permissions.canManageGoals && !formReadOnly;
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalDescription, setNewGoalDescription] = useState("");
+  const [newGoalWeight, setNewGoalWeight] = useState<number>(0);
+
+  const isObjectiveSetting = reviewType === "OBJECTIVE_SETTING";
+  const totalWeight = goals.reduce((sum, g) => sum + (g.weight ?? 0), 0);
 
   const createGoalMutation = useMutation({
     mutationFn: (data: {
       reviewId: string;
       title: string;
       description?: string;
+      weight?: number;
     }) => client.performance.createGoal(data),
     onSuccess: () => {
       toast.success("Goal added");
@@ -62,6 +71,7 @@ export function FutureGoalsSection({
       setIsDialogOpen(false);
       setNewGoalTitle("");
       setNewGoalDescription("");
+      setNewGoalWeight(0);
     },
     onError: (error) => {
       toast.error(error.message || "Failed to add goal");
@@ -85,10 +95,19 @@ export function FutureGoalsSection({
       return;
     }
 
+    if (
+      isObjectiveSetting &&
+      (!Number.isFinite(newGoalWeight) || newGoalWeight <= 0)
+    ) {
+      toast.error("Weight % is required for objective setting goals");
+      return;
+    }
+
     createGoalMutation.mutate({
       reviewId,
       title: newGoalTitle.trim(),
       description: newGoalDescription.trim() || undefined,
+      weight: isObjectiveSetting ? newGoalWeight : undefined,
     });
   };
 
@@ -98,7 +117,19 @@ export function FutureGoalsSection({
         <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">
           Future Goals
         </h3>
-        {permissions.canManageGoals && (
+        {isObjectiveSetting && (
+          <div className="text-muted-foreground text-xs">
+            Total weight:{" "}
+            <span
+              className={
+                totalWeight === 100 ? "text-foreground" : "text-destructive"
+              }
+            >
+              {totalWeight}%
+            </span>
+          </div>
+        )}
+        {canEditGoals && (
           <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
@@ -132,6 +163,24 @@ export function FutureGoalsSection({
                     value={newGoalDescription}
                   />
                 </div>
+                {isObjectiveSetting && (
+                  <div className="space-y-2">
+                    <Label htmlFor="goal-weight">
+                      Weight % <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="goal-weight"
+                      inputMode="numeric"
+                      onChange={(e) =>
+                        setNewGoalWeight(
+                          Number.parseInt(e.target.value || "0", 10),
+                        )
+                      }
+                      placeholder="e.g., 25"
+                      value={Number.isFinite(newGoalWeight) ? newGoalWeight : 0}
+                    />
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button
@@ -170,9 +219,16 @@ export function FutureGoalsSection({
                     <span className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs">
                       {index + 1}
                     </span>
-                    <CardTitle className="text-base">{goal.title}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">{goal.title}</CardTitle>
+                      {isObjectiveSetting && (
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-muted-foreground text-xs">
+                          {goal.weight ?? 0}%
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {permissions.canManageGoals && (
+                  {canEditGoals && (
                     <Button
                       disabled={deleteGoalMutation.isPending}
                       onClick={() => deleteGoalMutation.mutate(goal.id)}

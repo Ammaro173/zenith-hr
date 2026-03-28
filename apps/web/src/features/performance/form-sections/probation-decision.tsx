@@ -1,5 +1,6 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,7 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePerformanceReviewFormContext } from "../performance-review-form-context";
 
 export function ProbationDecisionSection() {
-  const { form, permissions } = usePerformanceReviewFormContext();
+  const { form, permissions, formReadOnly } = usePerformanceReviewFormContext();
+  const disabledSelect = formReadOnly || !permissions.canEditProbationDecision;
+  const disabledComment = formReadOnly || !permissions.canEditManagerComment;
 
   return (
     <div className="space-y-6 rounded-lg border bg-blue-50/30 p-6 dark:bg-blue-950/10">
@@ -43,7 +46,7 @@ export function ProbationDecisionSection() {
           <div className="grid gap-2 md:max-w-sm">
             <Label htmlFor={field.name}>Recommendation</Label>
             <Select
-              disabled={!permissions.canEditProbationDecision}
+              disabled={disabledSelect}
               onValueChange={field.handleChange}
               value={field.state.value}
             >
@@ -66,7 +69,7 @@ export function ProbationDecisionSection() {
         )}
       </form.Field>
 
-      <form.Field name="managerComment">
+      <form.Field name="probationDecisionComment">
         {(field: {
           name: string;
           state: { value: string };
@@ -77,13 +80,84 @@ export function ProbationDecisionSection() {
             <Label htmlFor={field.name}>Final Decision Comments</Label>
             <Textarea
               className="bg-background"
-              disabled={!permissions.canEditManagerComment}
+              disabled={disabledComment}
               id={field.name}
               onBlur={field.handleBlur}
               onChange={(event) => field.handleChange(event.target.value)}
               placeholder="Provide justification for the probation decision..."
-              readOnly={!permissions.canEditManagerComment}
+              readOnly={disabledComment}
               rows={4}
+              value={field.state.value}
+            />
+          </div>
+        )}
+      </form.Field>
+
+      <form.Field name="probationStrengthness">
+        {(field: {
+          name: string;
+          state: { value: string };
+          handleBlur: () => void;
+          handleChange: (value: string) => void;
+        }) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Stongness</Label>
+            <Textarea
+              className="bg-background"
+              disabled={disabledComment}
+              id={field.name}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+              placeholder="List key strengths shown during probation..."
+              readOnly={disabledComment}
+              rows={3}
+              value={field.state.value}
+            />
+          </div>
+        )}
+      </form.Field>
+
+      <form.Field name="probationWeakness">
+        {(field: {
+          name: string;
+          state: { value: string };
+          handleBlur: () => void;
+          handleChange: (value: string) => void;
+        }) => (
+          <div className="space-y-2">
+            <Label htmlFor={field.name}>Weakness</Label>
+            <Textarea
+              className="bg-background"
+              disabled={disabledComment}
+              id={field.name}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+              placeholder="List areas that need improvement..."
+              readOnly={disabledComment}
+              rows={3}
+              value={field.state.value}
+            />
+          </div>
+        )}
+      </form.Field>
+
+      <form.Field name="probationPerformanceRate">
+        {(field: {
+          name: string;
+          state: { value: string };
+          handleBlur: () => void;
+          handleChange: (value: string) => void;
+        }) => (
+          <div className="grid gap-2 md:max-w-sm">
+            <Label htmlFor={field.name}>Performance rete</Label>
+            <Input
+              className="bg-background"
+              disabled={disabledComment}
+              id={field.name}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+              placeholder="e.g., 4/5 or 80%"
+              readOnly={disabledComment}
               value={field.state.value}
             />
           </div>

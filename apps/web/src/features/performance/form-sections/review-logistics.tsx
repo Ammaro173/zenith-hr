@@ -1,26 +1,23 @@
 import { REVIEW_TYPES } from "@zenith-hr/api/modules/performance/performance.schema";
 import { format } from "date-fns";
 import { Calendar, User } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ReviewLogisticsSectionProps {
   review: {
     reviewType: string;
+    createdAt?: Date | string | null;
     reviewPeriodStart?: Date | string | null;
     reviewPeriodEnd?: Date | string | null;
+    employee?: {
+      joiningDate?: Date | string | null;
+      name?: string | null;
+      email?: string | null;
+    } | null;
     reviewer?: {
       id: string;
       name: string | null;
       email: string;
-    } | null;
-    cycle?: {
-      name: string;
     } | null;
   };
 }
@@ -38,6 +35,14 @@ export function ReviewLogisticsSection({
     }
     return format(new Date(date), "MMM d, yyyy");
   };
+  const periodStart =
+    review.reviewType === "PROBATION"
+      ? (review.reviewPeriodStart ?? review.employee?.joiningDate ?? null)
+      : review.reviewPeriodStart;
+  const periodEnd =
+    review.reviewType === "PROBATION"
+      ? (review.reviewPeriodEnd ?? review.createdAt ?? null)
+      : review.reviewPeriodEnd;
 
   return (
     <section className="space-y-4">
@@ -48,8 +53,10 @@ export function ReviewLogisticsSection({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">{reviewTypeLabel}</CardTitle>
-          {review.cycle && (
-            <CardDescription>Cycle: {review.cycle.name}</CardDescription>
+          {review.reviewType === "PROBATION" && review.employee && (
+            <p className="text-muted-foreground text-sm">
+              {review.employee.name || review.employee.email}
+            </p>
           )}
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
@@ -58,8 +65,7 @@ export function ReviewLogisticsSection({
             <div>
               <p className="text-muted-foreground text-xs">Review Period</p>
               <p className="font-medium text-sm">
-                {formatDate(review.reviewPeriodStart)} -{" "}
-                {formatDate(review.reviewPeriodEnd)}
+                {formatDate(periodStart)} - {formatDate(periodEnd)}
               </p>
             </div>
           </div>

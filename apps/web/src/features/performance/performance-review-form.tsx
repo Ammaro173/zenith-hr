@@ -1,33 +1,41 @@
 "use client";
 
 import { Eye, Loader2, Save } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   CompetencyRatingsSection,
-  FutureGoalsSection,
+  GoalAchievementSection,
   ManagerCommentsSection,
   ProbationDecisionSection,
   ReviewLogisticsSection,
   SelfReviewCommentsSection,
 } from "./form-sections";
+import type { GoalAchievementsMap } from "./performance-review-form-context";
 import { PerformanceReviewFormProvider } from "./performance-review-form-context";
 import { usePerformanceReviewForm } from "./use-performance-review-form";
 
 interface PerformanceReviewFormProps {
+  employeeId?: string;
   mode?: "page" | "sheet";
   onCancel?: () => void;
   onSuccess?: () => void;
-  reviewId: string;
+  reviewId?: string;
 }
 
 export function PerformanceReviewForm({
+  employeeId,
   reviewId,
   mode = "page",
   onSuccess,
   onCancel,
 }: PerformanceReviewFormProps) {
+  const goalAchievementsRef = useRef<GoalAchievementsMap>({});
+  const [liveGoalCompletion, setLiveGoalCompletion] = useState<number | null>(
+    null,
+  );
   const {
     form,
     review,
@@ -37,11 +45,29 @@ export function PerformanceReviewForm({
     isSaving,
     handleCancel,
     handleSaveDraft,
+    goalBasedCompletion,
   } = usePerformanceReviewForm({
     reviewId,
+    employeeId,
     onSuccess,
     onCancel,
+    goalAchievementsRef,
   });
+
+  // Reset live completion when this review has no goals / no goal section
+  useEffect(() => {
+    if (!review) {
+      return;
+    }
+    const hasGoalSection =
+      review.reviewType === "OBJECTIVE_SETTING" ||
+      (review.reviewType === "ANNUAL_PERFORMANCE" &&
+        (review.linkedObjectiveReviewId ||
+          (review.goals && review.goals.length > 0)));
+    if (!(hasGoalSection && review.goals?.length)) {
+      setLiveGoalCompletion(null);
+    }
+  }, [review]);
 
   if (isLoading) {
     return (
@@ -68,6 +94,29 @@ export function PerformanceReviewForm({
     permissions.canSaveDraft,
     permissions.canSubmit,
   ].some((value) => value);
+  const isProbationFinalDecision =
+    review.reviewType === "PROBATION" &&
+    (review.probationConfirmationDecision === "CONFIRM_EMPLOYMENT" ||
+      review.probationConfirmationDecision === "RECOMMEND_TERMINATION");
+  const lockSubmittedReview =
+    review.status === "SUBMITTED" &&
+    !(review.reviewType === "PROBATION" && !isProbationFinalDecision);
+  const hideBottomMetrics =
+    mode === "sheet" && review.reviewType === "PROBATION";
+  const probationFeedback =
+    review.feedback && typeof review.feedback === "object"
+      ? (review.feedback as Record<string, unknown>)
+      : null;
+  const showProbationDecisionSection =
+    review.reviewType === "PROBATION" &&
+    Boolean(
+      permissions.canEditProbationDecision ||
+        review.probationConfirmationDecision ||
+        review.managerComment ||
+        probationFeedback?.probationStrengthness ||
+        probationFeedback?.probationWeakness ||
+        probationFeedback?.probationPerformanceRate,
+    );
 
   return (
     <div
@@ -86,9 +135,12 @@ export function PerformanceReviewForm({
       >
         <PerformanceReviewFormProvider
           form={form}
+          formReadOnly={lockSubmittedReview}
+          goalAchievementsRef={goalAchievementsRef}
           isEditing={true}
           permissions={permissions}
           reviewId={reviewId}
+          setLiveGoalCompletion={setLiveGoalCompletion}
         >
           <div className="space-y-10">
             {isReadOnly && (
@@ -102,10 +154,7 @@ export function PerformanceReviewForm({
               </Alert>
             )}
             <ReviewLogisticsSection review={review} />
-            {review.reviewType === "PROBATION" &&
-              (permissions.canEditProbationDecision ||
-                review.probationConfirmationDecision ||
-                review.managerComment) && <ProbationDecisionSection />}
+            {showProbationDecisionSection && <ProbationDecisionSection />}
             <CompetencyRatingsSection competencies={review.competencies} />
             {(permissions.canEditSelfComment || review.selfComment) && (
               <SelfReviewCommentsSection />
@@ -113,71 +162,104 @@ export function PerformanceReviewForm({
             {(permissions.canEditManagerComment || review.managerComment) && (
               <ManagerCommentsSection />
             )}
-            <FutureGoalsSection goals={review.goals} reviewId={reviewId} />
+            {((review.reviewType === "ANNUAL_PERFORMANCE" &&
+              (review.linkedObjectiveReviewId ||
+                (review.goals && review.goals.length > 0))) ||
+              review.reviewType === "OBJECTIVE_SETTING") && (
+              <GoalAchievementSection
+                annualReview={review}
+                objectiveReviewId={
+                  review.reviewType === "OBJECTIVE_SETTING"
+                    ? review.id
+                    : (review.linkedObjectiveReviewId ?? review.id)
+                }
+              />
+            )}
           </div>
         </PerformanceReviewFormProvider>
 
         {/* Bottom Action Bar */}
-        <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t bg-background/95 pt-6 backdrop-blur-sm">
+        <div
+          className={cn(
+            "sticky bottom-0 flex items-center gap-3 border-t bg-background/95 pt-6 backdrop-blur-sm",
+            hideBottomMetrics ? "justify-end" : "justify-between",
+          )}
+        >
           {/* Left side: Completion status */}
-          <div className="flex items-center gap-4">
-            <div className="text-muted-foreground text-sm">
-              Completion:{" "}
-              <span className="font-semibold text-foreground">
-                {review.completionPercentage ?? 0}%
-              </span>
-            </div>
-            {review.totalScore && (
+          {!hideBottomMetrics && (
+            <div className="flex items-center gap-4">
               <div className="text-muted-foreground text-sm">
-                Score:{" "}
+                Completion:{" "}
                 <span className="font-semibold text-foreground">
-                  {review.totalScore}
+                  {(() => {
+                    if (
+                      liveGoalCompletion !== null &&
+                      liveGoalCompletion !== undefined
+                    ) {
+                      return `${liveGoalCompletion}%`;
+                    }
+                    if (goalBasedCompletion !== undefined) {
+                      return `${goalBasedCompletion}%`;
+                    }
+                    return `${review.completionPercentage ?? 0}%`;
+                  })()}
                 </span>
               </div>
-            )}
-          </div>
+              {review.totalScore !== null &&
+                review.totalScore !== undefined && (
+                  <div className="text-muted-foreground text-sm">
+                    Score:{" "}
+                    <span className="font-semibold text-foreground">
+                      {review.totalScore}
+                    </span>
+                  </div>
+                )}
+            </div>
+          )}
 
-          {/* Right side: Actions */}
-          <div className="flex items-center gap-3">
-            {permissions.canSaveDraft && (
-              <Button
-                disabled={isSaving}
-                onClick={handleSaveDraft}
-                type="button"
-                variant="outline"
-              >
-                {isSaving ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 size-4" />
-                )}
-                Save Draft
+          {/* Right side: Actions – hidden when review is already submitted */}
+          {!lockSubmittedReview && (
+            <div className="flex items-center gap-3">
+              {permissions.canSaveDraft && (
+                <Button
+                  disabled={isSaving}
+                  onClick={handleSaveDraft}
+                  type="button"
+                  variant="outline"
+                >
+                  {isSaving ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 size-4" />
+                  )}
+                  Save Draft
+                </Button>
+              )}
+              <Button onClick={handleCancel} type="button" variant="ghost">
+                Cancel
               </Button>
-            )}
-            <Button onClick={handleCancel} type="button" variant="ghost">
-              Cancel
-            </Button>
-            {permissions.canSubmit && (
-              <form.Subscribe
-                selector={(state) => ({
-                  canSubmit: state.canSubmit,
-                  isSubmitting: state.isSubmitting,
-                })}
-              >
-                {({ canSubmit, isSubmitting }) => (
-                  <Button
-                    disabled={!canSubmit || isSubmitting || isPending}
-                    type="submit"
-                  >
-                    {(isSubmitting || isPending) && (
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                    )}
-                    Submit Review
-                  </Button>
-                )}
-              </form.Subscribe>
-            )}
-          </div>
+              {permissions.canSubmit && (
+                <form.Subscribe
+                  selector={(state) => ({
+                    canSubmit: state.canSubmit,
+                    isSubmitting: state.isSubmitting,
+                  })}
+                >
+                  {({ canSubmit, isSubmitting }) => (
+                    <Button
+                      disabled={!canSubmit || isSubmitting || isPending}
+                      type="submit"
+                    >
+                      {(isSubmitting || isPending) && (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      )}
+                      Submit Review
+                    </Button>
+                  )}
+                </form.Subscribe>
+              )}
+            </div>
+          )}
         </div>
       </form>
     </div>

@@ -32,18 +32,18 @@ export function CompetencyRatingsSection({
   competencies,
 }: CompetencyRatingsSectionProps) {
   // Calculate weighted percentage for display
-  const totalWeight = competencies.reduce((sum, c) => sum + c.weight, 0);
+  // const totalWeight = competencies.reduce((sum, c) => sum + c.weight, 0);
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* <div className="flex items-center justify-between">
         <h3 className="font-bold text-muted-foreground text-sm uppercase tracking-wider">
           Core Competencies
         </h3>
         <span className="text-muted-foreground text-xs">
           Weighted: {totalWeight}%
         </span>
-      </div>
+      </div> */}
 
       <div className="space-y-4">
         {competencies.map((competency, index) => (
@@ -67,7 +67,8 @@ function CompetencyRatingCard({
   competency,
   index,
 }: CompetencyRatingCardProps) {
-  const { form, permissions } = usePerformanceReviewFormContext();
+  const { form, permissions, formReadOnly } = usePerformanceReviewFormContext();
+  const disabled = formReadOnly || !permissions.canEditCompetencies;
   const [localRating, setLocalRating] = useState<number | undefined>(
     competency.rating ?? undefined,
   );
@@ -146,7 +147,7 @@ function CompetencyRatingCard({
                     ? getRatingButtonActiveClass(rating.value)
                     : "hover:bg-muted",
                 )}
-                disabled={!permissions.canEditCompetencies}
+                disabled={disabled}
                 key={rating.value}
                 onClick={() => handleRatingChange(rating.value)}
                 title={rating.label}
@@ -180,18 +181,16 @@ function CompetencyRatingCard({
             </Label>
             <Textarea
               className="min-h-20"
-              disabled={!permissions.canEditCompetencies}
+              disabled={disabled}
               onChange={(e) => handleJustificationChange(e.target.value)}
               placeholder="Provide specific examples and areas for improvement..."
-              readOnly={!permissions.canEditCompetencies}
+              readOnly={disabled}
               value={localJustification}
             />
           </div>
         )}
 
-        {!permissions.canEditCompetencies && (
-          <p className="text-muted-foreground text-xs">Read only</p>
-        )}
+        {disabled && <p className="text-muted-foreground text-xs">Read only</p>}
       </CardContent>
     </Card>
   );

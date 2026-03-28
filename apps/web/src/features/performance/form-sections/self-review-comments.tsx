@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePerformanceReviewFormContext } from "../performance-review-form-context";
 
 export function SelfReviewCommentsSection() {
-  const { form, permissions } = usePerformanceReviewFormContext();
+  const { form, permissions, formReadOnly } = usePerformanceReviewFormContext();
+  const disabled = formReadOnly || !permissions.canEditSelfComment;
 
   return (
     <section className="space-y-4">
@@ -27,15 +28,15 @@ export function SelfReviewCommentsSection() {
             </Label>
             <Textarea
               className="min-h-36"
-              disabled={!permissions.canEditSelfComment}
+              disabled={disabled}
               id={field.name}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
               placeholder="Describe your achievements, challenges, and support needed..."
-              readOnly={!permissions.canEditSelfComment}
+              readOnly={disabled}
               value={field.state.value || ""}
             />
-            {!permissions.canEditSelfComment && field.state.value && (
+            {disabled && field.state.value && (
               <p className="text-muted-foreground text-xs">Read only</p>
             )}
           </div>
