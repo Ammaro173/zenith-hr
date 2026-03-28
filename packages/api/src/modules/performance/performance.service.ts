@@ -2252,19 +2252,35 @@ export const createPerformanceService = (db: DbOrTx) => {
       }
 
       return await db.transaction(async (tx) => {
-        for (const goal of review.goals) {
-          const achievement = input.goalAchievements[goal.id];
-          if (achievement) {
-            await tx
-              .update(performanceGoal)
-              .set({
-                updatedAt: now,
-                status: "COMPLETED",
-                comment: achievement.comment ?? null,
-                rating: undefined,
-              })
-              .where(eq(performanceGoal.id, goal.id));
-          }
+        const goalRows = review.goals
+          .map((goal) => {
+            const achievement = input.goalAchievements[goal.id];
+            if (!achievement) {
+              return null;
+            }
+            return {
+              goalId: goal.id,
+              comment: achievement.comment ?? null,
+            };
+          })
+          .filter(
+            (r): r is { goalId: string; comment: string | null } => r !== null,
+          );
+
+        if (goalRows.length > 0) {
+          const valueRows = goalRows.map(
+            (r) => sql`(${r.goalId}::uuid, ${r.comment})`,
+          );
+          await tx.execute(sql`
+            UPDATE performance_goal AS g
+            SET
+              updated_at = ${now},
+              status = 'COMPLETED',
+              comment = v.comment,
+              rating = NULL
+            FROM (VALUES ${sql.join(valueRows, sql`, `)}) AS v(id, comment)
+            WHERE g.id = v.id::uuid
+          `);
         }
         await tx
           .update(performanceReview)
