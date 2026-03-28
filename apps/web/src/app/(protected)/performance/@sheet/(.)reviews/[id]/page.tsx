@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   Sheet,
@@ -14,7 +14,10 @@ import { PerformanceReviewForm } from "@/features/performance";
 export default function InterceptedReviewPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(true);
+  const employeeId = searchParams.get("employeeId") ?? undefined;
+  const isNewProbation = params.id === "new" && !!employeeId;
 
   const handleOpenChange = (val: boolean) => {
     setOpen(val);
@@ -35,6 +38,7 @@ export default function InterceptedReviewPage() {
           </SheetDescription>
         </SheetHeader>
         <PerformanceReviewForm
+          employeeId={isNewProbation ? employeeId : undefined}
           mode="sheet"
           onCancel={() => {
             setOpen(false);
@@ -44,7 +48,7 @@ export default function InterceptedReviewPage() {
             setOpen(false);
             router.back();
           }}
-          reviewId={params.id}
+          reviewId={isNewProbation ? undefined : params.id}
         />
       </SheetContent>
     </Sheet>

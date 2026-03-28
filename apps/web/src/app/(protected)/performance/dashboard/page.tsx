@@ -104,9 +104,7 @@ export default function PerformanceDashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="font-medium text-sm">
-              Completed (Cycle)
-            </CardTitle>
+            <CardTitle className="font-medium text-sm">Completed</CardTitle>
             <CheckCircle2 className="size-4 text-green-500" />
           </CardHeader>
           <CardContent>

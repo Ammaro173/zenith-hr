@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { PerformanceReviewForm } from "@/features/performance";
 import { orpc } from "@/utils";
 import { EmployeeSidebar } from "./_components/employee-sidebar";
@@ -9,12 +9,32 @@ import { ReviewHeader } from "./_components/review-header";
 
 export default function ReviewDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const employeeId = searchParams.get("employeeId") ?? undefined;
+  const isNewProbation = params.id === "new" && !!employeeId;
 
-  const { data: review, isLoading } = useQuery(
-    orpc.performance.getReview.queryOptions({
+  const { data: review, isLoading } = useQuery({
+    ...orpc.performance.getReview.queryOptions({
       input: { reviewId: params.id },
     }),
-  );
+    enabled: !isNewProbation,
+  });
+
+  if (isNewProbation) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="font-bold text-2xl tracking-tight">
+            Create Probation Review
+          </h1>
+          <p className="text-muted-foreground">
+            Fill in the review details, then save draft or submit.
+          </p>
+        </div>
+        <PerformanceReviewForm employeeId={employeeId} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

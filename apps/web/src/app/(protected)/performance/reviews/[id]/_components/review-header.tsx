@@ -11,10 +11,6 @@ interface ReviewHeaderProps {
     employee: {
       name: string | null;
     };
-    cycle?: {
-      id: string;
-      name: string;
-    } | null;
   };
 }
 
