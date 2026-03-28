@@ -2,7 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import { createPerformanceService } from "./performance.service";
 
 describe("PerformanceService", () => {
-  // Factory to create fresh mock for each test
+  // Factory to create fresh mock for each test (loose `any`: Bun mocks ≠ Drizzle `DbOrTx`)
   function createMockDb() {
     const mockDb: any = {
       insert: mock(() => ({
@@ -42,7 +42,17 @@ describe("PerformanceService", () => {
           })),
         })),
       })),
+      execute: mock(() => Promise.resolve({ rows: [] })),
       query: {
+        user: {
+          findFirst: mock(() =>
+            Promise.resolve({
+              departmentId: "dept-1",
+              id: "emp-1",
+              status: "ACTIVE" as const,
+            }),
+          ),
+        },
         performanceReview: {
           findFirst: mock(() =>
             Promise.resolve({
@@ -78,7 +88,7 @@ describe("PerformanceService", () => {
           findMany: mock(() => Promise.resolve([])),
         },
       },
-      transaction: mock((cb: (tx: any) => Promise<any>) => cb(mockDb)),
+      transaction: mock((cb: (tx: unknown) => Promise<unknown>) => cb(mockDb)),
     };
     return mockDb;
   }
@@ -129,7 +139,9 @@ describe("PerformanceService", () => {
     });
   }
 
-  function mockDescendantManagerAccess(mockDb: any) {
+  function mockDescendantManagerAccess(
+    mockDb: ReturnType<typeof createMockDb>,
+  ) {
     mockDb.select = createQueuedSelectMock([
       { type: "limit", value: [{ role: "MANAGER" }] },
       { type: "where", value: [{ positionId: "pos-manager" }] },
@@ -141,7 +153,10 @@ describe("PerformanceService", () => {
     ]);
   }
 
-  function mockGlobalActorRole(mockDb: any, role = "HOD_HR") {
+  function mockGlobalActorRole(
+    mockDb: ReturnType<typeof createMockDb>,
+    role = "HOD_HR",
+  ) {
     mockDb.select = mock(() => ({
       from: mock(() => ({
         innerJoin: mock(() => ({
