@@ -27,6 +27,7 @@ import { AppError } from "../../shared/errors";
 import type {
   CreateUserInput,
   HierarchyNode,
+  HierarchyUser,
   ListUsersInput,
   OffboardingPrecheckResult,
   UpdateUserInput,
@@ -630,16 +631,35 @@ export const createUsersService = (db: DbOrTx) => ({
       return [];
     }
 
-    // positionMap: one row per position — prefer occupied (user_id != null) over vacant duplicate
-    const positionMap = new Map<string, HierarchyRow>();
+    const positionIds = new Set(rows.map((r) => r.position_id));
+
+    // Group rows by position (multiple users same position → one node with users[]).
+    const slotsByPosition = new Map<string, HierarchyRow[]>();
     for (const row of rows) {
-      const existing = positionMap.get(row.position_id);
-      if (!existing || (row.user_id && !existing.user_id)) {
-        positionMap.set(row.position_id, row);
-      }
+      const list = slotsByPosition.get(row.position_id) ?? [];
+      list.push(row);
+      slotsByPosition.set(row.position_id, list);
     }
 
-    // userPositionMap: userId → positionId (for team-scope lookups)
+    // childrenByParent: parentPositionId → child positionIds (each position once)
+    const childrenByParent = new Map<string | null, string[]>();
+    for (const posId of slotsByPosition.keys()) {
+      const row = rows.find((r) => r.position_id === posId);
+      if (!row) {
+        continue;
+      }
+      const parentKey =
+        row.reports_to_position_id !== null &&
+        positionIds.has(row.reports_to_position_id)
+          ? row.reports_to_position_id
+          : null;
+      const list = childrenByParent.get(parentKey) ?? [];
+      if (!list.includes(posId)) {
+        list.push(posId);
+      }
+      childrenByParent.set(parentKey, list);
+    }
+
     const userPositionMap = new Map<string, string>();
     for (const row of rows) {
       if (row.user_id) {
@@ -647,97 +667,133 @@ export const createUsersService = (db: DbOrTx) => ({
       }
     }
 
-    // childrenMap: parentPositionId → child positionIds
-    // A position is a root (null key) when its parent is outside the relevant set or null.
-    const childrenMap = new Map<string | null, string[]>();
-    for (const row of positionMap.values()) {
-      const parentKey =
-        row.reports_to_position_id !== null &&
-        positionMap.has(row.reports_to_position_id)
-          ? row.reports_to_position_id
-          : null;
-      const list = childrenMap.get(parentKey) ?? [];
-      list.push(row.position_id);
-      childrenMap.set(parentKey, list);
+    const positionParentMap = new Map<string, string | null>();
+    for (const row of rows) {
+      if (!positionParentMap.has(row.position_id)) {
+        positionParentMap.set(row.position_id, row.reports_to_position_id);
+      }
     }
 
-    // Recursively build a HierarchyNode for the given position at any depth.
-    // Returns a user node when occupied, or a vacancy placeholder when empty.
-    function buildNode(posId: string): HierarchyNode | null {
-      const row = positionMap.get(posId);
-      if (!row) {
+    function toUser(row: HierarchyRow): HierarchyUser | null {
+      if (!row.user_id) {
         return null;
       }
-
-      const childIds = childrenMap.get(posId) ?? [];
-      const children: HierarchyNode[] = childIds
-        .map(buildNode)
-        .filter((n): n is HierarchyNode => n !== null)
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      if (!row.user_id) {
-        // Vacant position — ghost node
-        return {
-          id: `vacancy-${row.position_id}`,
-          name: row.position_name,
-          email: "",
-          sapNo: "",
-          role: "EMPLOYEE" as const,
-          status: "ACTIVE" as const,
-          departmentName: row.position_dept ?? null,
-          positionName: row.position_name,
-          isVacancy: true,
-          children,
-        };
-      }
-
       return {
         id: row.user_id,
         name: row.user_name ?? "",
         email: row.user_email ?? "",
         sapNo: row.user_sap_no ?? "",
-        role: (row.user_role as HierarchyNode["role"]) ?? "EMPLOYEE",
-        status: (row.user_status as HierarchyNode["status"]) ?? "ACTIVE",
+        role: (row.user_role as HierarchyUser["role"]) ?? "EMPLOYEE",
+        status: (row.user_status as HierarchyUser["status"]) ?? "ACTIVE",
         departmentName: row.user_dept ?? null,
-        positionName: row.position_name,
+      };
+    }
+
+    // One node per position; id = position-${positionId}; users[] lists all in that position.
+    function buildNode(positionId: string): HierarchyNode {
+      const positionRows = slotsByPosition.get(positionId) ?? [];
+      const occupied = positionRows.filter((r) => r.user_id != null);
+      const firstRow = positionRows[0];
+      if (!firstRow) {
+        return {
+          id: `vacancy-${positionId}`,
+          name: "",
+          email: "",
+          sapNo: "",
+          role: "EMPLOYEE" as const,
+          status: "ACTIVE" as const,
+          departmentName: null,
+          positionName: "",
+          isVacancy: true,
+          children: [],
+        };
+      }
+
+      const childIds = childrenByParent.get(positionId) ?? [];
+      const children = childIds
+        .map(buildNode)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const users = occupied
+        .map(toUser)
+        .filter((u): u is HierarchyUser => u != null);
+      const isVacancy = users.length === 0;
+      const positionName = firstRow.position_name;
+      const departmentName = firstRow.position_dept ?? null;
+
+      if (isVacancy) {
+        return {
+          id: `vacancy-${positionId}`,
+          name: positionName,
+          email: "",
+          sapNo: "",
+          role: "EMPLOYEE" as const,
+          status: "ACTIVE" as const,
+          departmentName,
+          positionName,
+          isVacancy: true,
+          users: [],
+          children,
+        };
+      }
+
+      const firstUser = users[0];
+      if (!firstUser) {
+        return {
+          id: `vacancy-${positionId}`,
+          name: positionName,
+          email: "",
+          sapNo: "",
+          role: "EMPLOYEE" as const,
+          status: "ACTIVE" as const,
+          departmentName,
+          positionName,
+          isVacancy: true,
+          users: [],
+          children,
+        };
+      }
+      return {
+        id: `position-${positionId}`,
+        name: users.length === 1 ? firstUser.name : positionName,
+        email: firstUser.email,
+        sapNo: firstUser.sapNo,
+        role: firstUser.role,
+        status: firstUser.status,
+        departmentName: firstUser.departmentName,
+        positionName,
         isVacancy: false,
+        users: users.length >= 1 ? users : undefined,
         children,
       };
     }
 
-    // Organization scope: build full tree from all root positions
     if (scope === "organization") {
-      const rootIds = childrenMap.get(null) ?? [];
+      const rootIds = childrenByParent.get(null) ?? [];
       return rootIds
         .map(buildNode)
-        .filter((n): n is HierarchyNode => n !== null)
         .sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // Team scope: build subtree rooted at the current user's position.
     const currentUserPosId = userPositionMap.get(currentUser.id);
     if (!currentUserPosId) {
       return [];
     }
 
-    const directReportPosIds = childrenMap.get(currentUserPosId) ?? [];
-    if (directReportPosIds.length > 0) {
-      // Current user manages others — show their own subtree
-      const selfNode = buildNode(currentUserPosId);
-      return selfNode ? [selfNode] : [];
+    const directReportIds = childrenByParent.get(currentUserPosId) ?? [];
+    if (directReportIds.length > 0) {
+      const node = buildNode(currentUserPosId);
+      return [node];
     }
 
-    // Leaf node: show peers under the same manager position
-    const currentPosRow = positionMap.get(currentUserPosId);
-    const managerPosId = currentPosRow?.reports_to_position_id ?? null;
-
-    if (!(managerPosId && positionMap.has(managerPosId))) {
-      const selfNode = buildNode(currentUserPosId);
-      return selfNode ? [selfNode] : [];
+    const managerPosId = positionParentMap.get(currentUserPosId) ?? null;
+    if (!(managerPosId && positionIds.has(managerPosId))) {
+      const node = buildNode(currentUserPosId);
+      return [node];
     }
 
     const managerNode = buildNode(managerPosId);
-    return managerNode ? [managerNode] : [];
+    return [managerNode];
   },
 
   /**

@@ -3621,11 +3621,16 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
       "organization",
     );
 
-    // Alice should be a root node with Bob as child
+    // Alice at root, Bob as child (one node per position)
     expect(result).toHaveLength(1);
     const alice = result[0];
-    expect(alice?.id).toBe("alice");
-    expect(alice?.children.some((c) => c.id === "bob")).toBe(true);
+    expect(alice?.id).toBe("position-pos-alice");
+    expect(alice?.users).toHaveLength(1);
+    expect(alice?.users?.[0]?.id).toBe("alice");
+    expect(alice?.children.some((c) => c.id === "position-pos-bob")).toBe(true);
+    expect(
+      alice?.children.find((c) => c.id === "position-pos-bob")?.users?.[0]?.id,
+    ).toBe("bob");
   });
 
   it("should show a vacant position as a ghost node between two occupied positions", async () => {
@@ -3681,10 +3686,11 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
       "organization",
     );
 
-    // Only CEO at root
+    // Only CEO at root (one node per position)
     expect(result).toHaveLength(1);
     const ceo = result[0];
-    expect(ceo?.id).toBe("ceo");
+    expect(ceo?.id).toBe("position-pos-ceo");
+    expect(ceo?.users?.[0]?.id).toBe("ceo");
 
     // CEO's child is the vacancy node (not Layla directly)
     expect(ceo?.children).toHaveLength(1);
@@ -3695,7 +3701,8 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
 
     // Layla is nested under the vacancy
     expect(vacancy?.children).toHaveLength(1);
-    expect(vacancy?.children[0]?.id).toBe("layla");
+    expect(vacancy?.children[0]?.id).toBe("position-pos-layla");
+    expect(vacancy?.children[0]?.users?.[0]?.id).toBe("layla");
   });
 
   it("should return multiple roots when several positions have no parent", async () => {
@@ -3739,8 +3746,14 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
 
     expect(result).toHaveLength(2);
     const ids = result.map((n) => n.id);
-    expect(ids).toContain("user-a");
-    expect(ids).toContain("user-b");
+    expect(ids).toContain("position-pos-a");
+    expect(ids).toContain("position-pos-b");
+    expect(result.find((n) => n.id === "position-pos-a")?.users?.[0]?.id).toBe(
+      "user-a",
+    );
+    expect(result.find((n) => n.id === "position-pos-b")?.users?.[0]?.id).toBe(
+      "user-b",
+    );
   });
 
   it("should correctly nest a 3-level fully occupied hierarchy", async () => {
@@ -3797,12 +3810,15 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
 
     expect(result).toHaveLength(1);
     const ceo = result[0];
-    expect(ceo?.id).toBe("ceo");
+    expect(ceo?.id).toBe("position-pos-ceo");
     expect(ceo?.children).toHaveLength(1);
     const mgr = ceo?.children[0];
-    expect(mgr?.id).toBe("mgr");
+    expect(mgr?.id).toBe("position-pos-mgr");
     expect(mgr?.children).toHaveLength(1);
-    expect(mgr?.children[0]?.id).toBe("emp");
+    expect(mgr?.children[0]?.id).toBe("position-pos-emp");
+    expect(ceo?.users?.[0]?.id).toBe("ceo");
+    expect(mgr?.users?.[0]?.id).toBe("mgr");
+    expect(mgr?.children[0]?.users?.[0]?.id).toBe("emp");
   });
 
   it("should handle a deep vacancy chain — CEO and HoHR both vacant, Layla visible at depth 3", async () => {
@@ -3875,7 +3891,75 @@ describe("getHierarchy - vacancy behavior after manager deletion", () => {
 
     // Layla under HoHR vacancy
     expect(hrvacancy?.children).toHaveLength(1);
-    expect(hrvacancy?.children[0]?.id).toBe("layla");
+    expect(hrvacancy?.children[0]?.id).toBe("position-pos-layla");
+    expect(hrvacancy?.children[0]?.users?.[0]?.id).toBe("layla");
     expect(hrvacancy?.children[0]?.isVacancy).toBeFalsy();
+  });
+
+  it("should show both users grouped in one position block when they share the same position", async () => {
+    // Alice (root); pos-engineer has two users (Bob and Carol) reporting to Alice
+    const mockDb = createMockDbForHierarchy([
+      {
+        position_id: "pos-alice",
+        reports_to_position_id: null,
+        position_name: "Engineering Lead",
+        position_dept: "Engineering",
+        user_id: "alice",
+        user_name: "Alice",
+        user_email: "alice@example.com",
+        user_sap_no: "SAP0001",
+        user_role: "MANAGER",
+        user_status: "ACTIVE",
+        user_dept: "Engineering",
+      },
+      {
+        position_id: "pos-engineer",
+        reports_to_position_id: "pos-alice",
+        position_name: "Software Engineer",
+        position_dept: "Engineering",
+        user_id: "bob",
+        user_name: "Bob",
+        user_email: "bob@example.com",
+        user_sap_no: "SAP0002",
+        user_role: "EMPLOYEE",
+        user_status: "ACTIVE",
+        user_dept: "Engineering",
+      },
+      {
+        position_id: "pos-engineer",
+        reports_to_position_id: "pos-alice",
+        position_name: "Software Engineer",
+        position_dept: "Engineering",
+        user_id: "carol",
+        user_name: "Carol",
+        user_email: "carol@example.com",
+        user_sap_no: "SAP0003",
+        user_role: "EMPLOYEE",
+        user_status: "ACTIVE",
+        user_dept: "Engineering",
+      },
+    ]);
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.getHierarchy(
+      { id: "alice", role: "ADMIN" },
+      "organization",
+    );
+
+    expect(result).toHaveLength(1);
+    const alice = result[0];
+    expect(alice?.id).toBe("position-pos-alice");
+    // One child node for the shared position, with both users grouped
+    expect(alice?.children).toHaveLength(1);
+    const engineerNode = alice?.children[0];
+    expect(engineerNode?.id).toBe("position-pos-engineer");
+    expect(engineerNode?.positionName).toBe("Software Engineer");
+    expect(engineerNode?.users).toHaveLength(2);
+    const userIds = engineerNode?.users?.map((u) => u.id) ?? [];
+    expect(userIds).toContain("bob");
+    expect(userIds).toContain("carol");
   });
 });

@@ -28,7 +28,18 @@ export interface UserListItem {
   status: UserStatus;
 }
 
-// Hierarchical node structure for org chart
+/** One user in a position (for grouped position blocks). */
+export interface HierarchyUser {
+  departmentName: string | null;
+  email: string;
+  id: string;
+  name: string;
+  role: UserRole;
+  sapNo: string;
+  status: UserStatus;
+}
+
+// Hierarchical node structure for org chart (one node per position; multiple users grouped).
 export interface HierarchyNode {
   children: HierarchyNode[];
   departmentName: string | null;
@@ -42,6 +53,8 @@ export interface HierarchyNode {
   role: UserRole;
   sapNo: string;
   status: UserStatus;
+  /** All users in this position; length > 1 when position is shared. Omitted or empty for vacancy. */
+  users?: HierarchyUser[];
 }
 
 // Role display configuration

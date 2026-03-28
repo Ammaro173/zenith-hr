@@ -25,6 +25,23 @@ interface UserCardProps {
   variant?: "chart" | "compact";
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+/** Count total employees in direct-report nodes (shared positions count each person). */
+function countDirectReports(node: HierarchyNode): number {
+  return node.children.reduce(
+    (sum, child) => sum + (child.users?.length ?? (child.isVacancy ? 0 : 1)),
+    0,
+  );
+}
+
 export function UserCard({
   user,
   isExpanded,
@@ -33,18 +50,15 @@ export function UserCard({
   className,
 }: UserCardProps) {
   const hasChildren = user.children.length > 0;
+  const directReportCount = countDirectReports(user);
+  const isGroup = (user.users?.length ?? 0) > 1;
+  const displayUsers = user.users?.length ? user.users : [user];
   const roleConfig = ROLE_VARIANTS[user.role as UserRole] ?? {
     variant: "secondary" as const,
     label: user.role,
   };
 
-  // Get initials for avatar
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = getInitials(user.name);
 
   if (variant === "compact") {
     return (
@@ -72,16 +86,29 @@ export function UserCard({
         )}
 
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-medium text-primary text-xs">
-          {initials}
+          {isGroup ? <Users className="h-3.5 w-3.5 text-primary" /> : initials}
         </div>
 
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate font-medium text-sm">{user.name}</span>
-          {user.positionName && (
-            <span className="truncate text-muted-foreground text-xs">
-              {" "}
-              · {user.positionName}
-            </span>
+          {isGroup ? (
+            <>
+              <span className="truncate font-medium text-sm">
+                {user.positionName ?? user.name}
+              </span>
+              <span className="truncate text-muted-foreground text-xs">
+                ({displayUsers.length})
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="truncate font-medium text-sm">{user.name}</span>
+              {user.positionName && (
+                <span className="truncate text-muted-foreground text-xs">
+                  {" "}
+                  · {user.positionName}
+                </span>
+              )}
+            </>
           )}
           <Badge
             appearance="light"
@@ -101,7 +128,7 @@ export function UserCard({
         {hasChildren && (
           <span className="flex shrink-0 items-center gap-1 text-muted-foreground text-xs">
             <Users className="h-3 w-3" />
-            {user.children.length}
+            {directReportCount}
           </span>
         )}
       </div>
@@ -148,7 +175,7 @@ export function UserCard({
                 <ChevronRight className="h-3.5 w-3.5" />
               )}
               <Users className="h-3 w-3" />
-              <span>{user.children.length} reports</span>
+              <span>{directReportCount} reports</span>
             </div>
           )}
         </div>
@@ -156,7 +183,71 @@ export function UserCard({
     );
   }
 
-  // Chart variant - full card
+  // Chart variant - grouped position block (multiple users in same position)
+  if (variant === "chart" && isGroup) {
+    return (
+      <Card
+        className={cn(
+          "relative w-52 cursor-default border-2 p-3 transition-all",
+          hasChildren && "cursor-pointer hover:border-primary/50",
+          className,
+        )}
+        onClick={hasChildren ? onToggle : undefined}
+      >
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div className="w-full space-y-1.5">
+            <p className="truncate font-semibold text-sm">
+              {user.positionName ?? user.name}
+            </p>
+            <Badge
+              appearance="light"
+              className="text-[10px]"
+              variant={roleConfig.variant}
+            >
+              {roleConfig.label}
+            </Badge>
+            {user.departmentName && (
+              <p className="flex items-center justify-center gap-1.5 truncate text-muted-foreground text-xs">
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                {user.departmentName}
+              </p>
+            )}
+            <div className="mt-2 flex flex-col gap-1.5 border-border border-t pt-2">
+              {displayUsers.map((u) => (
+                <div
+                  className="flex items-center gap-2 rounded-md bg-muted/50 px-2 py-1.5 text-left"
+                  key={u.id}
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background font-medium text-primary text-xs">
+                    {getInitials(u.name)}
+                  </div>
+                  <span className="min-w-0 truncate font-medium text-xs">
+                    {u.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {hasChildren && (
+            <div className="flex items-center gap-1 text-muted-foreground text-xs">
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+              <Users className="h-3 w-3" />
+              <span>{directReportCount} reports</span>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  // Chart variant - single user card
   return (
     <Card
       className={cn(
@@ -201,7 +292,7 @@ export function UserCard({
               <ChevronRight className="h-3.5 w-3.5" />
             )}
             <Users className="h-3 w-3" />
-            <span>{user.children.length} reports</span>
+            <span>{directReportCount} reports</span>
           </div>
         )}
       </div>

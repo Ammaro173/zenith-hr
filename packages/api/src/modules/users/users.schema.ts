@@ -46,7 +46,18 @@ export const getHierarchySchema = z.object({
 
 export type GetHierarchyInput = z.infer<typeof getHierarchySchema>;
 
-// Hierarchical node structure for org chart
+/** One user in a position (for grouped position blocks). */
+export interface HierarchyUser {
+  departmentName: string | null;
+  email: string;
+  id: string;
+  name: string;
+  role: string;
+  sapNo: string;
+  status: string;
+}
+
+// Hierarchical node structure for org chart (one node per position; multiple users grouped).
 export interface HierarchyNode {
   children: HierarchyNode[];
   departmentName: string | null;
@@ -60,6 +71,8 @@ export interface HierarchyNode {
   role: string;
   sapNo: string;
   status: string;
+  /** All users in this position; length > 1 when position is shared. Omitted or empty for vacancy. */
+  users?: HierarchyUser[];
 }
 
 // ============================================
