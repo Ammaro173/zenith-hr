@@ -41,6 +41,13 @@ export const tripPurposeEnum = pgEnum("trip_purpose", [
   "OTHER",
 ]);
 
+/** Who arranges: Company, Employee, or Third Party (used for air ticket and hotel) */
+export const tripArrangementPartyEnum = pgEnum("trip_arrangement_party", [
+  "COMPANY",
+  "EMPLOYEE",
+  "THIRD_PARTY",
+]);
+
 export const businessTrip = pgTable(
   "business_trip",
   {
@@ -86,6 +93,17 @@ export const businessTrip = pgTable(
     flightNotes: text("flight_notes"),
 
     status: tripStatusEnum("status").default("DRAFT").notNull(),
+
+    // Optional: employee covering duties during travel
+    replacementDuringTravelUserId: text(
+      "replacement_during_travel_user_id",
+    ).references(() => user.id, { onDelete: "set null" }),
+
+    // Arrangement and contact during trip (all optional)
+    airTicketBookedBy: tripArrangementPartyEnum("air_ticket_booked_by"),
+    hotelArrangedBy: tripArrangementPartyEnum("hotel_arranged_by"),
+    addressDuringTrip: text("address_during_trip"),
+    contactDetailsDuringTrip: text("contact_details_during_trip"),
 
     // Approval Workflow Fields
     currentApproverPositionId: uuid("current_approver_position_id").references(
@@ -144,6 +162,10 @@ export const businessTripRelations = relations(
     currentApproverPosition: one(jobPosition, {
       fields: [businessTrip.currentApproverPositionId],
       references: [jobPosition.id],
+    }),
+    replacementDuringTravelUser: one(user, {
+      fields: [businessTrip.replacementDuringTravelUserId],
+      references: [user.id],
     }),
     expenses: many(tripExpense),
     approvalLogs: many(approvalLog),

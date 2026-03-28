@@ -126,6 +126,7 @@ describe("BusinessTripsService", () => {
     needsHotelBooking: true,
     departureCity: "Doha",
     arrivalCity: "New York",
+    replacementDuringTravelUserId: undefined,
   };
 
   it("should create a trip with PENDING_MANAGER for a standard employee", async () => {
@@ -434,7 +435,7 @@ describe("BusinessTripsService", () => {
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
     mockDb.select.mockReturnValueOnce({ from: roleFromMock });
 
-    // 3) getPendingApprovals query: select().from().innerJoin().where().orderBy()
+    // 3) getPendingApprovals query: select().from().innerJoin().leftJoin().where().orderBy()
     const approvalsOrderByMock = mock(() =>
       Promise.resolve([
         {
@@ -445,11 +446,15 @@ describe("BusinessTripsService", () => {
             email: "t@t.com",
             image: null,
           },
+          replacementDuringTravelUserName: null,
         },
       ]),
     );
     const approvalsWhereMock = mock(() => ({ orderBy: approvalsOrderByMock }));
-    const approvalsInnerJoinMock = mock(() => ({ where: approvalsWhereMock }));
+    const approvalsLeftJoinMock = mock(() => ({ where: approvalsWhereMock }));
+    const approvalsInnerJoinMock = mock(() => ({
+      leftJoin: approvalsLeftJoinMock,
+    }));
     const approvalsFromMock = mock(() => ({
       innerJoin: approvalsInnerJoinMock,
     }));
@@ -504,11 +509,15 @@ describe("BusinessTripsService", () => {
             email: "it@example.com",
             image: null,
           },
+          replacementDuringTravelUserName: null,
         },
       ]),
     );
     const approvalsWhereMock = mock(() => ({ orderBy: approvalsOrderByMock }));
-    const approvalsInnerJoinMock = mock(() => ({ where: approvalsWhereMock }));
+    const approvalsLeftJoinMock = mock(() => ({ where: approvalsWhereMock }));
+    const approvalsInnerJoinMock = mock(() => ({
+      leftJoin: approvalsLeftJoinMock,
+    }));
     const approvalsFromMock = mock(() => ({
       innerJoin: approvalsInnerJoinMock,
     }));
@@ -523,6 +532,7 @@ describe("BusinessTripsService", () => {
     );
     expect(approvalsFromMock).toHaveBeenCalled();
     expect(approvalsInnerJoinMock).toHaveBeenCalled();
+    expect(approvalsLeftJoinMock).toHaveBeenCalled();
     expect(approvalsWhereMock).toHaveBeenCalled();
     expect(approvalsOrderByMock).toHaveBeenCalled();
   });

@@ -15,12 +15,14 @@ import {
   count,
   desc,
   eq,
+  getTableColumns,
   ilike,
   inArray,
   or,
   type SQL,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { z } from "zod";
 import { AppError } from "../../shared/errors";
 import type { ApprovalAction, PositionRole } from "../../shared/types";
@@ -93,6 +95,11 @@ export const createBusinessTripsService = (
         preferredArrivalDate: input.preferredArrivalDate,
         travelClass: input.travelClass,
         flightNotes: input.flightNotes,
+        replacementDuringTravelUserId: input.replacementDuringTravelUserId,
+        airTicketBookedBy: input.airTicketBookedBy,
+        hotelArrangedBy: input.hotelArrangedBy,
+        addressDuringTrip: input.addressDuringTrip,
+        contactDetailsDuringTrip: input.contactDetailsDuringTrip,
         status: nextApprover.nextStatus as BusinessTripStatus,
         currentApproverPositionId: nextApprover.approverPositionId,
         requiredApproverRole: nextApprover.approverRole,
@@ -143,6 +150,7 @@ export const createBusinessTripsService = (
       }
     }
 
+    const replacementUser = alias(user, "replacement_user");
     const [trip] = await db
       .select({
         id: businessTrip.id,
@@ -166,6 +174,12 @@ export const createBusinessTripsService = (
         preferredArrivalDate: businessTrip.preferredArrivalDate,
         travelClass: businessTrip.travelClass,
         flightNotes: businessTrip.flightNotes,
+        replacementDuringTravelUserId:
+          businessTrip.replacementDuringTravelUserId,
+        airTicketBookedBy: businessTrip.airTicketBookedBy,
+        hotelArrangedBy: businessTrip.hotelArrangedBy,
+        addressDuringTrip: businessTrip.addressDuringTrip,
+        contactDetailsDuringTrip: businessTrip.contactDetailsDuringTrip,
         status: businessTrip.status,
         currentApproverPositionId: businessTrip.currentApproverPositionId,
         requiredApproverRole: businessTrip.requiredApproverRole,
@@ -182,10 +196,15 @@ export const createBusinessTripsService = (
           role: user.role,
         },
         departmentName: department.name,
+        replacementDuringTravelUserName: replacementUser.name,
       })
       .from(businessTrip)
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
       .leftJoin(department, eq(user.departmentId, department.id))
+      .leftJoin(
+        replacementUser,
+        eq(businessTrip.replacementDuringTravelUserId, replacementUser.id),
+      )
       .where(
         and(
           eq(businessTrip.id, id),
@@ -248,10 +267,18 @@ export const createBusinessTripsService = (
       businessTrip[sortBy as keyof typeof businessTrip._.columns],
     );
 
+    const replacementUser = alias(user, "replacement_user");
     const [data, totalResult] = await Promise.all([
       db
-        .select()
+        .select({
+          ...getTableColumns(businessTrip),
+          replacementDuringTravelUserName: replacementUser.name,
+        })
         .from(businessTrip)
+        .leftJoin(
+          replacementUser,
+          eq(businessTrip.replacementDuringTravelUserId, replacementUser.id),
+        )
         .where(and(...conditions))
         .orderBy(orderBy)
         .limit(pageSize)
@@ -313,6 +340,7 @@ export const createBusinessTripsService = (
     }
 
     // Get all trips visible to this user
+    const replacementUser = alias(user, "replacement_user");
     const items = await db
       .select({
         trip: businessTrip,
@@ -322,9 +350,14 @@ export const createBusinessTripsService = (
           email: user.email,
           image: user.image,
         },
+        replacementDuringTravelUserName: replacementUser.name,
       })
       .from(businessTrip)
       .innerJoin(user, eq(businessTrip.requesterId, user.id))
+      .leftJoin(
+        replacementUser,
+        eq(businessTrip.replacementDuringTravelUserId, replacementUser.id),
+      )
       .where(
         and(
           // Only show actionable pending trips in approvals (exclude REJECTED)
@@ -344,6 +377,7 @@ export const createBusinessTripsService = (
     return items.map((item) => ({
       ...item.trip,
       requester: item.requester,
+      replacementDuringTravelUserName: item.replacementDuringTravelUserName,
     }));
   },
 
@@ -792,10 +826,18 @@ export const createBusinessTripsService = (
       businessTrip[sortBy as keyof typeof businessTrip._.columns],
     );
 
+    const replacementUser = alias(user, "replacement_user");
     const [data, totalResult] = await Promise.all([
       db
-        .select()
+        .select({
+          ...getTableColumns(businessTrip),
+          replacementDuringTravelUserName: replacementUser.name,
+        })
         .from(businessTrip)
+        .leftJoin(
+          replacementUser,
+          eq(businessTrip.replacementDuringTravelUserId, replacementUser.id),
+        )
         .where(and(...conditions))
         .orderBy(orderBy)
         .limit(pageSize)

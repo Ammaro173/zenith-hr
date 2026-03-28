@@ -30,6 +30,25 @@ export const TRAVEL_CLASS_OPTIONS = [
   { value: "FIRST", label: "First" },
 ] as const;
 
+/** Air Ticket / Hotel arrangement: Company, Employee, or Third Party */
+export const TRIP_ARRANGEMENT_PARTY_VALUES = [
+  "COMPANY",
+  "EMPLOYEE",
+  "THIRD_PARTY",
+] as const;
+
+export const AIR_TICKET_BOOKED_BY_OPTIONS = [
+  { value: "COMPANY", label: "Company" },
+  { value: "EMPLOYEE", label: "Employee" },
+  { value: "THIRD_PARTY", label: "Third Party" },
+] as const;
+
+export const HOTEL_ARRANGED_BY_OPTIONS = [
+  { value: "COMPANY", label: "Company" },
+  { value: "EMPLOYEE", label: "Employee" },
+  { value: "THIRD_PARTY", label: "Third Party" },
+] as const;
+
 export const TRIP_STATUSES = [
   "DRAFT",
   "PENDING_MANAGER",
@@ -70,6 +89,19 @@ const baseTripSchema = z.object({
   preferredArrivalDate: z.date().optional(),
   travelClass: z.string().optional(),
   flightNotes: z.string().optional(),
+
+  // Optional: employee covering duties during travel (null to clear).
+  replacementDuringTravelUserId: z
+    .union([z.string().min(1), z.literal(""), z.null(), z.undefined()])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+
+  // Optional: who books air ticket / arranges hotel
+  airTicketBookedBy: z.enum(TRIP_ARRANGEMENT_PARTY_VALUES).optional(),
+  hotelArrangedBy: z.enum(TRIP_ARRANGEMENT_PARTY_VALUES).optional(),
+  // Optional: address and contact during trip
+  addressDuringTrip: z.string().optional(),
+  contactDetailsDuringTrip: z.string().optional(),
 });
 
 // Create schema with date validation and conditional flight validation
@@ -142,6 +174,11 @@ export const createTripDefaults: z.input<typeof baseTripSchema> = {
   preferredArrivalDate: undefined,
   travelClass: "",
   flightNotes: "",
+  replacementDuringTravelUserId: undefined,
+  airTicketBookedBy: undefined,
+  hotelArrangedBy: undefined,
+  addressDuringTrip: "",
+  contactDetailsDuringTrip: "",
 };
 
 export const tripActionSchema = z.object({
@@ -150,9 +187,28 @@ export const tripActionSchema = z.object({
   comment: z.string().optional(),
 });
 
+export const EXPENSE_CATEGORY_VALUES = [
+  "FLIGHT",
+  "HOTEL",
+  "MEAL",
+  "TRANSPORT",
+  "OTHER",
+] as const;
+
+export const EXPENSE_CATEGORY_OPTIONS: {
+  value: (typeof EXPENSE_CATEGORY_VALUES)[number];
+  label: string;
+}[] = [
+  { value: "FLIGHT", label: "Flight" },
+  { value: "HOTEL", label: "Hotel" },
+  { value: "MEAL", label: "Meal" },
+  { value: "TRANSPORT", label: "Transport" },
+  { value: "OTHER", label: "Other" },
+];
+
 export const addExpenseSchema = z.object({
   tripId: z.string().uuid(),
-  category: z.enum(["FLIGHT", "HOTEL", "MEAL", "TRANSPORT", "OTHER"]),
+  category: z.enum(EXPENSE_CATEGORY_VALUES),
   amount: z.number().positive(),
   currency: z.string().default("QAR"),
   date: z.date(),

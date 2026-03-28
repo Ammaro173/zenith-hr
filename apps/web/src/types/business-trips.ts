@@ -9,8 +9,11 @@ export type TripFilterStatus = GetMyTripsInput["status"] extends
 export type TripStatus = ApiTripStatus;
 
 export interface BusinessTrip {
+  addressDuringTrip: string | null;
+  airTicketBookedBy: string | null;
   arrivalCity: string | null;
   city: string;
+  contactDetailsDuringTrip: string | null;
   country: string;
   createdAt: string | Date;
   currency: string | null;
@@ -19,6 +22,7 @@ export interface BusinessTrip {
   endDate: string | Date;
   estimatedCost: string | null;
   flightNotes: string | null;
+  hotelArrangedBy: string | null;
   id: string;
   needsFlightBooking: boolean;
   needsHotelBooking: boolean;
@@ -27,6 +31,8 @@ export interface BusinessTrip {
   preferredDepartureDate: string | Date | null;
   purposeDetails: string | null;
   purposeType: string;
+  replacementDuringTravelUserId: string | null;
+  replacementDuringTravelUserName?: string | null;
   requesterId: string;
   requiredApproverRole: string | null;
   revisionVersion: number;
