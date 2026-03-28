@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   pgEnum,
   pgTableCreator,
@@ -38,22 +39,28 @@ export const userStatusEnum = pgEnum("user_status", [
   "ON_LEAVE",
 ]);
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").notNull(),
-  image: text("image"),
-  role: userRoleEnum("role").notNull().default("EMPLOYEE"),
-  status: userStatusEnum("status").notNull().default("ACTIVE"),
-  sapNo: text("sap_no").notNull().unique(),
-  // Note: No FK constraint here to avoid circular dependency with departments.
-  // Referential integrity is maintained at the application level.
-  departmentId: uuid("department_id"),
-  passwordHash: text("password_hash"),
-  signatureUrl: text("signature_url"),
-  failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
-  joiningDate: timestamp("joining_date"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").notNull(),
+    image: text("image"),
+    role: userRoleEnum("role").notNull().default("EMPLOYEE"),
+    status: userStatusEnum("status").notNull().default("ACTIVE"),
+    sapNo: text("sap_no").notNull().unique(),
+    // Note: No FK constraint here to avoid circular dependency with departments.
+    // Referential integrity is maintained at the application level.
+    departmentId: uuid("department_id"),
+    passwordHash: text("password_hash"),
+    signatureUrl: text("signature_url"),
+    failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+    joiningDate: timestamp("joining_date"),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (table) => ({
+    joiningDateIdx: index("user_joining_date_idx").on(table.joiningDate),
+  }),
+);
