@@ -151,7 +151,7 @@ export function GoalAchievementSection({
           {!isLoading && goals.length > 0 && (
             <div className="space-y-6">
               {goals.map((g, idx) => {
-                const v = draft[g.id] ?? {
+                const assessment = draft[g.id] ?? {
                   achievedPercentage: 0,
                   comment: "",
                 };
@@ -192,11 +192,14 @@ export function GoalAchievementSection({
                             );
                             setDraft((prev) => ({
                               ...prev,
-                              [g.id]: { ...v, achievedPercentage: next },
+                              [g.id]: {
+                                ...assessment,
+                                achievedPercentage: next,
+                              },
                             }));
                           }}
                           readOnly={readOnly}
-                          value={v.achievedPercentage}
+                          value={assessment.achievedPercentage}
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
@@ -207,12 +210,12 @@ export function GoalAchievementSection({
                             const next = e.target.value;
                             setDraft((prev) => ({
                               ...prev,
-                              [g.id]: { ...v, comment: next },
+                              [g.id]: { ...assessment, comment: next },
                             }));
                           }}
                           placeholder="Notes, outcomes, and evidence…"
                           readOnly={readOnly}
-                          value={v.comment}
+                          value={assessment.comment}
                         />
                       </div>
                     </div>
