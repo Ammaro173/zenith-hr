@@ -86,6 +86,54 @@ interface ReviewPermissions {
   canSubmit: boolean;
 }
 
+async function assertActiveEmployeeForReview(
+  txOrDb: DbOrTx,
+  employeeId: string,
+) {
+  const row = await txOrDb.query.user.findFirst({
+    where: eq(user.id, employeeId),
+    columns: { id: true, status: true, departmentId: true },
+  });
+  if (!row) {
+    throw AppError.notFound("Employee not found");
+  }
+  if (row.status !== "ACTIVE") {
+    throw AppError.badRequest(
+      "Performance reviews can only be created for active employees",
+    );
+  }
+  return row;
+}
+
+function computeProbationReviewEditFlags(args: {
+  reviewType: ReviewType;
+  isEmployee: boolean;
+  isReviewer: boolean;
+  isGlobal: boolean;
+  managerCanEditProbation: boolean;
+}) {
+  const {
+    reviewType,
+    isEmployee,
+    isReviewer,
+    isGlobal,
+    managerCanEditProbation,
+  } = args;
+  const isProbationSelfView = reviewType === "PROBATION" && isEmployee;
+  const baseManager = isGlobal || isReviewer || managerCanEditProbation;
+  return {
+    isProbationSelfView,
+    canEditSelfComment: isProbationSelfView ? true : isEmployee,
+    canEditManagerComment: isProbationSelfView ? false : baseManager,
+    canEditOverallRating: isProbationSelfView ? false : baseManager,
+    canEditCompetencies: isProbationSelfView
+      ? false
+      : isGlobal || isEmployee || isReviewer || managerCanEditProbation,
+    canEditProbationDecision:
+      !isProbationSelfView && reviewType === "PROBATION" && baseManager,
+  };
+}
+
 // ============================================================================
 // Service Factory
 // ============================================================================
@@ -458,24 +506,23 @@ export const createPerformanceService = (db: DbOrTx) => {
       review,
       access.isManager,
     );
-    const isProbationSelfView = review.reviewType === "PROBATION" && isEmployee;
-    const canEditSelfComment = isProbationSelfView ? true : isEmployee;
-    const canEditManagerComment = isProbationSelfView
-      ? false
-      : access.isGlobal || isReviewer || managerCanEditProbation;
-    const canEditOverallRating = isProbationSelfView
-      ? false
-      : canEditManagerComment;
-    const canEditCompetencies = isProbationSelfView
-      ? false
-      : access.isGlobal || isEmployee || isReviewer || managerCanEditProbation;
+    const {
+      isProbationSelfView,
+      canEditSelfComment,
+      canEditManagerComment,
+      canEditOverallRating,
+      canEditCompetencies,
+      canEditProbationDecision,
+    } = computeProbationReviewEditFlags({
+      reviewType: review.reviewType,
+      isEmployee,
+      isReviewer,
+      isGlobal: access.isGlobal,
+      managerCanEditProbation,
+    });
     const canManageGoals = canEditCompetencies;
     const canCreateCompetencies = access.isGlobal;
     const canDirectlyEditStatus = access.isGlobal;
-    const canEditProbationDecision =
-      !isProbationSelfView &&
-      review.reviewType === "PROBATION" &&
-      (access.isGlobal || isReviewer || managerCanEditProbation);
     const canSaveDraft =
       canEditSelfComment || canEditManagerComment || canEditCompetencies;
 
@@ -670,6 +717,11 @@ export const createPerformanceService = (db: DbOrTx) => {
      */
     async createReview(input: CreateReviewInput, actorId?: string | null) {
       return await db.transaction(async (tx) => {
+        const employee = await assertActiveEmployeeForReview(
+          tx,
+          input.employeeId,
+        );
+
         if (input.reviewType === "PROBATION" && actorId) {
           const actorRole = await getActorRole(tx, actorId);
           const positionInfo = await getActorPositionInfo(tx, actorId);
@@ -681,15 +733,6 @@ export const createPerformanceService = (db: DbOrTx) => {
           if (!isAdmin && isHodRole) {
             if (!positionInfo?.departmentId) {
               throw AppError.forbidden("No department scope for this actor");
-            }
-
-            const employee = await tx.query.user.findFirst({
-              where: eq(user.id, input.employeeId),
-              columns: { id: true, departmentId: true },
-            });
-
-            if (!employee) {
-              throw AppError.notFound("Employee not found");
             }
 
             if (employee.departmentId !== positionInfo.departmentId) {
@@ -2030,14 +2073,14 @@ export const createPerformanceService = (db: DbOrTx) => {
         if (!positionInfo?.departmentId) {
           throw AppError.forbidden("No department scope for this actor");
         }
-        const employee = await db.query.user.findFirst({
-          where: eq(user.id, employeeId),
+        const scopedEmployee = await db.query.user.findFirst({
+          where: and(eq(user.id, employeeId), eq(user.status, "ACTIVE")),
           columns: { id: true, departmentId: true },
         });
-        if (!employee) {
+        if (!scopedEmployee) {
           throw AppError.notFound("Employee not found");
         }
-        if (employee.departmentId !== positionInfo.departmentId) {
+        if (scopedEmployee.departmentId !== positionInfo.departmentId) {
           throw AppError.forbidden("Employee is outside your department scope");
         }
       }
@@ -2062,16 +2105,14 @@ export const createPerformanceService = (db: DbOrTx) => {
       const positionInfo = await getActorPositionInfo(db, actorId);
       const isHrOrAdmin = role === "HOD_HR" || role === "ADMIN";
 
+      const employee = await assertActiveEmployeeForReview(
+        db,
+        input.employeeId,
+      );
+
       if (!isHrOrAdmin) {
         if (!positionInfo?.departmentId) {
           throw AppError.forbidden("No department scope for this actor");
-        }
-        const employee = await db.query.user.findFirst({
-          where: eq(user.id, input.employeeId),
-          columns: { id: true, departmentId: true },
-        });
-        if (!employee) {
-          throw AppError.notFound("Employee not found");
         }
         if (employee.departmentId !== positionInfo.departmentId) {
           throw AppError.forbidden("Employee is outside your department scope");
