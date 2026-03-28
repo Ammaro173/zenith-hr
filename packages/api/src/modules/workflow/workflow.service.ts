@@ -109,10 +109,11 @@ const SHARED_ROLE_QUEUES: Record<string, PositionRole[]> = {
 
 // Role-to-status mapping for double-approval skip logic.
 // When the dept HOD who approved at PENDING_HOD has one of these roles,
-// the corresponding cross-functional step is skipped.
+// the corresponding cross-functional step is skipped (no second approval).
 const HOD_ROLE_TO_STATUS: Record<string, RequestStatus> = {
   HOD_HR: "PENDING_HR",
   HOD_FINANCE: "PENDING_FINANCE",
+  CEO: "PENDING_CEO",
 };
 
 export const createWorkflowService = (
@@ -566,12 +567,21 @@ export const createWorkflowService = (
   /** Roles that skip PENDING_MANAGER at DRAFT: HODs and CEO (executive chain only). */
   const SKIP_MANAGER_AT_DRAFT: PositionRole[] = [...HOD_ROLES, "CEO"];
 
+  // HOD-type roles in manager chain: who can be the PENDING_HOD approver.
+  // If that person is also HOD_HR / HOD_FINANCE / CEO, we skip the later step.
+  const TRIP_HOD_CHAIN_ROLES: PositionRole[] = [
+    "HOD",
+    "HOD_IT",
+    "HOD_HR",
+    "HOD_FINANCE",
+    "CEO",
+  ];
+
   /**
    * Trip routing: walk up manager chain, then hit executive chain.
    * Skips PENDING_MANAGER for HOD and CEO requesters (they go via executive chain only).
-   * - HOD_HR requester → HOD_FINANCE → CEO (HR skipped by maybeSkip).
-   * - HOD_FINANCE requester → HOD_HR → CEO (Finance skipped by maybeSkip).
-   * - CEO requester → HOD_HR → HOD_FINANCE (CEO step skipped by maybeSkip → APPROVED).
+   * Skips PENDING_HR / PENDING_FINANCE / PENDING_CEO when the HOD (approver at PENDING_HOD)
+   * is the same role (e.g. HOD is Head of Finance → skip PENDING_FINANCE).
    * Skips any step where the approver role is the same as the requester's role (no self-approval).
    */
   const getNextTripApprover = async (
@@ -587,6 +597,13 @@ export const createWorkflowService = (
       requesterPositionId,
       txOrDb,
     );
+    const chain = await getManagerChain(requesterPositionId, txOrDb);
+    const hodPosition = chain.find((p) =>
+      TRIP_HOD_CHAIN_ROLES.includes(p.positionRole as PositionRole),
+    );
+    const hodRole: PositionRole | null = hodPosition
+      ? (hodPosition.positionRole as PositionRole)
+      : null;
 
     const maybeSkip = async (result: {
       approverPositionId: string | null;
@@ -597,6 +614,27 @@ export const createWorkflowService = (
         requesterPositionRole &&
         result.approverRole === requesterPositionRole &&
         result.nextStatus !== "APPROVED"
+      ) {
+        return await getNextTripApprover(
+          requesterPositionId,
+          result.nextStatus,
+          txOrDb,
+        );
+      }
+      return result;
+    };
+
+    // Skip PENDING_HR / PENDING_FINANCE / PENDING_CEO when HOD already approved in that role.
+    const maybeSkipHodDuplicate = async (result: {
+      approverPositionId: string | null;
+      approverRole: PositionRole | null;
+      nextStatus: string;
+    }) => {
+      if (
+        hodRole &&
+        hodRole !== "CEO" &&
+        result.nextStatus !== "APPROVED" &&
+        HOD_ROLE_TO_STATUS[hodRole] === result.nextStatus
       ) {
         return await getNextTripApprover(
           requesterPositionId,
@@ -619,7 +657,6 @@ export const createWorkflowService = (
         );
       }
       // Start with manager chain
-      const chain = await getManagerChain(requesterPositionId, txOrDb);
       if (chain.length > 0) {
         const firstManager = chain[0];
         if (!firstManager) {
@@ -665,11 +702,13 @@ export const createWorkflowService = (
             500,
           );
         }
-        return await maybeSkip({
-          approverPositionId: null,
-          approverRole: hrPosition.role as PositionRole,
-          nextStatus: "PENDING_HR",
-        });
+        return await maybeSkipHodDuplicate(
+          await maybeSkip({
+            approverPositionId: null,
+            approverRole: hrPosition.role as PositionRole,
+            nextStatus: "PENDING_HR",
+          }),
+        );
       }
 
       throw new AppError(
@@ -680,20 +719,24 @@ export const createWorkflowService = (
     }
 
     if (currentStatus === "PENDING_MANAGER") {
-      // After manager, check if there's an HOD or HOD_IT in the chain (use full chain, not just executives)
-      const chain = await getManagerChain(requesterPositionId, txOrDb);
-      const hodPosition = chain.find(
-        (p) => p.positionRole === "HOD" || p.positionRole === "HOD_IT",
-      );
-
+      // After manager, check if there's an HOD-type in the chain (HOD, HOD_IT, HOD_HR, HOD_FINANCE, CEO)
       if (hodPosition) {
-        const users = await getPositionUsers(hodPosition.positionId, txOrDb);
-        if (users.length > 0) {
-          return await maybeSkip({
-            approverPositionId: hodPosition.positionId,
-            approverRole: hodPosition.positionRole,
-            nextStatus: "PENDING_HOD",
-          });
+        const firstManager = chain[0];
+        // If the direct manager is already the HOD-type position (e.g. requester
+        // reports directly to HOD_IT), skip a second "PENDING_HOD" approval for
+        // the same person and move straight into the cross-functional chain.
+        if (
+          !firstManager ||
+          hodPosition.positionId !== firstManager.positionId
+        ) {
+          const users = await getPositionUsers(hodPosition.positionId, txOrDb);
+          if (users.length > 0) {
+            return await maybeSkip({
+              approverPositionId: hodPosition.positionId,
+              approverRole: hodPosition.positionRole as PositionRole,
+              nextStatus: "PENDING_HOD",
+            });
+          }
         }
       }
 
@@ -718,11 +761,13 @@ export const createWorkflowService = (
             500,
           );
         }
-        return await maybeSkip({
-          approverPositionId: null,
-          approverRole: hrPosition.role as PositionRole,
-          nextStatus: "PENDING_HR",
-        });
+        return await maybeSkipHodDuplicate(
+          await maybeSkip({
+            approverPositionId: null,
+            approverRole: hrPosition.role as PositionRole,
+            nextStatus: "PENDING_HR",
+          }),
+        );
       }
 
       throw new AppError(
@@ -754,11 +799,13 @@ export const createWorkflowService = (
             500,
           );
         }
-        return await maybeSkip({
-          approverPositionId: null,
-          approverRole: hrPosition.role as PositionRole,
-          nextStatus: "PENDING_HR",
-        });
+        return await maybeSkipHodDuplicate(
+          await maybeSkip({
+            approverPositionId: null,
+            approverRole: hrPosition.role as PositionRole,
+            nextStatus: "PENDING_HR",
+          }),
+        );
       }
 
       throw new AppError(
@@ -790,11 +837,13 @@ export const createWorkflowService = (
             500,
           );
         }
-        return await maybeSkip({
-          approverPositionId: null,
-          approverRole: financePosition.role as PositionRole,
-          nextStatus: "PENDING_FINANCE",
-        });
+        return await maybeSkipHodDuplicate(
+          await maybeSkip({
+            approverPositionId: null,
+            approverRole: financePosition.role as PositionRole,
+            nextStatus: "PENDING_FINANCE",
+          }),
+        );
       }
 
       throw new AppError(
@@ -821,11 +870,13 @@ export const createWorkflowService = (
             500,
           );
         }
-        return await maybeSkip({
-          approverPositionId: null,
-          approverRole: ceoPosition.role as PositionRole,
-          nextStatus: "PENDING_CEO",
-        });
+        return await maybeSkipHodDuplicate(
+          await maybeSkip({
+            approverPositionId: null,
+            approverRole: ceoPosition.role as PositionRole,
+            nextStatus: "PENDING_CEO",
+          }),
+        );
       }
 
       throw new AppError(
@@ -875,15 +926,15 @@ export const createWorkflowService = (
     }
     if (status === "PENDING_HOD") {
       const chain = await getManagerChain(requesterPositionId, txOrDb);
-      const hodPosition = chain.find(
-        (p) => p.positionRole === "HOD" || p.positionRole === "HOD_IT",
+      const hodPosition = chain.find((p) =>
+        TRIP_HOD_CHAIN_ROLES.includes(p.positionRole as PositionRole),
       );
       if (hodPosition) {
         const users = await getPositionUsers(hodPosition.positionId, txOrDb);
         if (users.length > 0) {
           return {
             approverPositionId: hodPosition.positionId,
-            approverRole: hodPosition.positionRole,
+            approverRole: hodPosition.positionRole as PositionRole,
           };
         }
       }

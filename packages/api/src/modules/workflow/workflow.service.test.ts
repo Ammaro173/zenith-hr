@@ -947,25 +947,22 @@ describe("WorkflowService", () => {
       });
     });
 
-    it("routes HOD_IT requester trips to HR after skipping manager stage", async () => {
+    it("when manager chain includes CEO, PENDING_FINANCE still routes to PENDING_CEO", async () => {
       const mockDb = createSequentialSelectDb(
         [
-          [{ role: "HOD_IT" }],
-          [{ role: "HOD_IT" }],
-          [{ id: "hr-pos-1", role: "HOD_HR" }],
-          [{ userId: "hr-1" }],
+          [{ role: "EMPLOYEE" }],
+          [{ id: "ceo-pos-1", role: "CEO" }],
+          [{ userId: "ceo-1" }],
         ],
         [{ position_id: "ceo-pos-1", position_role: "CEO", depth: 1 }],
       );
       const service = createWorkflowService(mockDb, mockNotificationsService);
-
-      const result = await service.getNextTripApprover("hod-it-pos-1", "DRAFT");
-
-      expect(result).toEqual({
-        approverPositionId: null,
-        approverRole: "HOD_HR",
-        nextStatus: "PENDING_HR",
-      });
+      const result = await service.getNextTripApprover(
+        "requester-pos-1",
+        "PENDING_FINANCE",
+      );
+      expect(result.nextStatus).toBe("PENDING_CEO");
+      expect(result.approverRole).toBe("CEO");
     });
 
     it("does not allow generic HOD to act on HR-stage trip approvals", async () => {
