@@ -89,6 +89,7 @@ function CreateObjectiveDialog({
   setOpen: (open: boolean) => void;
   onCreated: (reviewId: string) => void;
 }) {
+  //TODO this form
   const [objectiveMainGoal, setObjectiveMainGoal] = useState("");
   const [reviewPeriodStartDate, setReviewPeriodStartDate] = useState("");
   const [reviewPeriodEndDate, setReviewPeriodEndDate] = useState("");
@@ -131,7 +132,9 @@ function CreateObjectiveDialog({
     reviewPeriodEndDate.length > 0 &&
     reviewPeriodStartDate <= reviewPeriodEndDate &&
     goals.length >= 1 &&
-    goals.every((g) => g.title.trim().length >= 3 && g.weight >= 1) &&
+    goals.every(
+      (g) => g.title.trim().length >= 3 && g.weight >= 1 && g.weight <= 100,
+    ) &&
     totalWeight === 100;
   const submitBlockers: string[] = [];
   if (objectiveMainGoal.trim().length < 3) {
@@ -147,6 +150,9 @@ function CreateObjectiveDialog({
   }
   if (goals.some((g) => g.title.trim().length < 3)) {
     submitBlockers.push("Each goal title must be at least 3 characters");
+  }
+  if (goals.some((g) => g.weight < 1 || g.weight > 100)) {
+    submitBlockers.push("Each goal weight must be between 1 and 100");
   }
   if (totalWeight !== 100) {
     submitBlockers.push("Total goal weight must equal 100%");
