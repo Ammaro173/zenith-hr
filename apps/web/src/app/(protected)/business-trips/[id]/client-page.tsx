@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addExpenseSchema,
+  EXPENSE_CATEGORY_OPTIONS,
   TRAVEL_CLASS_OPTIONS,
   TRIP_PURPOSE_OPTIONS,
 } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
@@ -23,7 +24,7 @@ import {
 import type { Route } from "next";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { Badge } from "@/components/ui/badge";
@@ -189,15 +190,18 @@ export function BusinessTripDetailClientPage({
     }),
   );
 
-  const expenseDefaults: AddExpenseInput = {
-    tripId: params.id,
-    category: "MEAL",
-    amount: 1,
-    currency: "QAR",
-    date: new Date(),
-    description: "",
-    receiptUrl: "",
-  };
+  const expenseDefaults = useMemo<AddExpenseInput>(
+    () => ({
+      tripId: params.id,
+      category: "MEAL",
+      amount: 1,
+      currency: "QAR",
+      date: new Date(),
+      description: "",
+      receiptUrl: "",
+    }),
+    [params.id],
+  );
 
   const expenseForm = useForm({
     defaultValues: expenseDefaults,
@@ -208,6 +212,13 @@ export function BusinessTripDetailClientPage({
       await addExpense(value);
     },
   });
+
+  // Reset expense form when dialog opens so "Add another" starts fresh and category is valid
+  useEffect(() => {
+    if (isExpenseDialogOpen) {
+      expenseForm.reset(expenseDefaults);
+    }
+  }, [isExpenseDialogOpen, expenseDefaults, expenseForm]);
 
   if (isTripLoading) {
     return <div>Loading...</div>;
@@ -722,18 +733,30 @@ export function BusinessTripDetailClientPage({
                       {(field) => (
                         <div className="space-y-2">
                           <Label htmlFor={field.name}>Category</Label>
-                          <Input
-                            id={field.name}
-                            name={field.name}
-                            onBlur={field.handleBlur}
-                            onChange={(e) =>
+                          <Select
+                            onValueChange={(value) =>
                               field.handleChange(
-                                e.target.value as AddExpenseInput["category"],
+                                value as AddExpenseInput["category"],
                               )
                             }
-                            placeholder="e.g. MEAL, TRANSPORT"
                             value={field.state.value}
-                          />
+                          >
+                            <SelectTrigger id={field.name}>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {EXPENSE_CATEGORY_OPTIONS.map(
+                                (opt: {
+                                  value: AddExpenseInput["category"];
+                                  label: string;
+                                }) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </expenseForm.Field>
