@@ -47,24 +47,38 @@ export function PositionCombobox({
     enabled: open,
   });
 
-  const positions = data as PositionOption[] | undefined;
+  // Hydrate selected position by ID when value is set (e.g. edit form load)
+  const { data: positionById } = useQuery({
+    queryKey: ["positions", "byId", value],
+    queryFn: () => {
+      if (!value) {
+        throw new Error("Position id required");
+      }
+      return client.positions.getById({ id: value });
+    },
+    enabled: !!value && !open,
+  });
 
-  // Find selected position - first check cache, then check current results
+  const positions = data as PositionOption[] | undefined;
+  const hydratedPosition = positionById as PositionOption | undefined;
+
+  // Find selected position: current results, then cache, then hydrated by-id result
   const selectedItem = React.useMemo(() => {
     if (!value) {
       return null;
     }
-    // First try to find in current results
     const fromResults = positions?.find((pos) => pos.id === value);
     if (fromResults) {
       return fromResults;
     }
-    // Fall back to cache if the item was previously selected
     if (selectedCache?.id === value) {
       return selectedCache;
     }
+    if (hydratedPosition?.id === value) {
+      return hydratedPosition;
+    }
     return null;
-  }, [value, positions, selectedCache]);
+  }, [value, positions, selectedCache, hydratedPosition]);
 
   const handleSelect = (item: PositionOption) => {
     // Cache the selected item so we can display its name even when not in results

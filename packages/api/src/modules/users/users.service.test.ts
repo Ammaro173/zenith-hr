@@ -47,6 +47,7 @@ const createUserInputArb: fc.Arbitrary<LegacyCreateUserInput> = fc.record({
   role: fc.constantFrom(...VALID_ROLES),
   status: fc.constantFrom(...VALID_STATUSES),
   departmentId: fc.option(fc.uuid(), { nil: null }),
+  joiningDate: fc.date(),
 });
 
 /**

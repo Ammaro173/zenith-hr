@@ -36,6 +36,7 @@ export function CreateUserDialog({
         sapNo: data.sapNo,
         status: data.status,
         positionId: data.positionId,
+        joiningDate: data.joiningDate,
       }),
     onSuccess: () => {
       toast.success("User created successfully");

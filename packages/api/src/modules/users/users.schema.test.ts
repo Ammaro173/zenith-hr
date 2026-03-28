@@ -65,6 +65,12 @@ const invalidStatusArb = fc
     (s) => !VALID_STATUSES.includes(s as (typeof VALID_STATUSES)[number]),
   );
 
+// Bounded date for joiningDate to avoid edge cases (valid range, serializes consistently)
+const validJoiningDateArb = fc.date({
+  min: new Date(2000, 0, 1),
+  max: new Date(2030, 11, 31),
+});
+
 /**
  * Feature: user-management, Property 12: Form validation rejects invalid input
  *
@@ -208,6 +214,21 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
     });
 
     it("should accept valid input with all required fields", () => {
+      const validInput = {
+        name: "Jane Doe",
+        email: "jane@example.com",
+        password: "password1",
+        sapNo: "SAP001",
+        status: "ACTIVE" as const,
+        positionId: "550e8400-e29b-41d4-a716-446655440000",
+        joiningDate: new Date("2024-06-15"),
+      };
+      expect(createUserSchema.safeParse(validInput).success).toBe(true);
+      expect(
+        createUserSchema.safeParse({ ...validInput, joiningDate: "2024-06-15" })
+          .success,
+      ).toBe(true);
+
       fc.assert(
         fc.property(
           fc.record({
@@ -217,13 +238,14 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             sapNo: validSapNoArb,
             positionId: fc.uuid(),
             status: fc.constantFrom(...VALID_STATUSES),
+            joiningDate: validJoiningDateArb,
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 10 },
+        { numRuns: 20, seed: 0 },
       );
     });
 
@@ -237,13 +259,14 @@ describe("Feature: user-management, Property 12: Form validation rejects invalid
             sapNo: validSapNoArb,
             positionId: fc.uuid(),
             status: fc.constantFrom(...VALID_STATUSES),
+            joiningDate: validJoiningDateArb,
           }),
           (input) => {
             const result = createUserSchema.safeParse(input);
             expect(result.success).toBe(true);
           },
         ),
-        { numRuns: 10 },
+        { numRuns: 20, seed: 0 },
       );
     });
   });

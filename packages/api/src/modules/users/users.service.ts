@@ -747,7 +747,7 @@ export const createUsersService = (db: DbOrTx) => ({
    * - Returns user without password hash
    */
   async create(input: CreateUserInput): Promise<UserResponse> {
-    const { name, password, sapNo, status, positionId } = input;
+    const { name, password, sapNo, status, positionId, joiningDate } = input;
 
     // Normalize email to lowercase (Better Auth does case-sensitive lookups)
     const email = input.email.toLowerCase();
@@ -802,6 +802,7 @@ export const createUsersService = (db: DbOrTx) => ({
       role: derivedProfile.derivedRole,
       status: status ?? "ACTIVE",
       departmentId: derivedProfile.derivedDepartmentId,
+      joiningDate: joiningDate ?? null,
       passwordHash: null,
       failedLoginAttempts: 0,
       createdAt: now,

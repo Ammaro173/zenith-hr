@@ -11,6 +11,13 @@ import {
   userPositionAssignment,
 } from "./schema";
 
+/** Returns a date `monthsAgo` before the given date (for joining dates). */
+function joiningDateFrom(base: Date, monthsAgo: number): Date {
+  const d = new Date(base);
+  d.setMonth(d.getMonth() - monthsAgo);
+  return d;
+}
+
 async function seed() {
   const now = new Date();
   const defaultPasswordHash = await hashPassword("Test123!");
@@ -893,6 +900,12 @@ async function seed() {
     updatedAt: now,
   }));
 
+  // Assign joining dates: first user (index 0) joined longest ago, last joined most recently (spread over ~N months).
+  const usersForDb = users.map((u, i) => ({
+    ...u,
+    joiningDate: joiningDateFrom(now, users.length - 1 - i),
+  }));
+
   await db.transaction(async (tx) => {
     await tx.delete(userPositionAssignment);
     await tx.delete(jobPosition);
@@ -900,7 +913,7 @@ async function seed() {
     await tx.delete(department);
 
     await tx.insert(department).values(departments);
-    await tx.insert(user).values(users);
+    await tx.insert(user).values(usersForDb);
     await tx.insert(account).values(accounts);
     await tx.insert(jobPosition).values(allPositions);
     await tx.insert(userPositionAssignment).values(allPositionAssignments);

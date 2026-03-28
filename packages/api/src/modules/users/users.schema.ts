@@ -88,6 +88,7 @@ export const createUserSchema = z.object({
   sapNo: z.string().min(1).max(50),
   status: userStatusSchema,
   positionId: z.string().uuid(),
+  joiningDate: z.coerce.date(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -99,6 +100,7 @@ export const createUserDefaults: CreateUserInput = {
   sapNo: "",
   status: "ACTIVE",
   positionId: "",
+  joiningDate: new Date(),
 };
 
 // Update User Input

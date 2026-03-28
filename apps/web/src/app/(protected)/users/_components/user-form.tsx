@@ -3,10 +3,11 @@
 import { useForm } from "@tanstack/react-form";
 import {
   createUserDefaults,
-  createUserSchema,
   type UserResponse,
+  userStatusSchema,
 } from "@zenith-hr/api/modules/users/users.schema";
 import { Loader2 } from "lucide-react";
+import { z } from "zod";
 import { FormField } from "@/components/shared/form-field";
 import { PositionCombobox } from "@/components/shared/position-combobox";
 import { StatusSelect } from "@/components/shared/status-select";
@@ -19,6 +20,17 @@ import {
 
 type UserStatus = "ACTIVE" | "INACTIVE" | "ON_LEAVE";
 
+/** Form schema: joiningDate is string (date input value). API schema coerces to Date on submit. */
+const createUserFormSchema = z.object({
+  name: z.string().min(1).max(255),
+  email: z.string().email(),
+  password: z.string().min(8).max(128),
+  sapNo: z.string().min(1).max(50),
+  status: userStatusSchema,
+  positionId: z.string().uuid(),
+  joiningDate: z.string().min(1, "Joining date is required"),
+});
+
 export interface UserFormProps {
   initialData?: UserResponse;
   isPending?: boolean;
@@ -29,6 +41,7 @@ export interface UserFormProps {
 
 export interface CreateUserFormData {
   email: string;
+  joiningDate: string;
   name: string;
   password: string;
   positionId: string;
@@ -62,9 +75,13 @@ export function UserForm({
       sapNo: initialData?.sapNo ?? "",
       status: (initialData?.status as UserStatus) ?? "ACTIVE",
       positionId: initialData?.positionId ?? "",
+      joiningDate:
+        createUserDefaults.joiningDate instanceof Date
+          ? createUserDefaults.joiningDate.toISOString().slice(0, 10)
+          : String(createUserDefaults.joiningDate).slice(0, 10),
     },
     validators: {
-      onChange: createUserSchema,
+      onChange: createUserFormSchema,
     },
     onSubmit: async ({ value }) => {
       if (isEditMode && initialData) {
@@ -171,6 +188,23 @@ export function UserForm({
             </FormField>
           )}
         </form.Field>
+
+        {/* Joining Date Field - Only shown in create mode */}
+        {!isEditMode && (
+          <form.Field name="joiningDate">
+            {(field) => (
+              <FormField field={field} label="Joining Date" required>
+                <Input
+                  id={field.name}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  type="date"
+                  value={field.state.value}
+                />
+              </FormField>
+            )}
+          </form.Field>
+        )}
 
         {/* Status Field */}
         <form.Field name="status">
