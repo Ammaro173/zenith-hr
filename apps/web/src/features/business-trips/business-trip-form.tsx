@@ -1,13 +1,16 @@
 "use client";
 
-// import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
+  AIR_TICKET_BOOKED_BY_OPTIONS,
+  HOTEL_ARRANGED_BY_OPTIONS,
   TRAVEL_CLASS_OPTIONS,
   TRIP_PURPOSE_OPTIONS,
 } from "@zenith-hr/api/modules/business-trips/business-trips.schema";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Plane } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
+import { UserSearchCombobox } from "@/components/shared/user-search-combobox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,9 +37,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-// import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-// import { orpc } from "@/utils/orpc";
+import { client } from "@/utils/orpc";
 import { BusinessTripFormProvider } from "./business-trip-form-context";
 import type { FormValues } from "./types";
 import { useBusinessTripForm } from "./use-business-trip-form";
@@ -78,8 +81,18 @@ export function BusinessTripForm({
     version,
   });
 
-  // const { data: session } = authClient.useSession();
-  // const sessionUser = session?.user;
+  const { data: session } = authClient.useSession();
+  const currentUserId = session?.user?.id;
+  const currentUserEmail = session?.user?.email;
+
+  const { data: currentUserSearchResult } = useQuery({
+    queryKey: ["users", "search", "current-user-department", currentUserEmail],
+    queryFn: () =>
+      client.users.search({ query: currentUserEmail ?? "", limit: 1 }),
+    enabled: Boolean(currentUserEmail),
+  });
+  const currentUserDepartmentName =
+    currentUserSearchResult?.[0]?.departmentName ?? null;
 
   // Fetch department name for the current user
   // const { data: userSearchResults } = useQuery({
@@ -238,6 +251,21 @@ export function BusinessTripForm({
                   )}
                 </form.Field>
 
+                <form.Field name="replacementDuringTravelUserId">
+                  {(field) => (
+                    <FormField field={field} label="Replacement During Travel">
+                      <UserSearchCombobox
+                        departmentName={currentUserDepartmentName}
+                        excludeUserId={currentUserId}
+                        nullable
+                        onChange={(val) => field.handleChange(val ?? null)}
+                        placeholder="Search for an employee..."
+                        value={field.state.value ?? undefined}
+                      />
+                    </FormField>
+                  )}
+                </form.Field>
+
                 <Separator />
 
                 {/* Dates */}
@@ -371,6 +399,104 @@ export function BusinessTripForm({
                     )}
                   </form.Field>
                 </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <form.Field name="airTicketBookedBy">
+                    {(field) => (
+                      <FormField
+                        field={field}
+                        label="Air Ticket to be Booked By"
+                      >
+                        <Select
+                          onValueChange={(value) =>
+                            field.handleChange(
+                              value as typeof field.state.value,
+                            )
+                          }
+                          value={field.state.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AIR_TICKET_BOOKED_BY_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    )}
+                  </form.Field>
+                  <form.Field name="hotelArrangedBy">
+                    {(field) => (
+                      <FormField field={field} label="Hotel to be Arranged By">
+                        <Select
+                          onValueChange={(value) =>
+                            field.handleChange(
+                              value as typeof field.state.value,
+                            )
+                          }
+                          value={field.state.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {HOTEL_ARRANGED_BY_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    )}
+                  </form.Field>
+                </div>
+
+                <form.Field name="addressDuringTrip">
+                  {(field) => (
+                    <FormField
+                      field={field}
+                      label="Address during Training / Business Trip"
+                    >
+                      <Textarea
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Full address at destination..."
+                        value={field.state.value ?? ""}
+                      />
+                    </FormField>
+                  )}
+                </form.Field>
+
+                <form.Field name="contactDetailsDuringTrip">
+                  {(field) => (
+                    <FormField
+                      field={field}
+                      label="Contact Details (Phone Number / Email)"
+                    >
+                      <Input
+                        id={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Phone number and/or email"
+                        value={field.state.value ?? ""}
+                      />
+                    </FormField>
+                  )}
+                </form.Field>
+
+                <Separator />
 
                 <div className="grid grid-cols-2 gap-4">
                   <form.Field name="estimatedCost">

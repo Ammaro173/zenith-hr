@@ -497,6 +497,63 @@ export function BusinessTripDetailClientPage({
               <span className="text-muted-foreground">Visa Required</span>
               <span>{trip.visaRequired ? "Yes" : "No"}</span>
             </div>
+            {trip.replacementDuringTravelUserId != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Replacement During Travel
+                </span>
+                <span className="text-sm">
+                  {trip.replacementDuringTravelUserName ??
+                    trip.replacementDuringTravelUserId}
+                </span>
+              </div>
+            )}
+            {trip.airTicketBookedBy != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Air Ticket to be Booked By
+                </span>
+                <span className="text-sm">
+                  {trip.airTicketBookedBy
+                    .replace(/_/g, " ")
+                    .toLowerCase()
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </span>
+              </div>
+            )}
+            {trip.hotelArrangedBy != null && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Hotel to be Arranged By
+                </span>
+                <span className="text-sm">
+                  {trip.hotelArrangedBy
+                    .replace(/_/g, " ")
+                    .toLowerCase()
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </span>
+              </div>
+            )}
+            {trip.addressDuringTrip != null &&
+              trip.addressDuringTrip.trim() !== "" && (
+                <div className="flex justify-between gap-2">
+                  <span className="shrink-0 text-muted-foreground">
+                    Address during Trip
+                  </span>
+                  <span className="text-right text-sm">
+                    {trip.addressDuringTrip}
+                  </span>
+                </div>
+              )}
+            {trip.contactDetailsDuringTrip != null &&
+              trip.contactDetailsDuringTrip.trim() !== "" && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Contact Details</span>
+                  <span className="text-sm">
+                    {trip.contactDetailsDuringTrip}
+                  </span>
+                </div>
+              )}
           </CardContent>
         </Card>
 

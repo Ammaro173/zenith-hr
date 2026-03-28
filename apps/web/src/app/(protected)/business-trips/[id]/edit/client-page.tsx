@@ -102,6 +102,18 @@ export function EditBusinessTripClientPage({
       : createTripDefaults.preferredArrivalDate,
     travelClass: trip.travelClass ?? createTripDefaults.travelClass,
     flightNotes: trip.flightNotes ?? createTripDefaults.flightNotes,
+    replacementDuringTravelUserId:
+      trip.replacementDuringTravelUserId ??
+      createTripDefaults.replacementDuringTravelUserId ??
+      undefined,
+    airTicketBookedBy:
+      trip.airTicketBookedBy ?? createTripDefaults.airTicketBookedBy,
+    hotelArrangedBy: trip.hotelArrangedBy ?? createTripDefaults.hotelArrangedBy,
+    addressDuringTrip:
+      trip.addressDuringTrip ?? createTripDefaults.addressDuringTrip,
+    contactDetailsDuringTrip:
+      trip.contactDetailsDuringTrip ??
+      createTripDefaults.contactDetailsDuringTrip,
   };
 
   return (

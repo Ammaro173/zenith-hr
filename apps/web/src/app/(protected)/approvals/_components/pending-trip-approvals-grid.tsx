@@ -210,6 +210,19 @@ export function PendingTripApprovalsGrid() {
         size: 140,
         enableSorting: false,
       }),
+      columnHelper.display({
+        id: "replacementDuringTravel",
+        header: () => "Replacement During Travel",
+        cell: ({ row }) => {
+          const name = row.original.replacementDuringTravelUserName;
+          const id = row.original.replacementDuringTravelUserId;
+          if (!(name || id)) {
+            return <span className="text-muted-foreground">—</span>;
+          }
+          return <span className="text-sm">{name ?? id}</span>;
+        },
+        size: 180,
+      }),
       columnHelper.accessor("status", {
         header: ({ column }) => (
           <DataGridColumnHeader column={column} title="Status" />

@@ -25,6 +25,7 @@ interface UserOption {
 }
 
 interface UserSearchComboboxProps {
+  departmentName?: string | null;
   disabled?: boolean;
   excludeUserId?: string;
   fallbackLabel?: string | null;
@@ -44,6 +45,7 @@ export function UserSearchCombobox({
   fallbackLabel,
   valueKey = "id",
   excludeUserId,
+  departmentName,
   nullable = false,
   disabled = false,
 }: UserSearchComboboxProps) {
@@ -59,16 +61,35 @@ export function UserSearchCombobox({
     enabled: open,
   });
 
-  // Filter out excluded user if provided
+  // Filter out excluded user and optionally restrict to a department
   const filteredUsers = React.useMemo(() => {
     if (!users) {
       return [];
     }
-    if (!excludeUserId) {
-      return users;
-    }
-    return users.filter((u) => u.id !== excludeUserId);
-  }, [users, excludeUserId]);
+    const normalizedDepartmentName = departmentName?.trim().toLowerCase();
+    return users.filter((u) => {
+      if (excludeUserId && u.id === excludeUserId) {
+        return false;
+      }
+      if (normalizedDepartmentName) {
+        const userDepartmentName = u.departmentName?.trim().toLowerCase();
+        return userDepartmentName === normalizedDepartmentName;
+      }
+      return true;
+    });
+  }, [users, excludeUserId, departmentName]);
+
+  const hasDepartmentFilter = Boolean(departmentName?.trim());
+
+  const emptyStateMessage = hasDepartmentFilter
+    ? "No employees found in your department."
+    : "No employees found.";
+
+  const searchPlaceholder = hasDepartmentFilter
+    ? "Search by name or SAP no. in your department..."
+    : "Search by name or SAP no...";
+
+  const isControlDisabled = disabled;
 
   const getOptionValue = React.useCallback(
     (option: UserOption): string | null => {
@@ -138,7 +159,7 @@ export function UserSearchCombobox({
             "h-9 w-full justify-between px-3 font-normal",
             shouldUseMutedStyle && "text-muted-foreground",
           )}
-          disabled={disabled}
+          disabled={isControlDisabled}
           role="combobox"
           variant="outline"
         >
@@ -174,7 +195,7 @@ export function UserSearchCombobox({
             <input
               className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or SAP no..."
+              placeholder={searchPlaceholder}
               value={search}
             />
           </div>
@@ -189,7 +210,7 @@ export function UserSearchCombobox({
             )}
             {!isLoading && filteredUsers.length === 0 && (
               <div className="py-6 text-center text-muted-foreground text-sm">
-                No employees found.
+                {emptyStateMessage}
               </div>
             )}
             {!isLoading && filteredUsers.length > 0 && (

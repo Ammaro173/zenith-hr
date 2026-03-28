@@ -80,6 +80,35 @@ export const columns = [
     size: 120,
     enableSorting: true,
   }),
+  columnHelper.accessor(
+    (row) =>
+      row.replacementDuringTravelUserName ??
+      row.replacementDuringTravelUserId ??
+      null,
+    {
+      id: "replacementDuringTravel",
+      header: ({ column }) => (
+        <DataGridColumnHeader
+          column={column}
+          title="Replacement During Travel"
+        />
+      ),
+      cell: ({ row }) => {
+        const name = row.original.replacementDuringTravelUserName;
+        if (!(name || row.original.replacementDuringTravelUserId)) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        return (
+          <span className="text-sm">
+            {name ?? row.original.replacementDuringTravelUserId}
+          </span>
+        );
+      },
+      size: 180,
+      enableSorting: false,
+      enableHiding: true,
+    },
+  ),
   columnHelper.accessor("status", {
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Status" />

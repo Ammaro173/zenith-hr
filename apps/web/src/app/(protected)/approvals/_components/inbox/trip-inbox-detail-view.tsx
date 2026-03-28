@@ -205,6 +205,15 @@ export function TripInboxDetailView({
                 label="Visa Required"
                 value={trip.visaRequired ? "Yes" : "No"}
               />
+              {trip.replacementDuringTravelUserId != null && (
+                <DetailField
+                  label="Replacement During Travel"
+                  value={
+                    trip.replacementDuringTravelUserName ??
+                    trip.replacementDuringTravelUserId
+                  }
+                />
+              )}
             </div>
           </section>
 

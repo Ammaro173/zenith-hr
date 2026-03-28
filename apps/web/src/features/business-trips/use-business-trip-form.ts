@@ -89,7 +89,8 @@ export function useBusinessTripForm({
       onChange: createTripSchema,
     },
     onSubmit: async ({ value }) => {
-      await mutation.mutateAsync(value);
+      const parsed = createTripSchema.parse(value);
+      await mutation.mutateAsync(parsed);
     },
   });
 
