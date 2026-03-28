@@ -90,7 +90,7 @@ const baseTripSchema = z.object({
   travelClass: z.string().optional(),
   flightNotes: z.string().optional(),
 
-  // Optional: employee covering duties during travel (null to clear).
+  // Optional: employee covering duties during travel (null/empty clears).
   replacementDuringTravelUserId: z
     .union([z.string().min(1), z.literal(""), z.null(), z.undefined()])
     .optional()
