@@ -92,7 +92,7 @@ async function assertActiveEmployeeForReview(
 ) {
   const row = await txOrDb.query.user.findFirst({
     where: eq(user.id, employeeId),
-    columns: { id: true, status: true, departmentId: true },
+    columns: { id: true, status: true, departmentId: true, role: true },
   });
   if (!row) {
     throw AppError.notFound("Employee not found");
@@ -723,6 +723,18 @@ export const createPerformanceService = (db: DbOrTx) => {
         );
 
         if (input.reviewType === "PROBATION" && actorId) {
+          if (input.employeeId === actorId) {
+            throw AppError.forbidden(
+              "You cannot create a probation review for yourself",
+            );
+          }
+
+          if (employee.role === "CEO") {
+            throw AppError.forbidden(
+              "Cannot create a probation review for the CEO",
+            );
+          }
+
           const actorRole = await getActorRole(tx, actorId);
           const positionInfo = await getActorPositionInfo(tx, actorId);
           const isAdmin = actorRole === "ADMIN";
@@ -1026,6 +1038,16 @@ export const createPerformanceService = (db: DbOrTx) => {
 
         assertValidTransition(review, newStatus);
         await assertCanTransitionReview(review, newStatus, actorId);
+
+        if (
+          review.reviewType === "PROBATION" &&
+          (newStatus === "SUBMITTED" || newStatus === "COMPLETED") &&
+          review.employee?.role === "CEO"
+        ) {
+          throw AppError.forbidden(
+            "Cannot submit a probation review for the CEO",
+          );
+        }
 
         const validatesRatings = [
           "AWAITING_MANAGER_REVIEW",
