@@ -584,15 +584,25 @@ export const createWorkflowService = (
    * is the same role (e.g. HOD is Head of Finance → skip PENDING_FINANCE).
    * Skips any step where the approver role is the same as the requester's role (no self-approval).
    */
+  const TRIP_APPROVER_MAX_RECURSION = 24;
+
   const getNextTripApprover = async (
     requesterPositionId: string,
     currentStatus: string,
     txOrDb: DbOrTx = db,
+    depth = 0,
   ): Promise<{
     approverPositionId: string | null;
     approverRole: PositionRole | null;
     nextStatus: string;
   }> => {
+    if (depth > TRIP_APPROVER_MAX_RECURSION) {
+      throw new AppError(
+        "CONFIGURATION_ERROR",
+        "Trip approval routing exceeded maximum steps; verify position hierarchy and roles.",
+        500,
+      );
+    }
     const requesterPositionRole = await getPositionRole(
       requesterPositionId,
       txOrDb,
@@ -619,6 +629,7 @@ export const createWorkflowService = (
           requesterPositionId,
           result.nextStatus,
           txOrDb,
+          depth + 1,
         );
       }
       return result;
@@ -640,6 +651,7 @@ export const createWorkflowService = (
           requesterPositionId,
           result.nextStatus,
           txOrDb,
+          depth + 1,
         );
       }
       return result;
@@ -654,6 +666,7 @@ export const createWorkflowService = (
           requesterPositionId,
           "PENDING_MANAGER",
           txOrDb,
+          depth + 1,
         );
       }
       // Start with manager chain
