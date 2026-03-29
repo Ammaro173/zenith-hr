@@ -201,9 +201,14 @@ export const createSeparationsService = (
 
         let status: "PENDING_MANAGER" | "PENDING_HR";
         if (
-          requesterRole === "MANAGER" ||
-          requesterRole === "HOD_HR" ||
-          requesterRole === "ADMIN"
+          [
+            "HOD",
+            "HOD_IT",
+            "HOD_FINANCE",
+            "CEO",
+            "HOD_HR",
+            "ADMIN",
+          ].includes(requesterRole)
         ) {
           status = "PENDING_HR";
         } else if (managerPositionId) {
@@ -292,11 +297,15 @@ export const createSeparationsService = (
     ) {
       const actorRole = await getActorRole(db, actorId);
       if (
-        !(
-          actorRole === "MANAGER" ||
-          actorRole === "HOD_HR" ||
-          actorRole === "ADMIN"
-        )
+        ![
+          "MANAGER",
+          "HOD",
+          "HOD_IT",
+          "HOD_FINANCE",
+          "CEO",
+          "HOD_HR",
+          "ADMIN",
+        ].includes(actorRole)
       ) {
         throw new AppError("FORBIDDEN", "Not authorized", 403);
       }
@@ -334,10 +343,43 @@ export const createSeparationsService = (
           throw new AppError("FORBIDDEN", "Not authorized as manager", 403);
         }
 
+        const isApproverHOD = [
+          "HOD",
+          "HOD_IT",
+          "HOD_FINANCE",
+          "CEO",
+          "HOD_HR",
+          "ADMIN",
+        ].includes(actorRole);
+
+        let nextStatus: "PENDING_MANAGER" | "PENDING_HR" = "PENDING_HR";
+        let nextManagerPositionId = request.managerPositionId;
+        let nextManagerId = request.managerId;
+
+        if (!isApproverHOD && request.managerPositionId) {
+          const parentPosId = await getParentPositionId(
+            tx,
+            request.managerPositionId,
+          );
+          if (parentPosId) {
+            const parentManagerId = await getActivePositionOccupant(
+              tx,
+              parentPosId,
+            );
+            if (parentManagerId) {
+              nextStatus = "PENDING_MANAGER";
+              nextManagerPositionId = parentPosId;
+              nextManagerId = parentManagerId;
+            }
+          }
+        }
+
         const [updated] = await tx
           .update(separationRequest)
           .set({
-            status: "PENDING_HR",
+            status: nextStatus,
+            managerPositionId: nextManagerPositionId,
+            managerId: nextManagerId,
             updatedAt: new Date(),
           })
           .where(eq(separationRequest.id, input.separationId))
@@ -349,22 +391,33 @@ export const createSeparationsService = (
           action: "MANAGER_APPROVE",
           performedBy: actorId,
           performedAt: new Date(),
-          metadata: { comment: input.comment ?? null },
+          metadata: { comment: input.comment ?? null, nextStatus },
         });
 
-        // Notify HR (first available HR user; simplified).
-        const [hrUser] = await tx
-          .select({ id: user.id })
-          .from(user)
-          .where(and(eq(user.role, "HOD_HR"), eq(user.status, "ACTIVE")))
-          .limit(1);
-        if (hrUser?.id) {
+        if (nextStatus === "PENDING_HR") {
+          // Notify HR (first available HR user; simplified).
+          const [hrUser] = await tx
+            .select({ id: user.id })
+            .from(user)
+            .where(and(eq(user.role, "HOD_HR"), eq(user.status, "ACTIVE")))
+            .limit(1);
+          if (hrUser?.id) {
+            await enqueueOutbox(tx, {
+              idempotencyKey: `separation:${input.separationId}:notify:hr_pending`,
+              userId: hrUser.id,
+              type: "ACTION_REQUIRED",
+              title: "HR approval required",
+              body: "A separation request is pending HR approval.",
+              link: `/separations/${input.separationId}`,
+            });
+          }
+        } else if (nextStatus === "PENDING_MANAGER" && nextManagerId) {
           await enqueueOutbox(tx, {
-            idempotencyKey: `separation:${input.separationId}:notify:hr_pending`,
-            userId: hrUser.id,
+            idempotencyKey: `separation:${input.separationId}:notify:manager_pending:${nextManagerId}`,
+            userId: nextManagerId,
             type: "ACTION_REQUIRED",
-            title: "HR approval required",
-            body: "A separation request is pending HR approval.",
+            title: "Separation approval required",
+            body: "A separation request is pending your approval.",
             link: `/separations/${input.separationId}`,
           });
         }

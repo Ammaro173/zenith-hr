@@ -14,7 +14,7 @@ import {
 } from "./separations.schema";
 
 export const separationsRouter = o.router({
-  create: requireRoles(["EMPLOYEE", "MANAGER", "HOD_HR", "ADMIN"])
+  create: protectedProcedure
     .input(createSeparationSchema)
     .handler(
       async ({ input, context }) =>
@@ -31,14 +31,30 @@ export const separationsRouter = o.router({
         await context.services.separations.get(input.separationId),
     ),
 
-  update: requireRoles(["MANAGER", "HOD_HR", "ADMIN"])
+  update: requireRoles([
+    "MANAGER",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+    "CEO",
+    "HOD_HR",
+    "ADMIN",
+  ])
     .input(updateSeparationSchema)
     .handler(async ({ input, context }) => {
       // TODO: Add permission checks
       return await context.services.separations.update(input);
     }),
 
-  approveByManager: requireRoles(["MANAGER", "HOD_HR", "ADMIN"])
+  approveByManager: requireRoles([
+    "MANAGER",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+    "CEO",
+    "HOD_HR",
+    "ADMIN",
+  ])
     .input(approveByManagerSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.approveByManager(
