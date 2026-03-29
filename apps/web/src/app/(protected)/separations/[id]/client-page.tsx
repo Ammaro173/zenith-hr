@@ -71,8 +71,34 @@ export function SeparationDetailClientPage({
         </div>
       </div>
 
+      {["REQUESTED", "PENDING_MANAGER", "PENDING_HR"].includes(
+        separation.status,
+      ) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Request Status: Pending</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              This separation request is currently pending necessary approvals.
+              The clearance checklist will be generated and displayed here once
+              it has been fully approved by HR.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {separation.status === "PENDING_MANAGER" &&
-      (role === "MANAGER" || role === "HOD_HR" || role === "ADMIN") ? (
+      role &&
+      [
+        "MANAGER",
+        "HOD",
+        "HOD_IT",
+        "HOD_FINANCE",
+        "CEO",
+        "HOD_HR",
+        "ADMIN",
+      ].includes(role) ? (
         <Card>
           <CardHeader>
             <CardTitle>Manager approval required</CardTitle>
@@ -91,7 +117,8 @@ export function SeparationDetailClientPage({
       ) : null}
 
       {separation.status === "PENDING_HR" &&
-      (role === "HOD_HR" || role === "ADMIN") ? (
+      role &&
+      ["HOD_HR", "ADMIN"].includes(role) ? (
         <Card>
           <CardHeader>
             <CardTitle>HR approval required</CardTitle>
@@ -109,8 +136,7 @@ export function SeparationDetailClientPage({
         </Card>
       ) : null}
 
-      {separation.status === "CLEARANCE_IN_PROGRESS" ||
-      separation.status === "COMPLETED" ? (
+      {["CLEARANCE_IN_PROGRESS", "COMPLETED"].includes(separation.status) ? (
         <ClearanceBoard role={role} separation={separation} />
       ) : null}
     </div>
