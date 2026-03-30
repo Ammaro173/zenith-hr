@@ -17,6 +17,11 @@ import {
 } from "./users.schema";
 
 export const usersRouter = o.router({
+  /** Current user's effective position role (not session-stored profile role). */
+  getMyPositionRole: protectedProcedure.handler(async ({ context }) => ({
+    role: await context.services.users.getPositionRole(context.session.user.id),
+  })),
+
   // Search users for autocomplete (all authenticated users)
   search: protectedProcedure
     .input(searchUsersSchema)

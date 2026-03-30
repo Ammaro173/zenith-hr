@@ -112,10 +112,6 @@ export function isHODFamily(role: string): boolean {
   return ["HOD", "HOD_HR", "HOD_FINANCE", "HOD_IT"].includes(role);
 }
 
-export function isExecutiveRole(role: string): boolean {
-  return ["HOD_HR", "HOD_FINANCE", "CEO"].includes(role);
-}
-
 export async function getActor(
   db: DbOrTx,
   userId: string,

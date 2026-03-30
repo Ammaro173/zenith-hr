@@ -24,6 +24,8 @@ import {
   sql,
 } from "drizzle-orm";
 import { AppError } from "../../shared/errors";
+import type { UserRole } from "../../shared/types";
+import { getActorPositionInfo, getActorRole } from "../../shared/utils";
 import type {
   CreateUserInput,
   HierarchyNode,
@@ -1460,6 +1462,11 @@ export const createUsersService = (db: DbOrTx) => ({
 
     // Revoke all sessions for the user
     await db.delete(session).where(eq(session.userId, userId));
+  },
+
+  /** Live position-derived role; prefer over `session.user.role` for authorization-aligned UI. */
+  getPositionRole(userId: string): Promise<UserRole> {
+    return getActorRole(db, userId);
   },
 });
 
