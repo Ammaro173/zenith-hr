@@ -109,7 +109,7 @@ export const separationsRouter = o.router({
       );
     }),
 
-  uploadDocument: requireRoles(["EMPLOYEE", "MANAGER", "HOD_HR", "ADMIN"])
+  uploadDocument: protectedProcedure
     .input(uploadSeparationDocumentSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.uploadDocument(
