@@ -104,6 +104,59 @@ describe("SeparationsService", () => {
     expect(result?.status).toBe("PENDING_MANAGER");
   });
 
+  it("create() forbids TERMINATION and END_OF_CONTRACT for EMPLOYEE role", async () => {
+    const storage = createMockStorage();
+    const mockDb: MockDb = {
+      insert: mock(() => ({})),
+      update: mock(() => ({})),
+      select: mock(() => {
+        const qb: unknown = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() =>
+            Promise.resolve([{ role: "EMPLOYEE", positionRole: "EMPLOYEE" }]),
+          ),
+        };
+        return qb;
+      }),
+      transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
+        const tx: Record<string, unknown> = {};
+        return await cb(tx);
+      }),
+      query: {},
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as any,
+      storage as any,
+    );
+
+    await expect(
+      service.create(
+        {
+          type: "TERMINATION",
+          reason: "Performance — initiated by HR",
+          lastWorkingDay: new Date("2026-01-31"),
+          noticePeriodWaived: false,
+        },
+        "emp-1",
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+    await expect(
+      service.create(
+        {
+          type: "END_OF_CONTRACT",
+          reason: "Contract ended naturally",
+          lastWorkingDay: new Date("2026-01-31"),
+          noticePeriodWaived: false,
+        },
+        "emp-1",
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   it("approveByHr() clones templates into checklist + starts clearance", async () => {
     const storage = createMockStorage();
 

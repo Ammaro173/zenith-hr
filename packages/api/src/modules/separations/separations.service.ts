@@ -15,19 +15,20 @@ import type { z } from "zod";
 import type { StorageService } from "../../infrastructure/interfaces";
 import { AppError } from "../../shared/errors";
 import { getActor, getActorRole } from "../../shared/utils";
-import type {
-  addChecklistItemSchema,
-  approveByHrSchema,
-  approveByManagerSchema,
-  createSeparationSchema,
-  getSeparationDocumentDownloadUrlSchema,
-  rejectByHrSchema,
-  rejectByManagerSchema,
-  reorderChecklistItemsSchema,
-  startClearanceSchema,
-  updateChecklistSchema,
-  updateSeparationSchema,
-  uploadSeparationDocumentSchema,
+import {
+  type addChecklistItemSchema,
+  type approveByHrSchema,
+  type approveByManagerSchema,
+  type createSeparationSchema,
+  elevatedSeparationTypes,
+  type getSeparationDocumentDownloadUrlSchema,
+  type rejectByHrSchema,
+  type rejectByManagerSchema,
+  type reorderChecklistItemsSchema,
+  type startClearanceSchema,
+  type updateChecklistSchema,
+  type updateSeparationSchema,
+  type uploadSeparationDocumentSchema,
 } from "./separations.schema";
 
 type Lane =
@@ -339,6 +340,17 @@ export const createSeparationsService = (
       return await db.transaction(async (tx) => {
         const actor = await getActor(db, employeeId);
         const requesterRole = actor?.role ?? "EMPLOYEE";
+
+        if (
+          (elevatedSeparationTypes as readonly string[]).includes(input.type) &&
+          requesterRole === "EMPLOYEE"
+        ) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Termination and end-of-contract requests must be submitted by a manager or HR",
+            403,
+          );
+        }
 
         const employeePositionId = await getActivePositionId(tx, employeeId);
         const managerPositionId = employeePositionId

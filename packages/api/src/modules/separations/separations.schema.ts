@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/** Manager/HR-initiated; not available to position role EMPLOYEE in `create`. */
+export const elevatedSeparationTypes = [
+  "TERMINATION",
+  "END_OF_CONTRACT",
+] as const;
+
 const baseSeparationSchema = z.object({
   type: z.enum(["RESIGNATION", "TERMINATION", "RETIREMENT", "END_OF_CONTRACT"]),
   reason: z.string().min(5),
