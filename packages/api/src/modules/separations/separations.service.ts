@@ -754,7 +754,7 @@ export const createSeparationsService = (
             ),
           );
 
-        if ((pendingRequired?.count ?? 0) === 0) {
+        if (Number(pendingRequired?.count ?? 0) === 0) {
           await db
             .update(separationRequest)
             .set({
@@ -770,6 +770,38 @@ export const createSeparationsService = (
             action: "AUTO_COMPLETE",
             performedBy: userId,
             performedAt: now,
+          });
+        }
+      } else if (
+        input.status === "REJECTED" ||
+        input.status === "PENDING"
+      ) {
+        // Revert COMPLETED → CLEARANCE_IN_PROGRESS if a required item is un-cleared.
+        const [sep] = await db
+          .select({ status: separationRequest.status })
+          .from(separationRequest)
+          .where(eq(separationRequest.id, checklist.separationId))
+          .limit(1);
+
+        if (sep?.status === "COMPLETED" && checklist.required) {
+          await db
+            .update(separationRequest)
+            .set({
+              status: "CLEARANCE_IN_PROGRESS",
+              completedAt: null,
+              updatedAt: now,
+            })
+            .where(eq(separationRequest.id, checklist.separationId));
+
+          await db.insert(auditLog).values({
+            entityId: checklist.separationId,
+            entityType: "SEPARATION",
+            action: "REVERT_COMPLETE",
+            performedBy: userId,
+            performedAt: now,
+            metadata: {
+              reason: `Required item "${checklist.title}" was ${input.status.toLowerCase()}`,
+            },
           });
         }
       }
