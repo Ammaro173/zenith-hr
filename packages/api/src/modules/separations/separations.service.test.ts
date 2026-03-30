@@ -450,7 +450,8 @@ describe("SeparationsService", () => {
       employee: { id: "emp-1", name: "Emp" },
     };
 
-    let selectCall = 0;
+    let selectBuilderCall = 0;
+    let limitCall = 0;
     const mockDb: MockDb = {
       insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
       update: mock(() => ({
@@ -459,13 +460,22 @@ describe("SeparationsService", () => {
         })),
       })),
       select: mock(() => {
+        selectBuilderCall++;
+        // 4th select: `getUserLanes` membership query has no `.limit()`.
+        if (selectBuilderCall === 4) {
+          return {
+            from: mock(() => ({
+              where: mock(() => Promise.resolve([])),
+            })),
+          };
+        }
         const qb: any = {
           from: mock(() => qb),
           innerJoin: mock(() => qb),
           where: mock(() => qb),
           limit: mock(() => {
-            selectCall++;
-            if (selectCall === 1) {
+            limitCall++;
+            if (limitCall === 1) {
               return Promise.resolve([{ role: "HOD_IT" }]);
             }
             return Promise.resolve([{ userId: "hod-it-1" }]);
@@ -496,6 +506,8 @@ describe("SeparationsService", () => {
     expect(result.viewer.canApproveAsManager).toBe(true);
     expect(result.viewer.canRejectAsManager).toBe(true);
     expect(result.viewer.canApproveAsHr).toBe(false);
+    expect(result.viewer.clearanceActLanes).toContain("HOD_IT");
+    expect(result.viewer.canAddClearanceItems).toBe(false);
   });
 
   it("getForViewer() forbids HOD_IT who is not the slot occupant from viewing", async () => {
@@ -615,6 +627,8 @@ describe("SeparationsService", () => {
     expect(result.viewer.canApproveAsHr).toBe(true);
     expect(result.viewer.canRejectAsHr).toBe(false);
     expect(result.viewer.canApproveAsManager).toBe(true);
+    expect(result.viewer.canAddClearanceItems).toBe(true);
+    expect(result.viewer.clearanceActLanes.length).toBeGreaterThan(3);
   });
 
   it("getForViewer() allows HR reject only in PENDING_HR", async () => {
@@ -673,5 +687,102 @@ describe("SeparationsService", () => {
 
     const result = await service.getForViewer("sep-1", "hr-1");
     expect(result.viewer.canRejectAsHr).toBe(true);
+    expect(result.viewer.canAddClearanceItems).toBe(true);
+  });
+
+  it("getForViewer() allows clearance lane actor (not employee/manager) when they hold a checklist item in that lane", async () => {
+    const storage = createMockStorage();
+    const clearanceSep = {
+      id: "sep-clear",
+      employeeId: "emp-other",
+      managerPositionId: "pos-mgr",
+      status: "CLEARANCE_IN_PROGRESS",
+      checklistItems: [],
+      documents: [],
+      employee: { id: "emp-other", name: "Other" },
+    };
+
+    let selectBuilderCall = 0;
+    const limitOccupantNotActor = () =>
+      Promise.resolve([{ userId: "line-mgr" }]);
+
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      select: mock(() => {
+        selectBuilderCall++;
+        // 1 getActorRole; 2 ensure slot occupant; 3 getUserLanes (ensure); 4 checklist hit;
+        // 5 computeViewer occupant; 6 getUserLanes (computeViewer).
+        if (selectBuilderCall === 1) {
+          return {
+            from: mock(() => ({
+              innerJoin: mock(() => ({
+                where: mock(() => ({
+                  limit: mock(() => Promise.resolve([{ role: "HOD_IT" }])),
+                })),
+              })),
+            })),
+          };
+        }
+        if (selectBuilderCall === 2 || selectBuilderCall === 5) {
+          return {
+            from: mock(() => ({
+              where: mock(() => ({
+                limit: mock(limitOccupantNotActor),
+              })),
+            })),
+          };
+        }
+        if (selectBuilderCall === 3 || selectBuilderCall === 6) {
+          return {
+            from: mock(() => ({
+              where: mock(() => Promise.resolve([])),
+            })),
+          };
+        }
+        if (selectBuilderCall === 4) {
+          return {
+            from: mock(() => ({
+              where: mock(() => ({
+                limit: mock(() => Promise.resolve([{ id: "chk-lane" }])),
+              })),
+            })),
+          };
+        }
+        return {
+          from: mock(() => ({
+            where: mock(() => ({
+              limit: mock(limitOccupantNotActor),
+            })),
+          })),
+        };
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {
+        separationRequest: {
+          findFirst: mock(() => Promise.resolve(clearanceSep)),
+        },
+      },
+    };
+
+    (mockDb as any).execute = mock(() =>
+      Promise.resolve({ rows: [{ parent_position_id: null }] }),
+    );
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as any,
+    );
+
+    const result = await service.getForViewer("sep-clear", "hod-it-lane-1");
+    expect(result.id).toBe("sep-clear");
+    expect(result.viewer.canApproveAsManager).toBe(false);
+    expect(result.viewer.clearanceActLanes).toContain("HOD_IT");
   });
 });
