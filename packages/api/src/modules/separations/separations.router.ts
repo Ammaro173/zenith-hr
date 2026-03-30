@@ -28,9 +28,11 @@ export const separationsRouter = o.router({
 
   get: protectedProcedure
     .input(z.object({ separationId: z.string().uuid() }))
-    .handler(
-      async ({ input, context }) =>
-        await context.services.separations.get(input.separationId),
+    .handler(async ({ input, context }) =>
+      context.services.separations.getForViewer(
+        input.separationId,
+        context.session.user.id,
+      ),
     ),
 
   update: requireRoles([

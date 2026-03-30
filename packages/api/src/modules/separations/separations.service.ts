@@ -41,6 +41,24 @@ type Lane =
 
 type ChecklistStatus = "PENDING" | "CLEARED" | "REJECTED";
 
+/** Mirrors `approveByManager` / `rejectByManager` role gate (position-derived role). */
+const MANAGER_APPROVER_ROLES = [
+  "MANAGER",
+  "HOD",
+  "HOD_IT",
+  "HOD_FINANCE",
+  "CEO",
+  "HOD_HR",
+  "ADMIN",
+] as const;
+
+export interface SeparationViewerFlags {
+  canApproveAsHr: boolean;
+  canApproveAsManager: boolean;
+  canRejectAsHr: boolean;
+  canRejectAsManager: boolean;
+}
+
 function sanitizeFileName(fileName: string): string {
   return fileName.replaceAll(/[^a-zA-Z0-9._-]/g, "_");
 }
@@ -184,6 +202,45 @@ export const createSeparationsService = (
     throw new AppError("FORBIDDEN", "Not authorized to access separation", 403);
   };
 
+  const computeViewerApprovalFlags = async (
+    separation: {
+      status: string;
+      managerPositionId: string | null;
+    },
+    actorId: string,
+    actorRole: string,
+  ): Promise<SeparationViewerFlags> => {
+    const isDirectManager = separation.managerPositionId
+      ? (await getActivePositionOccupant(db, separation.managerPositionId)) ===
+        actorId
+      : false;
+    const hrOrAdminOverride = actorRole === "HOD_HR" || actorRole === "ADMIN";
+    const roleAllowsManagerApproval = (
+      MANAGER_APPROVER_ROLES as readonly string[]
+    ).includes(actorRole);
+
+    const canActAsManager =
+      separation.status === "PENDING_MANAGER" &&
+      roleAllowsManagerApproval &&
+      (isDirectManager || hrOrAdminOverride);
+
+    const canApproveAsHr =
+      hrOrAdminOverride &&
+      (separation.status === "PENDING_HR" ||
+        separation.status === "PENDING_MANAGER" ||
+        separation.status === "REQUESTED");
+
+    const canRejectAsHr =
+      hrOrAdminOverride && separation.status === "PENDING_HR";
+
+    return {
+      canApproveAsManager: canActAsManager,
+      canRejectAsManager: canActAsManager,
+      canApproveAsHr,
+      canRejectAsHr,
+    };
+  };
+
   return {
     async create(
       input: z.infer<typeof createSeparationSchema>,
@@ -269,6 +326,30 @@ export const createSeparationsService = (
           employee: true,
         },
       });
+    },
+
+    async getForViewer(separationId: string, actorId: string) {
+      const { actorRole } = await ensureRequestVisibleToActor(
+        separationId,
+        actorId,
+      );
+
+      const full = await db.query.separationRequest.findFirst({
+        where: eq(separationRequest.id, separationId),
+        with: {
+          checklistItems: true,
+          documents: true,
+          employee: true,
+        },
+      });
+
+      if (!full) {
+        throw AppError.notFound("Separation request not found");
+      }
+
+      const viewer = await computeViewerApprovalFlags(full, actorId, actorRole);
+
+      return { ...full, viewer };
     },
 
     async update(input: z.infer<typeof updateSeparationSchema>) {
@@ -772,10 +853,7 @@ export const createSeparationsService = (
             performedAt: now,
           });
         }
-      } else if (
-        input.status === "REJECTED" ||
-        input.status === "PENDING"
-      ) {
+      } else if (input.status === "REJECTED" || input.status === "PENDING") {
         // Revert COMPLETED → CLEARANCE_IN_PROGRESS if a required item is un-cleared.
         const [sep] = await db
           .select({ status: separationRequest.status })
