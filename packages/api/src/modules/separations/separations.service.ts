@@ -261,6 +261,25 @@ export const createSeparationsService = (
     return [...new Set(rows.map((r) => r.separationId))];
   };
 
+  const separationWasInitiatedByActor = async (
+    separationId: string,
+    actorId: string,
+  ): Promise<boolean> => {
+    const [row] = await db
+      .select({ id: auditLog.id })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.entityId, separationId),
+          eq(auditLog.entityType, "SEPARATION"),
+          eq(auditLog.action, "CREATE_REQUEST"),
+          eq(auditLog.performedBy, actorId),
+        ),
+      )
+      .limit(1);
+    return row != null;
+  };
+
   const ensureRequestVisibleToActor = async (
     separationId: string,
     actorId: string,
@@ -274,7 +293,7 @@ export const createSeparationsService = (
     }
 
     const actorRole = await getActorRole(db, actorId);
-    if (actorRole === "HOD_HR" || actorRole === "ADMIN") {
+    if (SEPARATION_ORG_WIDE_VIEW_ROLES.includes(actorRole)) {
       return { request, actorRole };
     }
     if (request.employeeId === actorId) {
@@ -296,6 +315,9 @@ export const createSeparationsService = (
       if (await actorHasChecklistInAllowedLanes(separationId, lanes)) {
         return { request, actorRole };
       }
+    }
+    if (await separationWasInitiatedByActor(separationId, actorId)) {
+      return { request, actorRole };
     }
     throw new AppError("FORBIDDEN", "Not authorized to access separation", 403);
   };
@@ -1221,12 +1243,24 @@ export const createSeparationsService = (
 
     async getListForViewer(actorId: string) {
       const actorRole = await getActorRole(db, actorId);
-      if (actorRole === "HOD_HR" || actorRole === "ADMIN") {
+      if (SEPARATION_ORG_WIDE_VIEW_ROLES.includes(actorRole)) {
         return await db.query.separationRequest.findMany({
           with: { employee: true },
           orderBy: (requests, { desc }) => [desc(requests.createdAt)],
         });
       }
+
+      const initiatedRows = await db
+        .select({ entityId: auditLog.entityId })
+        .from(auditLog)
+        .where(
+          and(
+            eq(auditLog.entityType, "SEPARATION"),
+            eq(auditLog.action, "CREATE_REQUEST"),
+            eq(auditLog.performedBy, actorId),
+          ),
+        );
+      const initiatedIds = [...new Set(initiatedRows.map((r) => r.entityId))];
 
       const clearanceIds = await getClearanceParticipationSeparationIds(
         actorId,
@@ -1248,10 +1282,18 @@ export const createSeparationsService = (
           : undefined;
 
       if (positionIds.length > 0) {
-        const base = or(
-          eq(separationRequest.employeeId, actorId),
-          inArray(separationRequest.managerPositionId, positionIds),
-        );
+        const baseParts =
+          initiatedIds.length > 0
+            ? [
+                eq(separationRequest.employeeId, actorId),
+                inArray(separationRequest.managerPositionId, positionIds),
+                inArray(separationRequest.id, initiatedIds),
+              ]
+            : [
+                eq(separationRequest.employeeId, actorId),
+                inArray(separationRequest.managerPositionId, positionIds),
+              ];
+        const base = or(...baseParts);
         return await db.query.separationRequest.findMany({
           where: clearancePredicate ? or(base, clearancePredicate) : base,
           with: { employee: true },
@@ -1259,11 +1301,18 @@ export const createSeparationsService = (
         });
       }
 
-      const employeeOnly = eq(separationRequest.employeeId, actorId);
+      const employeeParts =
+        initiatedIds.length > 0
+          ? [
+              eq(separationRequest.employeeId, actorId),
+              inArray(separationRequest.id, initiatedIds),
+            ]
+          : [eq(separationRequest.employeeId, actorId)];
+      const visibilityPredicate = or(...employeeParts);
       return await db.query.separationRequest.findMany({
         where: clearancePredicate
-          ? or(employeeOnly, clearancePredicate)
-          : employeeOnly,
+          ? or(visibilityPredicate, clearancePredicate)
+          : visibilityPredicate,
         with: { employee: true },
         orderBy: (requests, { desc }) => [desc(requests.createdAt)],
       });
@@ -1376,10 +1425,29 @@ export const createSeparationsService = (
       input: z.infer<typeof uploadSeparationDocumentSchema>,
       actorId: string,
     ) {
-      const { request } = await ensureRequestVisibleToActor(
+      const { request, actorRole } = await ensureRequestVisibleToActor(
         input.separationId,
         actorId,
       );
+
+      if (input.kind === "RESIGNATION_LETTER") {
+        const isLeaver = request.employeeId === actorId;
+        const isPrivileged =
+          actorRole === "HOD_HR" ||
+          actorRole === "ADMIN" ||
+          actorRole === "CEO";
+        const isInitiator = await separationWasInitiatedByActor(
+          input.separationId,
+          actorId,
+        );
+        if (!(isLeaver || isPrivileged || isInitiator)) {
+          throw new AppError(
+            "FORBIDDEN",
+            "Only the employee, HR, leadership, or the request initiator may upload a resignation letter",
+            403,
+          );
+        }
+      }
 
       const buffer = Buffer.from(input.fileBase64, "base64");
       const safeName = sanitizeFileName(input.fileName);

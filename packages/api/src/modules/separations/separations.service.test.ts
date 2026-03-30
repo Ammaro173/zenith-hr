@@ -685,8 +685,13 @@ describe("SeparationsService", () => {
           where: mock(() => qb),
           limit: mock(() => {
             _selectCall++;
-            // getActorRole → EMPLOYEE for stranger
-            return Promise.resolve([{ role: "EMPLOYEE" }]);
+            if (_selectCall === 1) {
+              return Promise.resolve([{ role: "EMPLOYEE" }]);
+            }
+            if (_selectCall === 2 || _selectCall === 4) {
+              return Promise.resolve([{ userId: "real-mgr" }]);
+            }
+            return Promise.resolve([]);
           }),
         };
         return qb;
@@ -821,7 +826,10 @@ describe("SeparationsService", () => {
             if (selectCall === 1) {
               return Promise.resolve([{ role: "HOD_IT" }]);
             }
-            return Promise.resolve([{ userId: "other-mgr" }]);
+            if (selectCall === 2 || selectCall === 4) {
+              return Promise.resolve([{ userId: "other-mgr" }]);
+            }
+            return Promise.resolve([]);
           }),
         };
         return qb;
