@@ -438,7 +438,7 @@ describe("SeparationsService", () => {
     );
   });
 
-  it("getForViewer() sets canApproveAsManager for manager slot occupant with HOD_IT position role", async () => {
+  it("getForViewer() sets canApproveAsManager for manager slot occupant with HOD_IT precedence (even with EMPLOYEE assignment)", async () => {
     const storage = createMockStorage();
     const fullSep = {
       id: "sep-1",
@@ -476,7 +476,11 @@ describe("SeparationsService", () => {
           limit: mock(() => {
             limitCall++;
             if (limitCall === 1) {
-              return Promise.resolve([{ role: "HOD_IT" }]);
+              // Simulate a dual-assignment user: EMPLOYEE + HOD_IT.
+              return Promise.resolve([
+                { role: "EMPLOYEE" },
+                { role: "HOD_IT" },
+              ]);
             }
             return Promise.resolve([{ userId: "hod-it-1" }]);
           }),
