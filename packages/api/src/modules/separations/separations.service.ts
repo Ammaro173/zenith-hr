@@ -357,7 +357,53 @@ export const createSeparationsService = (
       return { ...full, viewer };
     },
 
-    async update(input: z.infer<typeof updateSeparationSchema>) {
+    async update(
+      input: z.infer<typeof updateSeparationSchema>,
+      actorId: string,
+    ) {
+      const { request, actorRole } = await ensureRequestVisibleToActor(
+        input.separationId,
+        actorId,
+      );
+      const isHr = actorRole === "HOD_HR" || actorRole === "ADMIN";
+      const isEmployee = request.employeeId === actorId;
+
+      if (input.status !== undefined && !isHr) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Only HR may change separation status",
+          403,
+        );
+      }
+
+      const hasNonStatusFields =
+        input.reason !== undefined ||
+        input.lastWorkingDay !== undefined ||
+        input.noticePeriodWaived !== undefined;
+
+      if (hasNonStatusFields && !isHr && !isEmployee) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Not authorized to edit this separation",
+          403,
+        );
+      }
+
+      if (hasNonStatusFields && isEmployee && !isHr) {
+        const editableByEmployee = [
+          "REQUESTED",
+          "PENDING_MANAGER",
+          "PENDING_HR",
+        ] as const;
+        if (
+          !(editableByEmployee as readonly string[]).includes(request.status)
+        ) {
+          throw AppError.badRequest(
+            "Cannot edit request fields in the current status",
+          );
+        }
+      }
+
       const [updated] = await db
         .update(separationRequest)
         .set({

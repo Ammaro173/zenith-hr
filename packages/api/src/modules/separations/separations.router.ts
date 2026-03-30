@@ -45,10 +45,9 @@ export const separationsRouter = o.router({
     "ADMIN",
   ])
     .input(updateSeparationSchema)
-    .handler(async ({ input, context }) => {
-      // TODO: Add permission checks
-      return await context.services.separations.update(input);
-    }),
+    .handler(async ({ input, context }) =>
+      context.services.separations.update(input, context.session.user.id),
+    ),
 
   approveByManager: requireRoles([
     "MANAGER",
