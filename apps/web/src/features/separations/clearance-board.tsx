@@ -73,20 +73,8 @@ function percent(numerator: number, denominator: number): number {
   return Math.round((numerator / denominator) * 100);
 }
 
-function laneCanAct(role: string | null, lane: Lane): boolean {
-  if (!role) {
-    return false;
-  }
-  if (role === "HOD_HR" || role === "ADMIN") {
-    return true;
-  }
-  if (role === "HOD_IT") {
-    return lane === "HOD_IT";
-  }
-  if (role === "HOD_FINANCE") {
-    return lane === "HOD_FINANCE";
-  }
-  return false;
+function laneCanAct(clearanceActLanes: Lane[], lane: Lane): boolean {
+  return clearanceActLanes.includes(lane);
 }
 
 const STATUS_CONFIG: Record<
@@ -99,10 +87,8 @@ const STATUS_CONFIG: Record<
 };
 
 export function ClearanceBoard({
-  role,
   separation,
 }: {
-  role: string | null;
   separation: SeparationBoardModel;
 }) {
   const queryClient = useQueryClient();
@@ -237,7 +223,10 @@ export function ClearanceBoard({
               laneCleared.length,
               laneRequired.length,
             );
-            const canAct = laneCanAct(role, lane);
+            const canAct = laneCanAct(
+              separation.viewer.clearanceActLanes ?? [],
+              lane,
+            );
 
             return (
               <div
@@ -284,7 +273,7 @@ export function ClearanceBoard({
                     />
                   ))}
 
-                  {(role === "HOD_HR" || role === "ADMIN") && (
+                  {separation.viewer.canAddClearanceItems ? (
                     <Dialog onOpenChange={setAddOpen} open={addOpen}>
                       <DialogTrigger asChild>
                         <Button
@@ -416,7 +405,7 @@ export function ClearanceBoard({
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );

@@ -19,10 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ClearanceBoard } from "@/features/separations";
 import { client, orpc } from "@/utils/orpc";
 
-interface SeparationDetailClientPageProps {
-  role: string | null;
-}
-
 const TYPE_LABELS: Record<string, string> = {
   RESIGNATION: "Resignation",
   TERMINATION: "Termination",
@@ -30,9 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
   END_OF_CONTRACT: "End of Contract",
 };
 
-export function SeparationDetailClientPage({
-  role,
-}: SeparationDetailClientPageProps) {
+export function SeparationDetailClientPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -352,7 +346,7 @@ export function SeparationDetailClientPage({
       ) : null}
 
       {["CLEARANCE_IN_PROGRESS", "COMPLETED"].includes(separation.status) ? (
-        <ClearanceBoard role={role} separation={separation} />
+        <ClearanceBoard separation={separation} />
       ) : null}
     </div>
   );
