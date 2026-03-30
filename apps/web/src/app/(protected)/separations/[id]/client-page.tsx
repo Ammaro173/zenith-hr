@@ -38,7 +38,12 @@ export function SeparationDetailClientPage({
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
 
-  const { data: separation, isLoading } = useQuery(
+  const {
+    data: separation,
+    isLoading,
+    isError,
+    error,
+  } = useQuery(
     orpc.separations.get.queryOptions({
       input: { separationId: params.id },
     }),
@@ -92,27 +97,21 @@ export function SeparationDetailClientPage({
     return <div className="p-6">Loading...</div>;
   }
 
+  if (isError) {
+    return (
+      <div className="p-6 text-destructive">
+        {error?.message ?? "Could not load separation."}
+      </div>
+    );
+  }
+
   if (!separation) {
     return <div className="p-6">Not found</div>;
   }
 
-  const isManagerApprover =
-    separation.status === "PENDING_MANAGER" &&
-    role &&
-    [
-      "MANAGER",
-      "HOD",
-      "HOD_IT",
-      "HOD_FINANCE",
-      "CEO",
-      "HOD_HR",
-      "ADMIN",
-    ].includes(role);
-
-  const isHrApprover =
-    separation.status === "PENDING_HR" &&
-    role &&
-    ["HOD_HR", "ADMIN"].includes(role);
+  const { viewer } = separation;
+  const showManagerApprovalCard = viewer.canApproveAsManager;
+  const showHrApprovalCard = viewer.canApproveAsHr || viewer.canRejectAsHr;
 
   const isPending =
     approveByManager.isPending ||
@@ -198,8 +197,8 @@ export function SeparationDetailClientPage({
       {["REQUESTED", "PENDING_MANAGER", "PENDING_HR"].includes(
         separation.status,
       ) &&
-        !isManagerApprover &&
-        !isHrApprover && (
+        !showManagerApprovalCard &&
+        !showHrApprovalCard && (
           <Card>
             <CardHeader>
               <CardTitle>Request Status: Pending</CardTitle>
@@ -215,7 +214,7 @@ export function SeparationDetailClientPage({
         )}
 
       {/* Manager Approval Card */}
-      {isManagerApprover ? (
+      {showManagerApprovalCard ? (
         <Card>
           <CardHeader>
             <CardTitle>Manager Approval Required</CardTitle>
@@ -281,7 +280,7 @@ export function SeparationDetailClientPage({
       ) : null}
 
       {/* HR Approval Card */}
-      {isHrApprover ? (
+      {showHrApprovalCard ? (
         <Card>
           <CardHeader>
             <CardTitle>HR Approval Required</CardTitle>
@@ -302,46 +301,52 @@ export function SeparationDetailClientPage({
                 value={comment}
               />
             </div>
-            <div className="flex gap-3">
-              <Button
-                disabled={isPending}
-                onClick={() =>
-                  approveByHr.mutate({
-                    separationId: separation.id,
-                    comment: comment || undefined,
-                  })
-                }
-              >
-                {approveByHr.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                )}
-                Approve & Start Clearance
-              </Button>
-              <Button
-                disabled={isPending || comment.trim().length < 5}
-                onClick={() =>
-                  rejectByHr.mutate({
-                    separationId: separation.id,
-                    comment,
-                  })
-                }
-                variant="destructive"
-              >
-                {rejectByHr.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <XCircle className="mr-2 h-4 w-4" />
-                )}
-                Reject
-              </Button>
+            <div className="flex flex-wrap gap-3">
+              {viewer.canApproveAsHr ? (
+                <Button
+                  disabled={isPending}
+                  onClick={() =>
+                    approveByHr.mutate({
+                      separationId: separation.id,
+                      comment: comment || undefined,
+                    })
+                  }
+                >
+                  {approveByHr.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                  )}
+                  Approve & Start Clearance
+                </Button>
+              ) : null}
+              {viewer.canRejectAsHr ? (
+                <Button
+                  disabled={isPending || comment.trim().length < 5}
+                  onClick={() =>
+                    rejectByHr.mutate({
+                      separationId: separation.id,
+                      comment,
+                    })
+                  }
+                  variant="destructive"
+                >
+                  {rejectByHr.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <XCircle className="mr-2 h-4 w-4" />
+                  )}
+                  Reject
+                </Button>
+              ) : null}
             </div>
-            {comment.trim().length > 0 && comment.trim().length < 5 && (
+            {viewer.canRejectAsHr &&
+            comment.trim().length > 0 &&
+            comment.trim().length < 5 ? (
               <p className="text-destructive text-xs">
                 Notes must be at least 5 characters to reject.
               </p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
