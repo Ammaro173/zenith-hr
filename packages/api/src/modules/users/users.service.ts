@@ -404,8 +404,10 @@ export const createUsersService = (db: DbOrTx) => ({
     // biome-ignore lint/suspicious/noExplicitAny: drizzle condition types are complex
     const conditions: any[] = [];
 
-    // Role-based access control
-    if (currentUser.role === "MANAGER") {
+    const scopeRole = await getActorRole(db, currentUser.id);
+
+    // Role-based access control (position-derived; avoids stale session role)
+    if (scopeRole === "MANAGER") {
       // Managers can only see their direct reports and downstream hierarchy
       const subordinateIds = await this.getSubordinateIds(currentUser.id);
       if (subordinateIds.length === 0) {
@@ -419,7 +421,48 @@ export const createUsersService = (db: DbOrTx) => ({
         };
       }
       conditions.push(inArray(user.id, subordinateIds));
-    } else if (!FULL_ACCESS_ROLES.includes(currentUser.role)) {
+    } else if (scopeRole === "HOD") {
+      const deptIds = await this.getDepartmentIdsFromPositionAssignments(
+        currentUser.id,
+      );
+      if (deptIds.length === 0) {
+        return {
+          data: [],
+          total: 0,
+          page,
+          pageSize,
+          pageCount: 0,
+        };
+      }
+      const deptMemberRows = await db
+        .select({ id: user.id })
+        .from(user)
+        .innerJoin(
+          userPositionAssignment,
+          eq(userPositionAssignment.userId, user.id),
+        )
+        .innerJoin(
+          jobPosition,
+          eq(userPositionAssignment.positionId, jobPosition.id),
+        )
+        .where(
+          and(
+            eq(user.status, "ACTIVE"),
+            inArray(jobPosition.departmentId, deptIds),
+          ),
+        );
+      const hodScopedIds = [...new Set(deptMemberRows.map((r) => r.id))];
+      if (hodScopedIds.length === 0) {
+        return {
+          data: [],
+          total: 0,
+          page,
+          pageSize,
+          pageCount: 0,
+        };
+      }
+      conditions.push(inArray(user.id, hodScopedIds));
+    } else if (!FULL_ACCESS_ROLES.includes(scopeRole)) {
       // EMPLOYEE or unknown role - no access
       return {
         data: [],
@@ -516,16 +559,34 @@ export const createUsersService = (db: DbOrTx) => ({
   },
 
   /**
+   * Department IDs from all active position assignments (for HOD department scoping).
+   */
+  async getDepartmentIdsFromPositionAssignments(
+    userId: string,
+  ): Promise<string[]> {
+    const rows = await db
+      .select({ departmentId: jobPosition.departmentId })
+      .from(userPositionAssignment)
+      .innerJoin(
+        jobPosition,
+        eq(userPositionAssignment.positionId, jobPosition.id),
+      )
+      .where(eq(userPositionAssignment.userId, userId));
+    return [
+      ...new Set(
+        rows
+          .map((r) => r.departmentId)
+          .filter((id): id is string => id != null),
+      ),
+    ];
+  },
+
+  /**
    * Get all subordinate user IDs recursively (direct reports + their reports, etc.)
    */
   async getSubordinateIds(managerId: string): Promise<string[]> {
-    const [managerPosition] = await db
-      .select({ positionId: userPositionAssignment.positionId })
-      .from(userPositionAssignment)
-      .where(eq(userPositionAssignment.userId, managerId))
-      .limit(1);
-
-    if (!managerPosition?.positionId) {
+    const anchor = await getActorPositionInfo(db, managerId);
+    if (!anchor?.positionId) {
       return [];
     }
 
@@ -533,7 +594,7 @@ export const createUsersService = (db: DbOrTx) => ({
       WITH RECURSIVE subordinate_positions AS (
         SELECT id AS position_id
         FROM job_position
-        WHERE reports_to_position_id = ${managerPosition.positionId}
+        WHERE reports_to_position_id = ${anchor.positionId}
 
         UNION ALL
 

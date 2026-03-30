@@ -37,6 +37,7 @@ export const usersRouter = o.router({
     "CEO",
     "HOD_IT",
     "HOD_FINANCE",
+    "HOD",
     "MANAGER",
   ])
     .input(listUsersSchema)
@@ -55,6 +56,7 @@ export const usersRouter = o.router({
     "CEO",
     "HOD_IT",
     "HOD_FINANCE",
+    "HOD",
     "MANAGER",
   ]).handler(
     async ({ context }) => await context.services.departments.getAll(),
