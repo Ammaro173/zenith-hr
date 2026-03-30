@@ -1,6 +1,7 @@
 import {
   auditLog,
   type DbOrTx,
+  jobPosition,
   notificationOutbox,
   separationChecklist,
   separationChecklistTemplate,
@@ -10,11 +11,17 @@ import {
   userClearanceLane,
   userPositionAssignment,
 } from "@zenith-hr/db";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { department } from "@zenith-hr/db/schema/departments";
+import { and, asc, eq, ilike, inArray, or, type SQL, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { StorageService } from "../../infrastructure/interfaces";
 import { AppError } from "../../shared/errors";
-import { getActor, getActorRole } from "../../shared/utils";
+import {
+  getActor,
+  getActorPositionInfo,
+  getActorRole,
+  isHODFamily,
+} from "../../shared/utils";
 import {
   type addChecklistItemSchema,
   type approveByHrSchema,
@@ -22,6 +29,7 @@ import {
   type createSeparationSchema,
   elevatedSeparationTypes,
   type getSeparationDocumentDownloadUrlSchema,
+  type listEligibleSeparationSubjectsSchema,
   type rejectByHrSchema,
   type rejectByManagerSchema,
   type reorderChecklistItemsSchema,
@@ -69,6 +77,16 @@ const MANAGER_APPROVER_ROLES = [
 const MANAGER_APPROVER_ROLES_EXCLUDING_LINE_MANAGER = (
   MANAGER_APPROVER_ROLES as readonly string[]
 ).filter((r) => r !== "MANAGER") as readonly string[];
+
+/** May initiate a separation on behalf of any active user. */
+const FULL_SUBJECT_ACCESS_ROLES: readonly string[] = ["ADMIN", "HOD_HR", "CEO"];
+
+/** Sees all separation rows in list/get (aligned with broad org duties). */
+const SEPARATION_ORG_WIDE_VIEW_ROLES: readonly string[] = [
+  "ADMIN",
+  "HOD_HR",
+  "CEO",
+];
 
 export interface SeparationViewerFlags {
   canAddClearanceItems: boolean;
@@ -122,17 +140,12 @@ export const createSeparationsService = (
     return Array.from(merged);
   };
 
-  const getActivePositionId = async (
+  const getEffectivePositionId = async (
     txOrDb: DbOrTx,
     userId: string,
   ): Promise<string | null> => {
-    const [assignment] = await txOrDb
-      .select({ positionId: userPositionAssignment.positionId })
-      .from(userPositionAssignment)
-      .where(eq(userPositionAssignment.userId, userId))
-      .limit(1);
-
-    return assignment?.positionId ?? null;
+    const info = await getActorPositionInfo(txOrDb, userId);
+    return info?.positionId ?? null;
   };
 
   const getParentPositionId = async (
@@ -196,7 +209,8 @@ export const createSeparationsService = (
     actorId: string,
     actorRole: string,
   ): Promise<Lane[]> => {
-    const isPrivileged = actorRole === "HOD_HR" || actorRole === "ADMIN";
+    const isPrivileged =
+      actorRole === "HOD_HR" || actorRole === "ADMIN" || actorRole === "CEO";
     if (isPrivileged) {
       return [...ALL_CLEARANCE_LANES];
     }
@@ -332,27 +346,242 @@ export const createSeparationsService = (
     };
   };
 
+  const getSubordinateUserIds = async (
+    txOrDb: DbOrTx,
+    managerId: string,
+  ): Promise<string[]> => {
+    const managerPositionId = await getEffectivePositionId(txOrDb, managerId);
+    if (!managerPositionId) {
+      return [];
+    }
+
+    const result = await txOrDb.execute(sql`
+      WITH RECURSIVE subordinate_positions AS (
+        SELECT id AS position_id
+        FROM job_position
+        WHERE reports_to_position_id = ${managerPositionId}
+
+        UNION ALL
+
+        SELECT jp.id AS position_id
+        FROM job_position jp
+        INNER JOIN subordinate_positions sp ON jp.reports_to_position_id = sp.position_id
+      )
+      SELECT upa.user_id AS id
+      FROM subordinate_positions sp
+      INNER JOIN user_position_assignment upa ON upa.position_id = sp.position_id
+    `);
+
+    return (result.rows as Array<{ id: string }>).map((row) => row.id);
+  };
+
+  const getActorPositionDepartmentIds = async (
+    txOrDb: DbOrTx,
+    forUserId: string,
+  ): Promise<string[]> => {
+    const rows = await txOrDb
+      .select({ departmentId: jobPosition.departmentId })
+      .from(userPositionAssignment)
+      .innerJoin(
+        jobPosition,
+        eq(userPositionAssignment.positionId, jobPosition.id),
+      )
+      .where(eq(userPositionAssignment.userId, forUserId));
+
+    const ids = rows
+      .map((r) => r.departmentId)
+      .filter((id): id is string => id != null);
+    return [...new Set(ids)];
+  };
+
+  const actorMayCreateForSubject = async (
+    txOrDb: DbOrTx,
+    actorId: string,
+    subjectUserId: string,
+    actorRole: string,
+  ): Promise<boolean> => {
+    if (subjectUserId === actorId) {
+      return true;
+    }
+    if (FULL_SUBJECT_ACCESS_ROLES.includes(actorRole)) {
+      return true;
+    }
+    if (actorRole === "EMPLOYEE") {
+      return false;
+    }
+
+    const subordinateIds = await getSubordinateUserIds(txOrDb, actorId);
+    if (subordinateIds.includes(subjectUserId)) {
+      return true;
+    }
+
+    if (isHODFamily(actorRole)) {
+      const actorDeptIds = await getActorPositionDepartmentIds(txOrDb, actorId);
+      if (actorDeptIds.length === 0) {
+        return false;
+      }
+      const subjectDeptIds = await getActorPositionDepartmentIds(
+        txOrDb,
+        subjectUserId,
+      );
+      return subjectDeptIds.some((d) => actorDeptIds.includes(d));
+    }
+
+    return false;
+  };
+
+  const assertActorMayCreateForSubject = async (
+    txOrDb: DbOrTx,
+    actorId: string,
+    subjectUserId: string,
+    actorRole: string,
+  ) => {
+    const allowed = await actorMayCreateForSubject(
+      txOrDb,
+      actorId,
+      subjectUserId,
+      actorRole,
+    );
+    if (!allowed) {
+      throw new AppError(
+        "FORBIDDEN",
+        "Not authorized to submit a separation for this employee",
+        403,
+      );
+    }
+  };
+
+  const collectEligibleSubjectUserIds = async (
+    actorId: string,
+    actorRole: string,
+  ): Promise<{ mode: "all" } | { mode: "restricted"; ids: string[] }> => {
+    if (FULL_SUBJECT_ACCESS_ROLES.includes(actorRole)) {
+      return { mode: "all" };
+    }
+    if (actorRole === "EMPLOYEE") {
+      return { mode: "restricted", ids: [actorId] };
+    }
+
+    const subordinateIds = await getSubordinateUserIds(db, actorId);
+    const ids = new Set<string>([actorId, ...subordinateIds]);
+
+    if (isHODFamily(actorRole)) {
+      const deptIds = await getActorPositionDepartmentIds(db, actorId);
+      if (deptIds.length > 0) {
+        const positionScoped = await db
+          .select({ id: user.id })
+          .from(user)
+          .innerJoin(
+            userPositionAssignment,
+            eq(userPositionAssignment.userId, user.id),
+          )
+          .innerJoin(
+            jobPosition,
+            eq(userPositionAssignment.positionId, jobPosition.id),
+          )
+          .where(
+            and(
+              eq(user.status, "ACTIVE"),
+              inArray(jobPosition.departmentId, deptIds),
+            ),
+          );
+        for (const row of positionScoped) {
+          ids.add(row.id);
+        }
+      }
+    }
+
+    return { mode: "restricted", ids: Array.from(ids) };
+  };
+
   return {
+    async listEligibleSubjects(
+      actorId: string,
+      input: z.infer<typeof listEligibleSeparationSubjectsSchema>,
+    ) {
+      const actorRole = await getActorRole(db, actorId);
+      const limit = input.limit ?? 50;
+      const q = (input.query ?? "").trim();
+
+      const scope = await collectEligibleSubjectUserIds(actorId, actorRole);
+      if (scope.mode === "restricted" && scope.ids.length === 0) {
+        return [];
+      }
+
+      const filters: SQL[] = [eq(user.status, "ACTIVE")];
+      if (scope.mode === "restricted") {
+        filters.push(inArray(user.id, scope.ids));
+      }
+      if (q.length > 0) {
+        const searchOr = or(
+          ilike(user.name, `%${q}%`),
+          ilike(user.email, `%${q}%`),
+          ilike(user.sapNo, `%${q}%`),
+        );
+        if (searchOr) {
+          filters.push(searchOr);
+        }
+      }
+
+      return await db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          sapNo: user.sapNo,
+          departmentName: department.name,
+        })
+        .from(user)
+        .leftJoin(department, eq(user.departmentId, department.id))
+        .where(and(...filters))
+        .orderBy(asc(user.name))
+        .limit(limit);
+    },
+
     async create(
       input: z.infer<typeof createSeparationSchema>,
-      employeeId: string,
+      actorId: string,
     ) {
-      return await db.transaction(async (tx) => {
-        const actor = await getActor(db, employeeId);
-        const requesterRole = actor?.role ?? "EMPLOYEE";
+      const actor = await getActor(db, actorId);
+      if (!actor) {
+        throw AppError.notFound("User not found");
+      }
+      const requesterRole = actor.role;
 
-        if (
-          (elevatedSeparationTypes as readonly string[]).includes(input.type) &&
-          requesterRole === "EMPLOYEE"
-        ) {
-          throw new AppError(
-            "FORBIDDEN",
-            "Termination and end-of-contract requests must be submitted by a manager or HR",
-            403,
-          );
+      if (
+        (elevatedSeparationTypes as readonly string[]).includes(input.type) &&
+        requesterRole === "EMPLOYEE"
+      ) {
+        throw new AppError(
+          "FORBIDDEN",
+          "Termination and end-of-contract requests must be submitted by a manager or HR",
+          403,
+        );
+      }
+
+      return await db.transaction(async (tx) => {
+        const subjectUserId = input.subjectUserId ?? actorId;
+
+        const [subjectRow] = await tx
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.id, subjectUserId))
+          .limit(1);
+        if (!subjectRow) {
+          throw AppError.notFound("Employee not found");
         }
 
-        const employeePositionId = await getActivePositionId(tx, employeeId);
+        await assertActorMayCreateForSubject(
+          tx,
+          actorId,
+          subjectUserId,
+          requesterRole,
+        );
+
+        const employeePositionId = await getEffectivePositionId(
+          tx,
+          subjectUserId,
+        );
         const managerPositionId = employeePositionId
           ? await getParentPositionId(tx, employeePositionId)
           : null;
@@ -376,7 +605,7 @@ export const createSeparationsService = (
         const [request] = await tx
           .insert(separationRequest)
           .values({
-            employeeId,
+            employeeId: subjectUserId,
             managerId,
             managerPositionId,
             type: input.type,
@@ -399,7 +628,7 @@ export const createSeparationsService = (
           entityId: request.id,
           entityType: "SEPARATION",
           action: "CREATE_REQUEST",
-          performedBy: employeeId,
+          performedBy: actorId,
           performedAt: new Date(),
           metadata: { status },
         });

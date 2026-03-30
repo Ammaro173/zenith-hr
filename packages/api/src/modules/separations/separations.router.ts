@@ -6,6 +6,7 @@ import {
   approveByManagerSchema,
   createSeparationSchema,
   getSeparationDocumentDownloadUrlSchema,
+  listEligibleSeparationSubjectsSchema,
   rejectByHrSchema,
   rejectByManagerSchema,
   reorderChecklistItemsSchema,
@@ -24,6 +25,15 @@ export const separationsRouter = o.router({
           input,
           context.session.user.id,
         ),
+    ),
+
+  listEligibleSubjects: protectedProcedure
+    .input(listEligibleSeparationSubjectsSchema)
+    .handler(async ({ input, context }) =>
+      context.services.separations.listEligibleSubjects(
+        context.session.user.id,
+        input,
+      ),
     ),
 
   get: protectedProcedure

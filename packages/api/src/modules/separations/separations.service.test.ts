@@ -55,15 +55,34 @@ describe("SeparationsService", () => {
         // tx.select: call 1 → getActivePositionId, call 2 → getActivePositionOccupant
         (tx as { select?: unknown }).select = mock(() => ({
           from: mock(() => ({
+            innerJoin: mock(() => ({
+              where: mock(() => ({
+                limit: mock(() => {
+                  txSelectCall++;
+                  if (txSelectCall === 2) {
+                    return Promise.resolve([
+                      {
+                        positionId: "pos-emp",
+                        positionRole: "EMPLOYEE",
+                        departmentId: "dept-1",
+                        reportsToPositionId: "pos-mgr",
+                      },
+                    ]);
+                  }
+                  return Promise.resolve([]);
+                }),
+              })),
+            })),
             where: mock(() => ({
               limit: mock(() => {
                 txSelectCall++;
                 if (txSelectCall === 1) {
-                  // getActivePositionId → positionId of employee
-                  return Promise.resolve([{ positionId: "pos-emp" }]);
+                  return Promise.resolve([{ id: "emp-1" }]);
                 }
-                // getActivePositionOccupant → userId of manager
-                return Promise.resolve([{ userId: "mgr-1" }]);
+                if (txSelectCall === 3) {
+                  return Promise.resolve([{ userId: "mgr-1" }]);
+                }
+                return Promise.resolve([]);
               }),
             })),
           })),
@@ -153,6 +172,211 @@ describe("SeparationsService", () => {
           noticePeriodWaived: false,
         },
         "emp-1",
+      ),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("create() uses subject as employeeId and actor as audit performedBy when subjectUserId set", async () => {
+    const storage = createMockStorage();
+    let separationEmployeeId: string | undefined;
+    let auditPerformedBy: string | undefined;
+
+    const tx: Record<string, unknown> = {};
+    let txSelectCall = 0;
+    let txExecuteCall = 0;
+
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => ({})) })),
+      update: mock(() => ({})),
+      select: mock(() => {
+        const qb: unknown = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() =>
+            Promise.resolve([
+              { id: "mgr-1", name: "Manager", role: "MANAGER" },
+            ]),
+          ),
+        };
+        return qb;
+      }),
+      transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
+        (tx as { select?: unknown }).select = mock(() => ({
+          from: mock(() => ({
+            innerJoin: mock(() => ({
+              where: mock(() => ({
+                limit: mock(() => {
+                  txSelectCall++;
+                  if (txSelectCall === 2) {
+                    return Promise.resolve([
+                      {
+                        positionId: "pos-mgr-anchor",
+                        positionRole: "MANAGER",
+                        departmentId: "dept-1",
+                        reportsToPositionId: "root",
+                      },
+                    ]);
+                  }
+                  if (txSelectCall === 3) {
+                    return Promise.resolve([
+                      {
+                        positionId: "pos-sub",
+                        positionRole: "EMPLOYEE",
+                        departmentId: "dept-1",
+                        reportsToPositionId: "pos-mgr",
+                      },
+                    ]);
+                  }
+                  return Promise.resolve([]);
+                }),
+              })),
+            })),
+            where: mock(() => ({
+              limit: mock(() => {
+                txSelectCall++;
+                if (txSelectCall === 1) {
+                  return Promise.resolve([{ id: "sub-1" }]);
+                }
+                if (txSelectCall === 4) {
+                  return Promise.resolve([{ userId: "mgr-slot" }]);
+                }
+                return Promise.resolve([]);
+              }),
+            })),
+          })),
+        }));
+        (tx as { execute?: unknown }).execute = mock(() => {
+          txExecuteCall++;
+          if (txExecuteCall === 1) {
+            return Promise.resolve({ rows: [{ id: "sub-1" }] });
+          }
+          return Promise.resolve({ rows: [{ parent_position_id: "pos-mgr" }] });
+        });
+        (tx as { insert?: unknown }).insert = mock(() => ({
+          values: mock((vals: Record<string, unknown>) => {
+            if (
+              vals.entityType === "SEPARATION" &&
+              vals.action === "CREATE_REQUEST"
+            ) {
+              auditPerformedBy = vals.performedBy as string;
+            } else if (vals.type != null && vals.employeeId != null) {
+              separationEmployeeId = vals.employeeId as string;
+            }
+            return {
+              returning: mock(() => {
+                if (vals.entityType === "SEPARATION") {
+                  return Promise.resolve([]);
+                }
+                return Promise.resolve([
+                  { id: "sep-1", status: "PENDING_MANAGER" },
+                ]);
+              }),
+              onConflictDoNothing: mock(() => Promise.resolve()),
+            };
+          }),
+        }));
+        return await cb(tx);
+      }),
+      query: {},
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+    );
+
+    await service.create(
+      {
+        type: "TERMINATION",
+        reason: "Policy violation — initiated by manager",
+        lastWorkingDay: new Date("2026-01-31"),
+        noticePeriodWaived: false,
+        subjectUserId: "sub-1",
+      },
+      "mgr-1",
+    );
+
+    expect(separationEmployeeId).toBe("sub-1");
+    expect(auditPerformedBy).toBe("mgr-1");
+  });
+
+  it("create() forbids manager submitting for employee outside scope", async () => {
+    const storage = createMockStorage();
+    const tx: Record<string, unknown> = {};
+    let txSelectCall = 0;
+
+    const mockDb: MockDb = {
+      insert: mock(() => ({})),
+      update: mock(() => ({})),
+      select: mock(() => {
+        const qb: unknown = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() =>
+            Promise.resolve([
+              { id: "mgr-1", name: "Manager", role: "MANAGER" },
+            ]),
+          ),
+        };
+        return qb;
+      }),
+      transaction: mock(async (cb: (t: unknown) => Promise<unknown>) => {
+        (tx as { select?: unknown }).select = mock(() => ({
+          from: mock(() => ({
+            innerJoin: mock(() => ({
+              where: mock(() => ({
+                limit: mock(() => {
+                  txSelectCall++;
+                  if (txSelectCall === 2) {
+                    return Promise.resolve([
+                      {
+                        positionId: "pos-mgr",
+                        positionRole: "MANAGER",
+                        departmentId: "dept-1",
+                        reportsToPositionId: "root",
+                      },
+                    ]);
+                  }
+                  return Promise.resolve([]);
+                }),
+              })),
+            })),
+            where: mock(() => ({
+              limit: mock(() => {
+                txSelectCall++;
+                if (txSelectCall === 1) {
+                  return Promise.resolve([{ id: "stranger" }]);
+                }
+                return Promise.resolve([]);
+              }),
+            })),
+          })),
+        }));
+        (tx as { execute?: unknown }).execute = mock(() =>
+          Promise.resolve({ rows: [] }),
+        );
+        return await cb(tx);
+      }),
+      query: {},
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+    );
+
+    await expect(
+      service.create(
+        {
+          type: "RESIGNATION",
+          reason: "Not in reporting line",
+          lastWorkingDay: new Date("2026-01-31"),
+          noticePeriodWaived: false,
+          subjectUserId: "stranger",
+        },
+        "mgr-1",
       ),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
@@ -841,5 +1065,128 @@ describe("SeparationsService", () => {
     expect(result.id).toBe("sep-clear");
     expect(result.viewer.canApproveAsManager).toBe(false);
     expect(result.viewer.clearanceActLanes).toContain("HOD_IT");
+  });
+
+  it("listEligibleSubjects() restricts EMPLOYEE to self in final query", async () => {
+    const storage = createMockStorage();
+    let selectBuild = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({
+            returning: mock(() => Promise.resolve([])),
+          })),
+        })),
+      })),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb({} as MockDb),
+      ),
+      query: {},
+      select: mock(() => {
+        selectBuild++;
+        if (selectBuild === 1) {
+          return {
+            from: mock(() => ({
+              innerJoin: mock(() => ({
+                where: mock(() => ({
+                  limit: mock(() => Promise.resolve([{ role: "EMPLOYEE" }])),
+                })),
+              })),
+            })),
+          };
+        }
+        return {
+          from: mock(() => ({
+            leftJoin: mock(() => ({
+              where: mock(() => ({
+                orderBy: mock(() => ({
+                  limit: mock(() =>
+                    Promise.resolve([
+                      {
+                        id: "self-1",
+                        name: "Alex",
+                        email: "a@x.com",
+                        sapNo: "100",
+                        departmentName: "Ops",
+                      },
+                    ]),
+                  ),
+                })),
+              })),
+            })),
+          })),
+        };
+      }),
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+    );
+    const rows = await service.listEligibleSubjects("self-1", { limit: 50 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe("self-1");
+  });
+
+  it("listEligibleSubjects() does not apply id filter when actor is ADMIN", async () => {
+    const storage = createMockStorage();
+    let selectBuild = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({
+            returning: mock(() => Promise.resolve([])),
+          })),
+        })),
+      })),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb({} as MockDb),
+      ),
+      query: {},
+      select: mock(() => {
+        selectBuild++;
+        if (selectBuild === 1) {
+          return {
+            from: mock(() => ({
+              innerJoin: mock(() => ({
+                where: mock(() => ({
+                  limit: mock(() => Promise.resolve([{ role: "ADMIN" }])),
+                })),
+              })),
+            })),
+          };
+        }
+        return {
+          from: mock(() => ({
+            leftJoin: mock(() => ({
+              where: mock(() => ({
+                orderBy: mock(() => ({
+                  limit: mock(() =>
+                    Promise.resolve([
+                      {
+                        id: "any-1",
+                        name: "Pat",
+                        email: "p@x.com",
+                        sapNo: "9",
+                        departmentName: null,
+                      },
+                    ]),
+                  ),
+                })),
+              })),
+            })),
+          })),
+        };
+      }),
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+    );
+    const rows = await service.listEligibleSubjects("admin-1", { limit: 10 });
+    expect(rows[0]?.id).toBe("any-1");
   });
 });

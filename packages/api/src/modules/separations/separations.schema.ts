@@ -11,6 +11,8 @@ const baseSeparationSchema = z.object({
   reason: z.string().min(5),
   lastWorkingDay: z.date(),
   noticePeriodWaived: z.boolean(),
+  /** Employee leaving; omit = actor files for self. */
+  subjectUserId: z.string().uuid().optional(),
 });
 
 export const createSeparationSchema = baseSeparationSchema;
@@ -21,7 +23,13 @@ export const createSeparationDefaults: z.infer<typeof createSeparationSchema> =
     reason: "",
     lastWorkingDay: new Date(),
     noticePeriodWaived: false,
+    subjectUserId: undefined,
   };
+
+export const listEligibleSeparationSubjectsSchema = z.object({
+  query: z.string().optional(),
+  limit: z.number().int().min(1).max(100).default(50),
+});
 
 export const updateSeparationSchema = z.object({
   separationId: z.string().uuid(),
