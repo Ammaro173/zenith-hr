@@ -21,6 +21,8 @@ import type {
   approveByManagerSchema,
   createSeparationSchema,
   getSeparationDocumentDownloadUrlSchema,
+  rejectByHrSchema,
+  rejectByManagerSchema,
   reorderChecklistItemsSchema,
   startClearanceSchema,
   updateChecklistSchema,
@@ -515,6 +517,142 @@ export const createSeparationsService = (
           type: "INFO",
           title: "Exit clearance started",
           body: "Your clearance process has started.",
+          link: `/separations/${input.separationId}`,
+        });
+
+        return updated;
+      });
+    },
+
+    async rejectByManager(
+      input: z.infer<typeof rejectByManagerSchema>,
+      actorId: string,
+    ) {
+      const actorRole = await getActorRole(db, actorId);
+      if (
+        ![
+          "MANAGER",
+          "HOD",
+          "HOD_IT",
+          "HOD_FINANCE",
+          "CEO",
+          "HOD_HR",
+          "ADMIN",
+        ].includes(actorRole)
+      ) {
+        throw new AppError("FORBIDDEN", "Not authorized", 403);
+      }
+
+      return await db.transaction(async (tx) => {
+        const [request] = await tx
+          .select()
+          .from(separationRequest)
+          .where(eq(separationRequest.id, input.separationId))
+          .limit(1);
+
+        if (!request) {
+          throw AppError.notFound("Separation request not found");
+        }
+
+        if (
+          request.status !== "PENDING_MANAGER" &&
+          actorRole !== "HOD_HR" &&
+          actorRole !== "ADMIN"
+        ) {
+          throw AppError.badRequest("Request is not pending manager approval");
+        }
+
+        const isDirectManagerBySlot = request.managerPositionId
+          ? (await getActivePositionOccupant(tx, request.managerPositionId)) ===
+            actorId
+          : false;
+        if (
+          !isDirectManagerBySlot &&
+          actorRole !== "HOD_HR" &&
+          actorRole !== "ADMIN"
+        ) {
+          throw new AppError("FORBIDDEN", "Not authorized as manager", 403);
+        }
+
+        const [updated] = await tx
+          .update(separationRequest)
+          .set({
+            status: "REJECTED",
+            updatedAt: new Date(),
+          })
+          .where(eq(separationRequest.id, input.separationId))
+          .returning();
+
+        await tx.insert(auditLog).values({
+          entityId: input.separationId,
+          entityType: "SEPARATION",
+          action: "MANAGER_REJECT",
+          performedBy: actorId,
+          performedAt: new Date(),
+          metadata: { comment: input.comment },
+        });
+
+        await enqueueOutbox(tx, {
+          idempotencyKey: `separation:${input.separationId}:notify:employee_rejected_by_manager`,
+          userId: request.employeeId,
+          type: "INFO",
+          title: "Separation request rejected",
+          body: "Your separation request has been rejected by your manager.",
+          link: `/separations/${input.separationId}`,
+        });
+
+        return updated;
+      });
+    },
+
+    async rejectByHr(
+      input: z.infer<typeof rejectByHrSchema>,
+      actorId: string,
+    ) {
+      const actorRole = await getActorRole(db, actorId);
+      if (!(actorRole === "HOD_HR" || actorRole === "ADMIN")) {
+        throw new AppError("FORBIDDEN", "Only HR can reject", 403);
+      }
+
+      return await db.transaction(async (tx) => {
+        const [request] = await tx
+          .select()
+          .from(separationRequest)
+          .where(eq(separationRequest.id, input.separationId))
+          .limit(1);
+
+        if (!request) {
+          throw AppError.notFound("Separation request not found");
+        }
+
+        if (request.status !== "PENDING_HR") {
+          throw AppError.badRequest("Request is not pending HR approval");
+        }
+
+        const [updated] = await tx
+          .update(separationRequest)
+          .set({
+            status: "REJECTED",
+            updatedAt: new Date(),
+          })
+          .where(eq(separationRequest.id, input.separationId))
+          .returning();
+
+        await tx.insert(auditLog).values({
+          entityId: input.separationId,
+          entityType: "SEPARATION",
+          action: "HR_REJECT",
+          performedBy: actorId,
+          performedAt: new Date(),
+          metadata: { comment: input.comment },
+        });
+
+        await enqueueOutbox(tx, {
+          idempotencyKey: `separation:${input.separationId}:notify:employee_rejected_by_hr`,
+          userId: request.employeeId,
+          type: "INFO",
+          title: "Separation request rejected",
+          body: "Your separation request has been rejected by HR.",
           link: `/separations/${input.separationId}`,
         });
 

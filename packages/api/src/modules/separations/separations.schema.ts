@@ -55,6 +55,16 @@ export const approveByHrSchema = z.object({
   comment: z.string().optional(),
 });
 
+export const rejectByManagerSchema = z.object({
+  separationId: z.string().uuid(),
+  comment: z.string().min(5),
+});
+
+export const rejectByHrSchema = z.object({
+  separationId: z.string().uuid(),
+  comment: z.string().min(5),
+});
+
 export const addChecklistItemSchema = z.object({
   separationId: z.string().uuid(),
   lane: z.enum([

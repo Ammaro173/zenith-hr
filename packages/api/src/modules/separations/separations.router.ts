@@ -6,6 +6,8 @@ import {
   approveByManagerSchema,
   createSeparationSchema,
   getSeparationDocumentDownloadUrlSchema,
+  rejectByHrSchema,
+  rejectByManagerSchema,
   reorderChecklistItemsSchema,
   startClearanceSchema,
   updateChecklistSchema,
@@ -67,6 +69,32 @@ export const separationsRouter = o.router({
     .input(approveByHrSchema)
     .handler(async ({ input, context }) => {
       return await context.services.separations.approveByHr(
+        input,
+        context.session.user.id,
+      );
+    }),
+
+  rejectByManager: requireRoles([
+    "MANAGER",
+    "HOD",
+    "HOD_IT",
+    "HOD_FINANCE",
+    "CEO",
+    "HOD_HR",
+    "ADMIN",
+  ])
+    .input(rejectByManagerSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.separations.rejectByManager(
+        input,
+        context.session.user.id,
+      );
+    }),
+
+  rejectByHr: requireRoles(["HOD_HR", "ADMIN"])
+    .input(rejectByHrSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.separations.rejectByHr(
         input,
         context.session.user.id,
       );
