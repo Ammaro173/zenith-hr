@@ -126,6 +126,16 @@ export const protectedNavigationItems: {
     href: "/separations",
     icon: LogOut,
     description: "Exit process management",
+    allowedRoles: [
+      "EMPLOYEE",
+      "MANAGER",
+      "HOD",
+      "HOD_IT",
+      "HOD_HR",
+      "HOD_FINANCE",
+      "CEO",
+      "ADMIN",
+    ],
   },
   {
     title: "Imports",
