@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, Lock, Plus } from "lucide-react";
+import { CalendarIcon, CheckCircle2, Lock, Plus, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -19,19 +19,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Kanban,
-  KanbanBoard,
-  KanbanColumn,
-  KanbanColumnHandle,
-  KanbanItem,
-} from "@/components/ui/kanban";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { type client, orpc } from "@/utils/orpc";
@@ -59,8 +53,8 @@ const LANE_ORDER: Lane[] = [
 
 const LANE_LABEL: Record<Lane, string> = {
   OPERATIONS: "Operations",
-  HOD_IT: "HOD_IT",
-  HOD_FINANCE: "HOD_FINANCE",
+  HOD_IT: "HOD IT",
+  HOD_FINANCE: "HOD Finance",
   ADMIN_ASSETS: "Admin/Assets",
   INSURANCE: "Insurance",
   USED_CARS: "Used Cars",
@@ -94,6 +88,15 @@ function laneCanAct(role: string | null, lane: Lane): boolean {
   }
   return false;
 }
+
+const STATUS_CONFIG: Record<
+  ChecklistStatus,
+  { badge: "default" | "destructive" | "outline"; label: string }
+> = {
+  PENDING: { badge: "outline", label: "Pending" },
+  CLEARED: { badge: "default", label: "Cleared" },
+  REJECTED: { badge: "destructive", label: "Rejected" },
+};
 
 export function ClearanceBoard({
   role,
@@ -172,14 +175,6 @@ export function ClearanceBoard({
   const cleared = required.filter((i) => i.status === "CLEARED");
   const progress = percent(cleared.length, required.length);
 
-  const kanbanValue = useMemo(() => {
-    const record: Record<string, SeparationBoardItem[]> = {};
-    for (const lane of LANE_ORDER) {
-      record[lane] = grouped[lane];
-    }
-    return record;
-  }, [grouped]);
-
   const handleUpdate = (id: string, status: ChecklistStatus) => {
     const remark = remarks[id]?.trim();
     if (status === "REJECTED" && !remark) {
@@ -195,50 +190,43 @@ export function ClearanceBoard({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
+      {/* Summary card */}
       <Card>
-        <CardContent className="flex flex-col gap-4 p-6">
-          <div className="flex flex-wrap items-start gap-3">
-            <div>
-              <div className="font-semibold text-xl">
-                {separation.employee.name}
-              </div>
-              <div className="text-muted-foreground text-sm">
-                SAP: {separation.employee.sapNo} • Last day:{" "}
-                {format(new Date(separation.lastWorkingDay), "MMM d, yyyy")}
-              </div>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
+          <div>
+            <div className="font-semibold text-lg">
+              {separation.employee.name}
             </div>
-            <div className="ml-auto flex items-center gap-3">
-              <Badge variant="outline">{separation.status}</Badge>
-              <div className="w-44">
-                <div className="mb-1 flex items-center justify-between text-muted-foreground text-xs">
-                  <span>Overall</span>
-                  <span>{progress}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full bg-primary transition-[width]"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <div className="mt-1 text-[11px] text-muted-foreground">
-                  {cleared.length}/{required.length} required cleared
-                </div>
+            <div className="text-muted-foreground text-sm">
+              SAP: {separation.employee.sapNo} · Last day:{" "}
+              {format(new Date(separation.lastWorkingDay), "MMM d, yyyy")}
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Badge variant="outline">{separation.status}</Badge>
+            <div className="w-36">
+              <div className="mb-1 flex items-center justify-between text-muted-foreground text-xs">
+                <span>Overall</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-[width]"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                {cleared.length}/{required.length} required cleared
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Kanban
-        flatCursor
-        getItemValue={(item) => item.id}
-        onValueChange={() => {
-          // Checklist ordering can be enabled later for HR using reorderChecklistItems
-        }}
-        value={kanbanValue}
-      >
-        <KanbanBoard className="gap-3">
+      {/* Kanban lanes — horizontally scrollable */}
+      <ScrollArea className="w-full">
+        <div className="flex gap-3 pb-4" style={{ minWidth: "max-content" }}>
           {LANE_ORDER.map((lane) => {
             const laneItems = grouped[lane];
             const laneRequired = laneItems.filter((i) => i.required);
@@ -252,129 +240,60 @@ export function ClearanceBoard({
             const canAct = laneCanAct(role, lane);
 
             return (
-              <KanbanColumn
-                className={cn(!canAct && "opacity-90")}
-                disabled={!canAct}
+              <div
+                className={cn(
+                  "flex w-55 shrink-0 flex-col rounded-lg border bg-muted/40 p-2.5",
+                  !canAct && "opacity-80",
+                )}
                 key={lane}
-                value={lane}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <KanbanColumnHandle className="font-semibold text-sm">
+                {/* Lane header */}
+                <div className="mb-2 flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="truncate font-semibold text-sm">
                       {LANE_LABEL[lane]}
-                    </KanbanColumnHandle>
-                    <Badge className="text-[11px]" variant="secondary">
+                    </span>
+                    <Badge className="text-[10px]" variant="secondary">
                       {laneCleared.length}/{laneRequired.length}
                     </Badge>
-                    {canAct ? null : (
-                      <span className="inline-flex items-center gap-1 text-muted-foreground text-xs">
-                        <Lock className="h-3 w-3" />
-                        Locked
-                      </span>
+                    {!canAct && (
+                      <Lock className="h-3 w-3 text-muted-foreground" />
                     )}
                   </div>
-                  <Badge variant={laneProgress === 100 ? "default" : "outline"}>
+                  <Badge
+                    className="shrink-0 text-[10px]"
+                    variant={laneProgress === 100 ? "default" : "outline"}
+                  >
                     {laneProgress === 100 ? "Done" : `${laneProgress}%`}
                   </Badge>
                 </div>
 
-                <div className="mt-2 flex flex-col gap-2">
+                {/* Items */}
+                <div className="flex flex-1 flex-col gap-2">
                   {laneItems.map((item) => (
-                    <KanbanItem
-                      disabled={!canAct}
+                    <ChecklistItemCard
+                      canAct={canAct}
+                      isPending={updateChecklist.isPending}
+                      item={item}
                       key={item.id}
-                      value={item.id}
-                    >
-                      <Card
-                        className={cn(
-                          "border bg-background",
-                          item.status === "CLEARED" &&
-                            "border-emerald-200 bg-emerald-50/50",
-                          item.status === "REJECTED" &&
-                            "border-red-200 bg-red-50/50",
-                        )}
-                      >
-                        <CardHeader className="space-y-1 p-3">
-                          <CardTitle className="flex items-start justify-between gap-2 text-sm">
-                            <span
-                              className={cn(
-                                "leading-snug",
-                                item.status === "CLEARED" &&
-                                  "text-muted-foreground line-through",
-                              )}
-                            >
-                              {item.title}
-                            </span>
-                            <Badge
-                              className="shrink-0"
-                              variant={(() => {
-                                if (item.status === "CLEARED") {
-                                  return "default";
-                                }
-                                if (item.status === "REJECTED") {
-                                  return "destructive";
-                                }
-                                return "outline";
-                              })()}
-                            >
-                              {item.status}
-                            </Badge>
-                          </CardTitle>
-                          <div className="text-[11px] text-muted-foreground">
-                            {item.dueAt
-                              ? `Due: ${format(new Date(item.dueAt), "MMM d")}`
-                              : "No due date"}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2 p-3 pt-0">
-                          <Textarea
-                            className="min-h-16 text-xs"
-                            disabled={!canAct}
-                            onChange={(e) =>
-                              setRemarks((prev) => ({
-                                ...prev,
-                                [item.id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Remarks (required on reject)"
-                            value={remarks[item.id] ?? item.remarks ?? ""}
-                          />
-                          {canAct ? (
-                            <div className="flex gap-2">
-                              <Button
-                                disabled={updateChecklist.isPending}
-                                onClick={() => handleUpdate(item.id, "CLEARED")}
-                                size="sm"
-                              >
-                                Clear
-                              </Button>
-                              <Button
-                                disabled={updateChecklist.isPending}
-                                onClick={() =>
-                                  handleUpdate(item.id, "REJECTED")
-                                }
-                                size="sm"
-                                variant="destructive"
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          ) : null}
-                        </CardContent>
-                      </Card>
-                    </KanbanItem>
+                      onUpdate={handleUpdate}
+                      remark={remarks[item.id] ?? item.remarks ?? ""}
+                      setRemark={(val) =>
+                        setRemarks((prev) => ({ ...prev, [item.id]: val }))
+                      }
+                    />
                   ))}
 
-                  {role === "HOD_HR" || role === "ADMIN" ? (
+                  {(role === "HOD_HR" || role === "ADMIN") && (
                     <Dialog onOpenChange={setAddOpen} open={addOpen}>
                       <DialogTrigger asChild>
                         <Button
-                          className="justify-start"
+                          className="mt-1 justify-start text-xs"
                           onClick={() => setAddLane(lane)}
                           size="sm"
                           variant="ghost"
                         >
-                          <Plus className="mr-2 h-4 w-4" />
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
                           Add item
                         </Button>
                       </DialogTrigger>
@@ -497,13 +416,96 @@ export function ClearanceBoard({
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                  ) : null}
+                  )}
                 </div>
-              </KanbanColumn>
+              </div>
             );
           })}
-        </KanbanBoard>
-      </Kanban>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
+  );
+}
+
+function ChecklistItemCard({
+  item,
+  canAct,
+  isPending,
+  remark,
+  setRemark,
+  onUpdate,
+}: {
+  canAct: boolean;
+  isPending: boolean;
+  item: SeparationBoardItem;
+  onUpdate: (id: string, status: ChecklistStatus) => void;
+  remark: string;
+  setRemark: (val: string) => void;
+}) {
+  const statusConfig = STATUS_CONFIG[item.status as ChecklistStatus];
+
+  return (
+    <Card
+      className={cn(
+        "border bg-background",
+        item.status === "CLEARED" && "border-emerald-200 bg-emerald-50/50",
+        item.status === "REJECTED" && "border-red-200 bg-red-50/50",
+      )}
+    >
+      <CardHeader className="space-y-1 p-2.5 pb-1">
+        <CardTitle className="flex items-start justify-between gap-1.5 text-xs">
+          <span
+            className={cn(
+              "leading-snug",
+              item.status === "CLEARED" && "text-muted-foreground line-through",
+            )}
+          >
+            {item.title}
+          </span>
+          <Badge className="shrink-0 text-[10px]" variant={statusConfig.badge}>
+            {statusConfig.label}
+          </Badge>
+        </CardTitle>
+        <div className="text-[10px] text-muted-foreground">
+          {item.dueAt
+            ? `Due: ${format(new Date(item.dueAt), "MMM d")}`
+            : "No due date"}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-1.5 p-2.5 pt-0">
+        <Textarea
+          className="min-h-12 text-[11px]"
+          disabled={!canAct}
+          onChange={(e) => setRemark(e.target.value)}
+          placeholder="Remarks (required on reject)"
+          rows={2}
+          value={remark}
+        />
+        {canAct && (
+          <div className="flex gap-1.5">
+            <Button
+              className="h-7 flex-1 text-xs"
+              disabled={isPending}
+              onClick={() => onUpdate(item.id, "CLEARED")}
+              size="sm"
+            >
+              <CheckCircle2 className="mr-1 h-3 w-3" />
+              Clear
+            </Button>
+            <Button
+              className="h-7 flex-1 text-xs"
+              disabled={isPending}
+              onClick={() => onUpdate(item.id, "REJECTED")}
+              size="sm"
+              variant="destructive"
+            >
+              <XCircle className="mr-1 h-3 w-3" />
+              Reject
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
