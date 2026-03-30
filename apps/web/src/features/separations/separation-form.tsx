@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { elevatedSeparationTypes } from "@zenith-hr/api/modules/separations/separations.schema";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Upload, X } from "lucide-react";
@@ -33,6 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { getRoleFromSessionUser } from "@/config/navigation";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { client } from "@/utils/orpc";
+import { SeparationSubjectCombobox } from "./separation-subject-combobox";
 import { useSeparationForm } from "./use-separation-form";
 
 const SEPARATION_TYPE_OPTIONS = [
@@ -54,7 +57,15 @@ export function SeparationForm({
   onCancel,
 }: SeparationFormProps) {
   const { data: session } = authClient.useSession();
-  const role = getRoleFromSessionUser(session?.user);
+  const sessionRole = getRoleFromSessionUser(session?.user);
+  const { data: positionRolePayload } = useQuery({
+    queryKey: ["users", "getMyPositionRole"],
+    queryFn: () => client.users.getMyPositionRole(),
+    enabled: Boolean(session?.user),
+    staleTime: 60_000,
+  });
+  const role =
+    positionRolePayload !== undefined ? positionRolePayload.role : sessionRole;
   const showManagerHrTypes = role !== null && role !== "EMPLOYEE";
   const typeOptions = showManagerHrTypes
     ? [...SEPARATION_TYPE_OPTIONS]
@@ -64,6 +75,7 @@ export function SeparationForm({
       );
 
   const { form, file, setFile, isPending, handleCancel } = useSeparationForm({
+    enableSubjectPicker: showManagerHrTypes,
     onSuccess,
     onCancel,
   });
@@ -88,6 +100,24 @@ export function SeparationForm({
             <CardTitle>Request Details</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-6">
+            {showManagerHrTypes && (
+              <form.Field name="subjectUserId">
+                {(field) => (
+                  <FormField
+                    description="Defaults to you; choose another employee when submitting on their behalf."
+                    field={field}
+                    label="Employee"
+                    required
+                  >
+                    <SeparationSubjectCombobox
+                      onChange={(id) => field.handleChange(id)}
+                      value={field.state.value}
+                    />
+                  </FormField>
+                )}
+              </form.Field>
+            )}
+
             <form.Field name="type">
               {(field) => (
                 <FormField field={field} label="Type" required>
@@ -190,13 +220,31 @@ export function SeparationForm({
               )}
             </form.Field>
 
-            <form.Subscribe selector={(state) => state.values.type}>
-              {(type) =>
-                type === "RESIGNATION" && (
+            <form.Subscribe
+              selector={(state) => ({
+                type: state.values.type,
+                subjectUserId: state.values.subjectUserId,
+              })}
+            >
+              {({ type, subjectUserId }) => {
+                if (type !== "RESIGNATION") {
+                  return null;
+                }
+                const actorId = session?.user?.id;
+                const effectiveSubjectId = subjectUserId ?? actorId ?? "";
+                const letterRequired =
+                  Boolean(actorId) && effectiveSubjectId === actorId;
+                return (
                   <div className="space-y-2">
                     <span className="font-medium text-sm">
                       Resignation Letter{" "}
-                      <span className="text-destructive">*</span>
+                      {letterRequired ? (
+                        <span className="text-destructive">*</span>
+                      ) : (
+                        <span className="font-normal text-muted-foreground text-xs">
+                          (optional when filing for someone else)
+                        </span>
+                      )}
                     </span>
                     <FileUpload
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
@@ -241,8 +289,8 @@ export function SeparationForm({
                       </FileUploadList>
                     </FileUpload>
                   </div>
-                )
-              }
+                );
+              }}
             </form.Subscribe>
           </CardContent>
         </Card>

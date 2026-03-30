@@ -5,21 +5,27 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createSeparationDefaults,
   createSeparationSchema,
+  elevatedSeparationTypes,
 } from "@zenith-hr/api/modules/separations/separations.schema";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 import { client } from "@/utils/orpc";
 
 interface UseSeparationFormProps {
+  enableSubjectPicker?: boolean;
   onCancel?: () => void;
   onSuccess?: (request: { id: string }) => void;
 }
 
 export function useSeparationForm({
+  enableSubjectPicker = false,
   onSuccess,
   onCancel,
 }: UseSeparationFormProps = {}) {
   const queryClient = useQueryClient();
+  const { data: session } = authClient.useSession();
+  const appliedDefaultSubject = useRef(false);
 
   const [file, setFile] = useState<File | null>(null);
 
@@ -64,12 +70,35 @@ export function useSeparationForm({
       onChange: createSeparationSchema,
     },
     onSubmit: async ({ value }) => {
-      if (value.type === "RESIGNATION" && !file) {
+      const actorId = session?.user?.id;
+      if (!actorId) {
+        toast.error("You must be signed in to submit");
+        return;
+      }
+
+      const subjectId = value.subjectUserId ?? actorId;
+      const elevated = (elevatedSeparationTypes as readonly string[]).includes(
+        value.type,
+      );
+      if (elevated && subjectId === actorId) {
+        toast.error("Select the employee this separation applies to");
+        return;
+      }
+
+      const needsResignationLetter =
+        value.type === "RESIGNATION" && subjectId === actorId;
+      if (needsResignationLetter && !file) {
         toast.error("Resignation letter is required");
         return;
       }
 
-      const request = await createMutation.mutateAsync(value);
+      const payload = {
+        ...value,
+        subjectUserId:
+          value.subjectUserId === actorId ? undefined : value.subjectUserId,
+      };
+
+      const request = await createMutation.mutateAsync(payload);
 
       if (value.type === "RESIGNATION" && file && request?.id) {
         try {
@@ -94,7 +123,20 @@ export function useSeparationForm({
     },
   });
 
+  useEffect(() => {
+    if (!enableSubjectPicker || appliedDefaultSubject.current) {
+      return;
+    }
+    const id = session?.user?.id;
+    if (!id) {
+      return;
+    }
+    form.setFieldValue("subjectUserId", id);
+    appliedDefaultSubject.current = true;
+  }, [enableSubjectPicker, session?.user?.id, form]);
+
   const handleCancel = () => {
+    appliedDefaultSubject.current = false;
     form.reset();
     setFile(null);
     onCancel?.();
