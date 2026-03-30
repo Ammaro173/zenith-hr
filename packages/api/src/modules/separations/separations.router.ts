@@ -112,13 +112,12 @@ export const separationsRouter = o.router({
 
   updateChecklist: protectedProcedure
     .input(updateChecklistSchema)
-    .handler(async ({ input, context }) => {
-      // TODO: Add permission checks (only specific departments)
-      return await context.services.separations.updateChecklist(
+    .handler(async ({ input, context }) =>
+      context.services.separations.updateChecklist(
         input,
         context.session.user.id,
-      );
-    }),
+      ),
+    ),
 
   addChecklistItem: requireRoles(["HOD_HR", "ADMIN"])
     .input(addChecklistItemSchema)

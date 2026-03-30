@@ -763,8 +763,6 @@ export const createSeparationsService = (
       input: z.infer<typeof updateChecklistSchema>,
       userId: string,
     ) {
-      const actorRole = await getActorRole(db, userId);
-
       const [checklist] = await db
         .select()
         .from(separationChecklist)
@@ -774,6 +772,11 @@ export const createSeparationsService = (
       if (!checklist) {
         throw AppError.notFound("Checklist item not found");
       }
+
+      const { actorRole } = await ensureRequestVisibleToActor(
+        checklist.separationId,
+        userId,
+      );
 
       if (input.status === "REJECTED" && !input.remarks?.trim()) {
         throw AppError.badRequest(
