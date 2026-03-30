@@ -39,9 +39,9 @@ export default function InterceptedNewSeparationPage() {
             setOpen(false);
             router.back();
           }}
-          onSuccess={() => {
+          onSuccess={({ id }) => {
             setOpen(false);
-            router.back();
+            router.push(`/separations/${id}` as Route);
           }}
         />
       </SheetContent>

@@ -12,7 +12,7 @@ import { client } from "@/utils/orpc";
 
 interface UseSeparationFormProps {
   onCancel?: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (request: { id: string }) => void;
 }
 
 export function useSeparationForm({
@@ -78,16 +78,19 @@ export function useSeparationForm({
           toast.error(
             "Separation created, but failed to upload resignation letter",
           );
-          // Optionally, still invalidate queries since the request was created
           await queryClient.invalidateQueries();
-          onSuccess?.();
+          if (request?.id) {
+            onSuccess?.({ id: request.id });
+          }
           return;
         }
       }
 
       toast.success("Separation request submitted");
       await queryClient.invalidateQueries();
-      onSuccess?.();
+      if (request?.id) {
+        onSuccess?.({ id: request.id });
+      }
     },
   });
 

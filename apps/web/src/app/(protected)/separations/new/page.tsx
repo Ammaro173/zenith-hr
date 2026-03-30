@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { CardDescription, CardTitle } from "@/components/ui/card";
 import { SeparationForm } from "@/features/separations";
@@ -17,7 +18,7 @@ export default function NewSeparationPage() {
         <SeparationForm
           mode="page"
           onCancel={() => router.back()}
-          onSuccess={() => router.push("/separations")}
+          onSuccess={({ id }) => router.push(`/separations/${id}` as Route)}
         />
       </div>
     </div>

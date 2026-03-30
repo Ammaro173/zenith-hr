@@ -1,5 +1,6 @@
 "use client";
 
+import { elevatedSeparationTypes } from "@zenith-hr/api/modules/separations/separations.schema";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Upload, X } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
@@ -29,13 +30,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getRoleFromSessionUser } from "@/config/navigation";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useSeparationForm } from "./use-separation-form";
+
+const SEPARATION_TYPE_OPTIONS = [
+  { value: "RESIGNATION", label: "Resignation" },
+  { value: "TERMINATION", label: "Termination" },
+  { value: "RETIREMENT", label: "Retirement" },
+  { value: "END_OF_CONTRACT", label: "End of Contract" },
+] as const;
 
 interface SeparationFormProps {
   mode?: "page" | "sheet";
   onCancel?: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (request: { id: string }) => void;
 }
 
 export function SeparationForm({
@@ -43,6 +53,16 @@ export function SeparationForm({
   onSuccess,
   onCancel,
 }: SeparationFormProps) {
+  const { data: session } = authClient.useSession();
+  const role = getRoleFromSessionUser(session?.user);
+  const showManagerHrTypes = role !== null && role !== "EMPLOYEE";
+  const typeOptions = showManagerHrTypes
+    ? [...SEPARATION_TYPE_OPTIONS]
+    : SEPARATION_TYPE_OPTIONS.filter(
+        (opt) =>
+          !(elevatedSeparationTypes as readonly string[]).includes(opt.value),
+      );
+
   const { form, file, setFile, isPending, handleCancel } = useSeparationForm({
     onSuccess,
     onCancel,
@@ -81,12 +101,11 @@ export function SeparationForm({
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="RESIGNATION">Resignation</SelectItem>
-                      <SelectItem value="TERMINATION">Termination</SelectItem>
-                      <SelectItem value="RETIREMENT">Retirement</SelectItem>
-                      <SelectItem value="END_OF_CONTRACT">
-                        End of Contract
-                      </SelectItem>
+                      {typeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </FormField>
