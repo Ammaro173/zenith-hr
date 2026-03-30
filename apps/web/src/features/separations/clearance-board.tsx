@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { StickyHorizontalScroll } from "@/components/ui/sticky-horizontal-scroll";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { type client, orpc } from "@/utils/orpc";
@@ -224,8 +224,8 @@ export function ClearanceBoard({
         </CardContent>
       </Card>
 
-      {/* Kanban lanes — horizontally scrollable */}
-      <ScrollArea className="w-full">
+      {/* Kanban lanes — horizontally scrollable with sticky scrollbar */}
+      <StickyHorizontalScroll>
         <div className="flex gap-3 pb-4" style={{ minWidth: "max-content" }}>
           {LANE_ORDER.map((lane) => {
             const laneItems = grouped[lane];
@@ -422,8 +422,7 @@ export function ClearanceBoard({
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </StickyHorizontalScroll>
     </div>
   );
 }
