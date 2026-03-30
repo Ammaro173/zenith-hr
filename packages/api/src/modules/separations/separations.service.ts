@@ -203,14 +203,9 @@ export const createSeparationsService = (
 
         let status: "PENDING_MANAGER" | "PENDING_HR";
         if (
-          [
-            "HOD",
-            "HOD_IT",
-            "HOD_FINANCE",
-            "CEO",
-            "HOD_HR",
-            "ADMIN",
-          ].includes(requesterRole)
+          ["HOD", "HOD_IT", "HOD_FINANCE", "CEO", "HOD_HR", "ADMIN"].includes(
+            requesterRole,
+          )
         ) {
           status = "PENDING_HR";
         } else if (managerPositionId) {
@@ -605,10 +600,7 @@ export const createSeparationsService = (
       });
     },
 
-    async rejectByHr(
-      input: z.infer<typeof rejectByHrSchema>,
-      actorId: string,
-    ) {
+    async rejectByHr(input: z.infer<typeof rejectByHrSchema>, actorId: string) {
       const actorRole = await getActorRole(db, actorId);
       if (!(actorRole === "HOD_HR" || actorRole === "ADMIN")) {
         throw new AppError("FORBIDDEN", "Only HR can reject", 403);
