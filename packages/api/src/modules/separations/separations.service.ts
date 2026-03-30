@@ -10,7 +10,7 @@ import {
   userClearanceLane,
   userPositionAssignment,
 } from "@zenith-hr/db";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { StorageService } from "../../infrastructure/interfaces";
 import { AppError } from "../../shared/errors";
@@ -913,11 +913,38 @@ export const createSeparationsService = (
       return updated;
     },
 
-    async getAll() {
+    async getListForViewer(actorId: string) {
+      const actorRole = await getActorRole(db, actorId);
+      if (actorRole === "HOD_HR" || actorRole === "ADMIN") {
+        return await db.query.separationRequest.findMany({
+          with: { employee: true },
+          orderBy: (requests, { desc }) => [desc(requests.createdAt)],
+        });
+      }
+
+      const assignments = await db
+        .select({ positionId: userPositionAssignment.positionId })
+        .from(userPositionAssignment)
+        .where(eq(userPositionAssignment.userId, actorId));
+
+      const positionIds = assignments
+        .map((a) => a.positionId)
+        .filter((id): id is string => id != null);
+
+      if (positionIds.length > 0) {
+        return await db.query.separationRequest.findMany({
+          where: or(
+            eq(separationRequest.employeeId, actorId),
+            inArray(separationRequest.managerPositionId, positionIds),
+          ),
+          with: { employee: true },
+          orderBy: (requests, { desc }) => [desc(requests.createdAt)],
+        });
+      }
+
       return await db.query.separationRequest.findMany({
-        with: {
-          employee: true,
-        },
+        where: eq(separationRequest.employeeId, actorId),
+        with: { employee: true },
         orderBy: (requests, { desc }) => [desc(requests.createdAt)],
       });
     },

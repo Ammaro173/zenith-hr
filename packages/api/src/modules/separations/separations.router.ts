@@ -163,7 +163,7 @@ export const separationsRouter = o.router({
       ),
   ),
 
-  getSeparations: protectedProcedure.handler(
-    async ({ context }) => await context.services.separations.getAll(),
+  getSeparations: protectedProcedure.handler(async ({ context }) =>
+    context.services.separations.getListForViewer(context.session.user.id),
   ),
 });
