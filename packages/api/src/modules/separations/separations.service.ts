@@ -41,6 +41,18 @@ type Lane =
 
 type ChecklistStatus = "PENDING" | "CLEARED" | "REJECTED";
 
+const ALL_CLEARANCE_LANES: Lane[] = [
+  "OPERATIONS",
+  "HOD_IT",
+  "HOD_FINANCE",
+  "ADMIN_ASSETS",
+  "INSURANCE",
+  "USED_CARS",
+  "HR_PAYROLL",
+];
+
+const CLEARANCE_VIEW_STATUSES = ["CLEARANCE_IN_PROGRESS", "COMPLETED"] as const;
+
 /** Mirrors `approveByManager` / `rejectByManager` role gate (position-derived role). */
 const MANAGER_APPROVER_ROLES = [
   "MANAGER",
@@ -58,10 +70,13 @@ const MANAGER_APPROVER_ROLES_EXCLUDING_LINE_MANAGER = (
 ).filter((r) => r !== "MANAGER") as readonly string[];
 
 export interface SeparationViewerFlags {
+  canAddClearanceItems: boolean;
   canApproveAsHr: boolean;
   canApproveAsManager: boolean;
   canRejectAsHr: boolean;
   canRejectAsManager: boolean;
+  /** Lanes this viewer may act on for checklist updates (matches `updateChecklist` / position + `user_clearance_lane`). */
+  clearanceActLanes: Lane[];
 }
 
 function sanitizeFileName(fileName: string): string {
@@ -176,6 +191,61 @@ export const createSeparationsService = (
       .onConflictDoNothing();
   };
 
+  const resolveClearanceActLanes = async (
+    actorId: string,
+    actorRole: string,
+  ): Promise<Lane[]> => {
+    const isPrivileged = actorRole === "HOD_HR" || actorRole === "ADMIN";
+    if (isPrivileged) {
+      return [...ALL_CLEARANCE_LANES];
+    }
+    return await getUserLanes(actorId, actorRole);
+  };
+
+  const actorHasChecklistInAllowedLanes = async (
+    separationId: string,
+    allowedLanes: Lane[],
+  ): Promise<boolean> => {
+    if (allowedLanes.length === 0) {
+      return false;
+    }
+    const [row] = await db
+      .select({ id: separationChecklist.id })
+      .from(separationChecklist)
+      .where(
+        and(
+          eq(separationChecklist.separationId, separationId),
+          inArray(separationChecklist.lane, allowedLanes),
+        ),
+      )
+      .limit(1);
+    return row !== undefined;
+  };
+
+  const getClearanceParticipationSeparationIds = async (
+    actorId: string,
+    actorRole: string,
+  ): Promise<string[]> => {
+    const lanes = await resolveClearanceActLanes(actorId, actorRole);
+    if (lanes.length === 0) {
+      return [];
+    }
+    const rows = await db
+      .select({ separationId: separationChecklist.separationId })
+      .from(separationChecklist)
+      .innerJoin(
+        separationRequest,
+        eq(separationChecklist.separationId, separationRequest.id),
+      )
+      .where(
+        and(
+          inArray(separationChecklist.lane, lanes),
+          inArray(separationRequest.status, [...CLEARANCE_VIEW_STATUSES]),
+        ),
+      );
+    return [...new Set(rows.map((r) => r.separationId))];
+  };
+
   const ensureRequestVisibleToActor = async (
     separationId: string,
     actorId: string,
@@ -201,6 +271,14 @@ export const createSeparationsService = (
         request.managerPositionId,
       );
       if (slotOccupant === actorId) {
+        return { request, actorRole };
+      }
+    }
+    if (
+      (CLEARANCE_VIEW_STATUSES as readonly string[]).includes(request.status)
+    ) {
+      const lanes = await resolveClearanceActLanes(actorId, actorRole);
+      if (await actorHasChecklistInAllowedLanes(separationId, lanes)) {
         return { request, actorRole };
       }
     }
@@ -238,11 +316,18 @@ export const createSeparationsService = (
     const canRejectAsHr =
       hrOrAdminOverride && separation.status === "PENDING_HR";
 
+    const clearanceActLanes = await resolveClearanceActLanes(
+      actorId,
+      actorRole,
+    );
+
     return {
       canApproveAsManager: canActAsManager,
       canRejectAsManager: canActAsManager,
       canApproveAsHr,
       canRejectAsHr,
+      clearanceActLanes,
+      canAddClearanceItems: hrOrAdminOverride,
     };
   };
 
@@ -319,17 +404,6 @@ export const createSeparationsService = (
         }
 
         return request;
-      });
-    },
-
-    async get(separationId: string) {
-      return await db.query.separationRequest.findFirst({
-        where: eq(separationRequest.id, separationId),
-        with: {
-          checklistItems: true,
-          documents: true,
-          employee: true,
-        },
       });
     },
 
@@ -784,19 +858,7 @@ export const createSeparationsService = (
         );
       }
 
-      // HR/Admin can act across all lanes.
-      const isPrivileged = actorRole === "HOD_HR" || actorRole === "ADMIN";
-      const allowedLanes = isPrivileged
-        ? ([
-            "OPERATIONS",
-            "HOD_IT",
-            "HOD_FINANCE",
-            "ADMIN_ASSETS",
-            "INSURANCE",
-            "USED_CARS",
-            "HR_PAYROLL",
-          ] satisfies Lane[])
-        : await getUserLanes(userId, actorRole);
+      const allowedLanes = await resolveClearanceActLanes(userId, actorRole);
 
       if (!allowedLanes.includes(checklist.lane as Lane)) {
         throw new AppError("FORBIDDEN", "Not authorized for this lane", 403);
@@ -925,6 +987,11 @@ export const createSeparationsService = (
         });
       }
 
+      const clearanceIds = await getClearanceParticipationSeparationIds(
+        actorId,
+        actorRole,
+      );
+
       const assignments = await db
         .select({ positionId: userPositionAssignment.positionId })
         .from(userPositionAssignment)
@@ -934,19 +1001,28 @@ export const createSeparationsService = (
         .map((a) => a.positionId)
         .filter((id): id is string => id != null);
 
+      const clearancePredicate =
+        clearanceIds.length > 0
+          ? inArray(separationRequest.id, clearanceIds)
+          : undefined;
+
       if (positionIds.length > 0) {
+        const base = or(
+          eq(separationRequest.employeeId, actorId),
+          inArray(separationRequest.managerPositionId, positionIds),
+        );
         return await db.query.separationRequest.findMany({
-          where: or(
-            eq(separationRequest.employeeId, actorId),
-            inArray(separationRequest.managerPositionId, positionIds),
-          ),
+          where: clearancePredicate ? or(base, clearancePredicate) : base,
           with: { employee: true },
           orderBy: (requests, { desc }) => [desc(requests.createdAt)],
         });
       }
 
+      const employeeOnly = eq(separationRequest.employeeId, actorId);
       return await db.query.separationRequest.findMany({
-        where: eq(separationRequest.employeeId, actorId),
+        where: clearancePredicate
+          ? or(employeeOnly, clearancePredicate)
+          : employeeOnly,
         with: { employee: true },
         orderBy: (requests, { desc }) => [desc(requests.createdAt)],
       });
