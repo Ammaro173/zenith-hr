@@ -52,6 +52,11 @@ const MANAGER_APPROVER_ROLES = [
   "ADMIN",
 ] as const;
 
+/** For manager approval escalation: non-manager roles skip chain-of-command. */
+const MANAGER_APPROVER_ROLES_EXCLUDING_LINE_MANAGER = (
+  MANAGER_APPROVER_ROLES as readonly string[]
+).filter((r) => r !== "MANAGER") as readonly string[];
+
 export interface SeparationViewerFlags {
   canApproveAsHr: boolean;
   canApproveAsManager: boolean;
@@ -374,17 +379,7 @@ export const createSeparationsService = (
       actorId: string,
     ) {
       const actorRole = await getActorRole(db, actorId);
-      if (
-        ![
-          "MANAGER",
-          "HOD",
-          "HOD_IT",
-          "HOD_FINANCE",
-          "CEO",
-          "HOD_HR",
-          "ADMIN",
-        ].includes(actorRole)
-      ) {
+      if (!(MANAGER_APPROVER_ROLES as readonly string[]).includes(actorRole)) {
         throw new AppError("FORBIDDEN", "Not authorized", 403);
       }
 
@@ -421,14 +416,9 @@ export const createSeparationsService = (
           throw new AppError("FORBIDDEN", "Not authorized as manager", 403);
         }
 
-        const isApproverHOD = [
-          "HOD",
-          "HOD_IT",
-          "HOD_FINANCE",
-          "CEO",
-          "HOD_HR",
-          "ADMIN",
-        ].includes(actorRole);
+        const isApproverHOD = (
+          MANAGER_APPROVER_ROLES_EXCLUDING_LINE_MANAGER as readonly string[]
+        ).includes(actorRole);
 
         let nextStatus: "PENDING_MANAGER" | "PENDING_HR" = "PENDING_HR";
         let nextManagerPositionId = request.managerPositionId;
@@ -605,17 +595,7 @@ export const createSeparationsService = (
       actorId: string,
     ) {
       const actorRole = await getActorRole(db, actorId);
-      if (
-        ![
-          "MANAGER",
-          "HOD",
-          "HOD_IT",
-          "HOD_FINANCE",
-          "CEO",
-          "HOD_HR",
-          "ADMIN",
-        ].includes(actorRole)
-      ) {
+      if (!(MANAGER_APPROVER_ROLES as readonly string[]).includes(actorRole)) {
         throw new AppError("FORBIDDEN", "Not authorized", 403);
       }
 
