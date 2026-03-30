@@ -6,6 +6,7 @@ import {
   createSeparationDefaults,
   createSeparationSchema,
 } from "@zenith-hr/api/modules/separations/separations.schema";
+import { useState } from "react";
 import { toast } from "sonner";
 import { client } from "@/utils/orpc";
 
@@ -20,16 +21,40 @@ export function useSeparationForm({
 }: UseSeparationFormProps = {}) {
   const queryClient = useQueryClient();
 
+  const [file, setFile] = useState<File | null>(null);
+
   const createMutation = useMutation({
     mutationFn: (data: typeof createSeparationDefaults) =>
       client.separations.create(data),
-    onSuccess: async () => {
-      toast.success("Separation request submitted");
-      await queryClient.invalidateQueries();
-      onSuccess?.();
-    },
     onError: (error) => {
       toast.error(error.message || "Failed to submit separation request");
+    },
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (data: { separationId: string; file: File }) => {
+      return new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(data.file);
+        reader.onload = async () => {
+          try {
+            const base64String = reader.result as string;
+            const base64 = base64String.split(",")[1] ?? "";
+
+            await client.separations.uploadDocument({
+              separationId: data.separationId,
+              kind: "RESIGNATION_LETTER",
+              fileName: data.file.name,
+              contentType: data.file.type || "application/octet-stream",
+              fileBase64: base64,
+            });
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        };
+        reader.onerror = (e) => reject(e);
+      });
     },
   });
 
@@ -39,18 +64,44 @@ export function useSeparationForm({
       onChange: createSeparationSchema,
     },
     onSubmit: async ({ value }) => {
-      await createMutation.mutateAsync(value);
+      if (value.type === "RESIGNATION" && !file) {
+        toast.error("Resignation letter is required");
+        return;
+      }
+
+      const request = await createMutation.mutateAsync(value);
+
+      if (value.type === "RESIGNATION" && file && request?.id) {
+        try {
+          await uploadMutation.mutateAsync({ separationId: request.id, file });
+        } catch {
+          toast.error(
+            "Separation created, but failed to upload resignation letter",
+          );
+          // Optionally, still invalidate queries since the request was created
+          await queryClient.invalidateQueries();
+          onSuccess?.();
+          return;
+        }
+      }
+
+      toast.success("Separation request submitted");
+      await queryClient.invalidateQueries();
+      onSuccess?.();
     },
   });
 
   const handleCancel = () => {
     form.reset();
+    setFile(null);
     onCancel?.();
   };
 
   return {
     form,
-    isPending: createMutation.isPending,
+    file,
+    setFile,
+    isPending: createMutation.isPending || uploadMutation.isPending,
     handleCancel,
   };
 }

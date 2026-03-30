@@ -1,12 +1,21 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Upload, X } from "lucide-react";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  FileUpload,
+  FileUploadDropzone,
+  FileUploadItem,
+  FileUploadItemDelete,
+  FileUploadItemMetadata,
+  FileUploadItemPreview,
+  FileUploadList,
+} from "@/components/ui/file-upload";
 import {
   Popover,
   PopoverContent,
@@ -34,7 +43,7 @@ export function SeparationForm({
   onSuccess,
   onCancel,
 }: SeparationFormProps) {
-  const { form, isPending, handleCancel } = useSeparationForm({
+  const { form, file, setFile, isPending, handleCancel } = useSeparationForm({
     onSuccess,
     onCancel,
   });
@@ -161,6 +170,61 @@ export function SeparationForm({
                 </FormField>
               )}
             </form.Field>
+
+            <form.Subscribe selector={(state) => state.values.type}>
+              {(type) =>
+                type === "RESIGNATION" && (
+                  <div className="space-y-2">
+                    <span className="font-medium text-sm">
+                      Resignation Letter{" "}
+                      <span className="text-destructive">*</span>
+                    </span>
+                    <FileUpload
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                      maxFiles={1}
+                      maxSize={5 * 1024 * 1024} // 5MB
+                      onAccept={(files) => setFile(files[0] || null)}
+                      value={file ? [file] : []}
+                    >
+                      <FileUploadDropzone className="min-h-[120px] cursor-pointer">
+                        <div className="flex flex-col items-center gap-2 text-center">
+                          <div className="rounded-full bg-muted p-2">
+                            <Upload className="size-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              Upload resignation letter
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              Max 5MB. PDF, Word, or Images.
+                            </p>
+                          </div>
+                        </div>
+                      </FileUploadDropzone>
+                      <FileUploadList>
+                        {file && (
+                          <FileUploadItem value={file}>
+                            <FileUploadItemPreview />
+                            <FileUploadItemMetadata />
+                            <FileUploadItemDelete asChild>
+                              <Button
+                                className="size-7"
+                                onClick={() => setFile(null)}
+                                size="icon"
+                                variant="ghost"
+                              >
+                                <X className="size-4" />
+                                <span className="sr-only">Remove file</span>
+                              </Button>
+                            </FileUploadItemDelete>
+                          </FileUploadItem>
+                        )}
+                      </FileUploadList>
+                    </FileUpload>
+                  </div>
+                )
+              }
+            </form.Subscribe>
           </CardContent>
         </Card>
 
