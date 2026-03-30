@@ -238,10 +238,21 @@ describe("SeparationsService", () => {
       transaction: mock(
         async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
       ),
-      query: {},
+      query: {
+        separationRequest: {
+          findFirst: mock(() =>
+            Promise.resolve({
+              id: "sep-1",
+              employeeId: "it-1",
+              managerPositionId: "pos-mgr",
+              status: "CLEARANCE_IN_PROGRESS",
+              employee: { id: "it-1", name: "IT" },
+            }),
+          ),
+        },
+      },
     };
 
-    // checklist select call should return the checklist item after role lookup.
     let selectCall = 0;
     mockDb.select.mockImplementation(() => {
       const qb: any = {
@@ -251,18 +262,18 @@ describe("SeparationsService", () => {
         limit: mock(() => {
           selectCall++;
           if (selectCall === 1) {
-            return Promise.resolve([{ role: "HOD_IT" }]);
+            return Promise.resolve([
+              {
+                id: "chk-1",
+                separationId: "sep-1",
+                lane: "HOD_IT",
+                title: "Disable email",
+                required: true,
+                status: "PENDING",
+              },
+            ]);
           }
-          return Promise.resolve([
-            {
-              id: "chk-1",
-              separationId: "sep-1",
-              lane: "HOD_IT",
-              title: "Disable email",
-              required: true,
-              status: "PENDING",
-            },
-          ]);
+          return Promise.resolve([{ role: "HOD_IT" }]);
         }),
       };
       return qb;
@@ -305,7 +316,19 @@ describe("SeparationsService", () => {
       transaction: mock(
         async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
       ),
-      query: {},
+      query: {
+        separationRequest: {
+          findFirst: mock(() =>
+            Promise.resolve({
+              id: "sep-1",
+              employeeId: "finance-1",
+              managerPositionId: "pos-mgr",
+              status: "CLEARANCE_IN_PROGRESS",
+              employee: { id: "finance-1", name: "Fin" },
+            }),
+          ),
+        },
+      },
     };
 
     let selectCall = 0;
@@ -318,11 +341,6 @@ describe("SeparationsService", () => {
             limit: mock(() => {
               selectCall++;
               if (selectCall === 1) {
-                // getActorRole => HOD_FINANCE
-                return Promise.resolve([{ role: "HOD_FINANCE" }]);
-              }
-              if (selectCall === 2) {
-                // checklist lookup => HOD_IT lane
                 return Promise.resolve([
                   {
                     id: "chk-1",
@@ -334,12 +352,13 @@ describe("SeparationsService", () => {
                   },
                 ]);
               }
-              // userClearanceLane membership lookup => none
+              if (selectCall === 2) {
+                return Promise.resolve([{ role: "HOD_FINANCE" }]);
+              }
               return Promise.resolve([]);
             }),
           };
 
-          // Some queries `await ...where(...)` directly (no `.limit()`).
           return {
             ...builder,
             // biome-ignore lint/suspicious/noThenProperty: mock
