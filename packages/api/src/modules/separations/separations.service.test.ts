@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
+import { AppError } from "../../shared/errors";
 import { createSeparationsService } from "./separations.service";
 
 interface MockDb {
@@ -361,5 +362,297 @@ describe("SeparationsService", () => {
         "finance-1",
       ),
     ).rejects.toThrow("Not authorized for this lane");
+  });
+
+  it("getForViewer() forbids unrelated users", async () => {
+    const storage = createMockStorage();
+    const sepRow = {
+      id: "sep-1",
+      employeeId: "emp-1",
+      managerPositionId: "pos-mgr",
+      status: "PENDING_MANAGER",
+      employee: { id: "emp-1", name: "Emp" },
+    };
+
+    let _selectCall = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() => {
+            _selectCall++;
+            // getActorRole → EMPLOYEE for stranger
+            return Promise.resolve([{ role: "EMPLOYEE" }]);
+          }),
+        };
+        return qb;
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {
+        separationRequest: {
+          findFirst: mock(() => Promise.resolve(sepRow)),
+        },
+      },
+    };
+
+    (mockDb as any).execute = mock(() =>
+      Promise.resolve({ rows: [{ parent_position_id: null }] }),
+    );
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as any,
+    );
+
+    await expect(service.getForViewer("sep-1", "stranger-1")).rejects.toThrow(
+      AppError,
+    );
+  });
+
+  it("getForViewer() sets canApproveAsManager for manager slot occupant with HOD_IT position role", async () => {
+    const storage = createMockStorage();
+    const fullSep = {
+      id: "sep-1",
+      employeeId: "emp-1",
+      managerPositionId: "pos-mgr",
+      status: "PENDING_MANAGER",
+      checklistItems: [],
+      documents: [],
+      employee: { id: "emp-1", name: "Emp" },
+    };
+
+    let selectCall = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() => {
+            selectCall++;
+            if (selectCall === 1) {
+              return Promise.resolve([{ role: "HOD_IT" }]);
+            }
+            return Promise.resolve([{ userId: "hod-it-1" }]);
+          }),
+        };
+        return qb;
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {
+        separationRequest: {
+          findFirst: mock(() => Promise.resolve(fullSep)),
+        },
+      },
+    };
+
+    (mockDb as any).execute = mock(() =>
+      Promise.resolve({ rows: [{ parent_position_id: null }] }),
+    );
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as any,
+    );
+
+    const result = await service.getForViewer("sep-1", "hod-it-1");
+    expect(result.viewer.canApproveAsManager).toBe(true);
+    expect(result.viewer.canRejectAsManager).toBe(true);
+    expect(result.viewer.canApproveAsHr).toBe(false);
+  });
+
+  it("getForViewer() forbids HOD_IT who is not the slot occupant from viewing", async () => {
+    const storage = createMockStorage();
+    const fullSep = {
+      id: "sep-1",
+      employeeId: "emp-1",
+      managerPositionId: "pos-mgr",
+      status: "PENDING_MANAGER",
+      checklistItems: [],
+      documents: [],
+      employee: { id: "emp-1", name: "Emp" },
+    };
+
+    let selectCall = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() => {
+            selectCall++;
+            if (selectCall === 1) {
+              return Promise.resolve([{ role: "HOD_IT" }]);
+            }
+            return Promise.resolve([{ userId: "other-mgr" }]);
+          }),
+        };
+        return qb;
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {
+        separationRequest: {
+          findFirst: mock(() => Promise.resolve(fullSep)),
+        },
+      },
+    };
+
+    (mockDb as any).execute = mock(() =>
+      Promise.resolve({ rows: [{ parent_position_id: null }] }),
+    );
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as any,
+    );
+
+    await expect(service.getForViewer("sep-1", "hod-it-1")).rejects.toThrow(
+      AppError,
+    );
+  });
+
+  it("getForViewer() exposes HR approve on PENDING_MANAGER for HOD_HR", async () => {
+    const storage = createMockStorage();
+    const fullSep = {
+      id: "sep-1",
+      employeeId: "emp-1",
+      managerPositionId: "pos-mgr",
+      status: "PENDING_MANAGER",
+      checklistItems: [],
+      documents: [],
+      employee: { id: "emp-1", name: "Emp" },
+    };
+
+    let selectCall = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() => {
+            selectCall++;
+            if (selectCall === 1) {
+              return Promise.resolve([{ role: "HOD_HR" }]);
+            }
+            return Promise.resolve([{ userId: "someone-else" }]);
+          }),
+        };
+        return qb;
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {
+        separationRequest: {
+          findFirst: mock(() => Promise.resolve(fullSep)),
+        },
+      },
+    };
+
+    (mockDb as any).execute = mock(() =>
+      Promise.resolve({ rows: [{ parent_position_id: null }] }),
+    );
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as any,
+    );
+
+    const result = await service.getForViewer("sep-1", "hr-1");
+    expect(result.viewer.canApproveAsHr).toBe(true);
+    expect(result.viewer.canRejectAsHr).toBe(false);
+    expect(result.viewer.canApproveAsManager).toBe(true);
+  });
+
+  it("getForViewer() allows HR reject only in PENDING_HR", async () => {
+    const storage = createMockStorage();
+    const fullSep = {
+      id: "sep-1",
+      employeeId: "emp-1",
+      managerPositionId: "pos-mgr",
+      status: "PENDING_HR",
+      checklistItems: [],
+      documents: [],
+      employee: { id: "emp-1", name: "Emp" },
+    };
+
+    let selectCall = 0;
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      select: mock(() => {
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() => qb),
+          limit: mock(() => {
+            selectCall++;
+            if (selectCall === 1) {
+              return Promise.resolve([{ role: "HOD_HR" }]);
+            }
+            return Promise.resolve([{ userId: "other-mgr" }]);
+          }),
+        };
+        return qb;
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb(mockDb),
+      ),
+      query: {
+        separationRequest: {
+          findFirst: mock(() => Promise.resolve(fullSep)),
+        },
+      },
+    };
+
+    (mockDb as any).execute = mock(() =>
+      Promise.resolve({ rows: [{ parent_position_id: null }] }),
+    );
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as any,
+    );
+
+    const result = await service.getForViewer("sep-1", "hr-1");
+    expect(result.viewer.canRejectAsHr).toBe(true);
   });
 });
