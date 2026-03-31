@@ -214,6 +214,7 @@ export interface UserResponse {
   positionId: string | null;
   positionName: string | null;
   reportsToPositionId: string | null;
+  reportsToPositionName: string | null;
   role: string;
   sapNo: string;
   status: string;

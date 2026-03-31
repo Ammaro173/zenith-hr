@@ -23,6 +23,7 @@ export interface UserListItem {
   positionId: string | null;
   positionName: string | null;
   reportsToPositionId: string | null;
+  reportsToPositionName: string | null;
   role: UserRole;
   sapNo: string;
   status: UserStatus;

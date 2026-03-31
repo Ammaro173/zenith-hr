@@ -169,6 +169,7 @@ async function getManagerInfoByUserIds(
     {
       managerUserId: string | null;
       managerName: string | null;
+      reportsToPositionName: string | null;
       reportsToPositionId: string | null;
       positionId: string | null;
       positionCode: string | null;
@@ -181,6 +182,7 @@ async function getManagerInfoByUserIds(
     {
       managerUserId: string | null;
       managerName: string | null;
+      reportsToPositionName: string | null;
       reportsToPositionId: string | null;
       positionId: string | null;
       positionCode: string | null;
@@ -208,10 +210,13 @@ async function getManagerInfoByUserIds(
       jp.code AS position_code,
       jp.name AS position_name,
       jp.reports_to_position_id AS reports_to_position_id,
+      reports_to_position.name AS reports_to_position_name,
       manager_assignment.user_id AS manager_user_id,
       manager_user.name AS manager_name
     FROM user_position_assignment upa
     LEFT JOIN job_position jp ON jp.id = upa.position_id
+    LEFT JOIN job_position reports_to_position
+      ON reports_to_position.id = jp.reports_to_position_id
     LEFT JOIN user_position_assignment manager_assignment
       ON manager_assignment.position_id = jp.reports_to_position_id
     LEFT JOIN "user" manager_user ON manager_user.id = manager_assignment.user_id
@@ -224,12 +229,14 @@ async function getManagerInfoByUserIds(
     position_code: string | null;
     position_name: string | null;
     reports_to_position_id: string | null;
+    reports_to_position_name: string | null;
     manager_user_id: string | null;
     manager_name: string | null;
   }>) {
     managerMap.set(row.user_id, {
       managerUserId: row.manager_user_id,
       managerName: row.manager_name,
+      reportsToPositionName: row.reports_to_position_name,
       reportsToPositionId: row.reports_to_position_id,
       positionId: row.position_id,
       positionCode: row.position_code,
@@ -244,6 +251,7 @@ async function withSlotManagers<
   T extends {
     id: string;
     managerName?: string | null;
+    reportsToPositionName?: string | null;
     reportsToPositionId?: string | null;
     positionId?: string | null;
     positionCode?: string | null;
@@ -256,6 +264,7 @@ async function withSlotManagers<
   Array<
     T & {
       managerName: string | null;
+      reportsToPositionName: string | null;
       reportsToPositionId: string | null;
       positionId: string | null;
       positionCode: string | null;
@@ -275,6 +284,7 @@ async function withSlotManagers<
         {
           managerUserId: string | null;
           managerName: string | null;
+          reportsToPositionName: string | null;
           reportsToPositionId: string | null;
           positionId: string | null;
           positionCode: string | null;
@@ -287,6 +297,7 @@ async function withSlotManagers<
       ? managerMap.get(row.id)
       : {
           managerName: row.managerName ?? null,
+          reportsToPositionName: row.reportsToPositionName ?? null,
           reportsToPositionId: row.reportsToPositionId ?? null,
           positionId: row.positionId ?? null,
           positionCode: row.positionCode ?? null,
@@ -296,6 +307,7 @@ async function withSlotManagers<
     return {
       ...row,
       managerName: manager?.managerName ?? null,
+      reportsToPositionName: manager?.reportsToPositionName ?? null,
       reportsToPositionId: manager?.reportsToPositionId ?? null,
       positionId: manager?.positionId ?? null,
       positionCode: manager?.positionCode ?? null,
@@ -319,6 +331,7 @@ function toUserResponse(
     | "positionCode"
     | "positionName"
     | "reportsToPositionId"
+    | "reportsToPositionName"
     | "managerName"
     | "createdAt"
     | "updatedAt"
@@ -337,6 +350,7 @@ function toUserResponse(
     positionCode: row.positionCode,
     positionName: row.positionName,
     reportsToPositionId: row.reportsToPositionId,
+    reportsToPositionName: row.reportsToPositionName,
     managerName: row.managerName,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

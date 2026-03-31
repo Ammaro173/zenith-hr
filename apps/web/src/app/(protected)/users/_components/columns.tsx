@@ -147,9 +147,13 @@ export const columns = [
     header: ({ column }) => (
       <DataGridColumnHeader column={column} title="Reports To" />
     ),
-    cell: ({ getValue }) => (
-      <span className="text-muted-foreground">{getValue() ?? "—"}</span>
-    ),
+    cell: ({ getValue, row }) => {
+      const managerName = getValue();
+      const reportsToPositionName = row.original.reportsToPositionName;
+      const reportsTo = managerName ?? reportsToPositionName;
+
+      return <span className="text-muted-foreground">{reportsTo ?? "—"}</span>;
+    },
     size: 180,
     enableSorting: false,
     enableHiding: true,

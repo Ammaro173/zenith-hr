@@ -613,6 +613,7 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
       "positionCode",
       "positionName",
       "reportsToPositionId",
+      "reportsToPositionName",
       "managerName",
       "createdAt",
       "updatedAt",
@@ -641,6 +642,55 @@ describe("Feature: user-management, Property 11: Response sanitization (create)"
       { numRuns: 5 },
     );
   }, 30_000);
+});
+
+describe("Feature: user-management, Reports-to vacancy fallback", () => {
+  it("should include reports-to position name when no manager user is assigned", async () => {
+    const mockDb = createMockDbForCreate() as ReturnType<
+      typeof createMockDbForCreate
+    > & {
+      execute: ReturnType<typeof mock>;
+    };
+
+    mockDb.execute = mock(() => {
+      const createdUser = mockDb.getInsertedUsers().at(-1);
+
+      return {
+        rows: [
+          {
+            user_id: createdUser?.id ?? "",
+            position_id: "00000000-0000-1000-8000-000000000000",
+            position_code: "DRV",
+            position_name: "Driver",
+            reports_to_position_id: "00000000-0000-1000-8000-000000000111",
+            reports_to_position_name: "Rental Supervisor",
+            manager_user_id: null,
+            manager_name: null,
+          },
+        ],
+      };
+    });
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+    );
+
+    const result = await service.create({
+      name: "Driver User",
+      email: "driver.user@example.com",
+      password: "Password123!",
+      sapNo: "SAP1234",
+      status: "ACTIVE",
+      positionId: "00000000-0000-1000-8000-000000000000",
+      joiningDate: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    expect(result.managerName).toBeNull();
+    expect(result.reportsToPositionId).toBe(
+      "00000000-0000-1000-8000-000000000111",
+    );
+    expect(result.reportsToPositionName).toBe("Rental Supervisor");
+  });
 });
 
 // ============================================
