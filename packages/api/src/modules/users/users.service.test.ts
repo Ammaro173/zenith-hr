@@ -358,6 +358,95 @@ describe("Feature: user-management, Property 1: User creation preserves input da
   });
 });
 
+describe("Feature: user-management, Credential email dispatch", () => {
+  it("should send credentials email after creating a user", async () => {
+    const mockDb = createMockDbForCreate();
+    const sendEmail = mock(
+      (_payload: {
+        html: string;
+        subject: string;
+        text?: string;
+        to: string;
+      }) => Promise.resolve(),
+    );
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+      {
+        credentialEmailSender: {
+          sendEmail,
+        },
+      },
+    );
+
+    const input: CreateUserInput = {
+      name: "Credential User",
+      email: "Credential.User@Example.com",
+      password: "Password123!",
+      sapNo: "SAP112233",
+      status: "ACTIVE",
+      positionId: "00000000-0000-1000-8000-000000000000",
+      joiningDate: new Date("2026-01-01T00:00:00.000Z"),
+    };
+
+    const result = await service.create(input);
+
+    expect(result.email).toBe("credential.user@example.com");
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+
+    const firstCall = sendEmail.mock.calls[0];
+    if (!firstCall?.[0]) {
+      throw new Error("Expected credential email sender to be called");
+    }
+
+    const payload = firstCall[0];
+
+    expect(payload.to).toBe("credential.user@example.com");
+    expect(payload.subject).toBe("Your Zenith HR account credentials");
+    expect(payload.html).toContain("credential.user@example.com");
+    expect(payload.html).toContain("Password123!");
+    expect(payload.text).toContain("credential.user@example.com");
+    expect(payload.text).toContain("Password123!");
+  });
+
+  it("should not fail user creation when credential email sending fails", async () => {
+    const mockDb = createMockDbForCreate();
+    const sendEmail = mock(
+      (_payload: {
+        html: string;
+        subject: string;
+        text?: string;
+        to: string;
+      }) => Promise.reject(new Error("Email provider unavailable")),
+    );
+
+    const service = createUsersService(
+      mockDb as unknown as Parameters<typeof createUsersService>[0],
+      {
+        credentialEmailSender: {
+          sendEmail,
+        },
+      },
+    );
+
+    const input: CreateUserInput = {
+      name: "Fallback User",
+      email: "Fallback.User@Example.com",
+      password: "Password123!",
+      sapNo: "SAP445566",
+      status: "ACTIVE",
+      positionId: "00000000-0000-1000-8000-000000000000",
+      joiningDate: new Date("2026-01-01T00:00:00.000Z"),
+    };
+
+    const result = await service.create(input);
+
+    expect(result.id).toBeDefined();
+    expect(result.email).toBe("fallback.user@example.com");
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+});
+
 /**
  * Feature: user-management, Property 2: Password hashing invariant
  *

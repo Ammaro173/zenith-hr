@@ -357,7 +357,47 @@ function toUserResponse(
   };
 }
 
-export const createUsersService = (db: DbOrTx) => ({
+interface UsersServiceEmailPayload {
+  html: string;
+  subject: string;
+  text?: string;
+  to: string;
+}
+
+interface UsersServiceDependencies {
+  credentialEmailSender?: {
+    sendEmail: (payload: UsersServiceEmailPayload) => Promise<unknown>;
+  };
+}
+
+function escapeEmailHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildAccountCredentialsEmailContent(input: {
+  email: string;
+  name: string;
+  password: string;
+}): { html: string; text: string } {
+  const safeName = escapeEmailHtml(input.name);
+  const safeEmail = escapeEmailHtml(input.email);
+  const safePassword = escapeEmailHtml(input.password);
+
+  return {
+    html: `<p>Hello ${safeName},</p><p>Your Zenith HR account has been created.</p><p><strong>Email:</strong> ${safeEmail}<br /><strong>Password:</strong> ${safePassword}</p><p>Please sign in and change your password immediately.</p>`,
+    text: `Hello ${input.name},\n\nYour Zenith HR account has been created.\nEmail: ${input.email}\nPassword: ${input.password}\n\nPlease sign in and change your password immediately.`,
+  };
+}
+
+export const createUsersService = (
+  db: DbOrTx,
+  dependencies: UsersServiceDependencies = {},
+) => ({
   /**
    * Search users by name, email, or SAP number (for autocomplete)
    * If query is empty, returns all users up to limit
@@ -1001,7 +1041,28 @@ export const createUsersService = (db: DbOrTx) => ({
       throw new AppError("INTERNAL_ERROR", "Failed to create user", 500);
     }
 
-    return toUserResponse(createdUser);
+    const createdUserResponse = toUserResponse(createdUser);
+    const credentialsEmail = buildAccountCredentialsEmailContent({
+      name: createdUserResponse.name,
+      email: createdUserResponse.email,
+      password,
+    });
+
+    dependencies.credentialEmailSender
+      ?.sendEmail({
+        to: createdUserResponse.email,
+        subject: "Your Zenith HR account credentials",
+        html: credentialsEmail.html,
+        text: credentialsEmail.text,
+      })
+      .catch((error: unknown) => {
+        console.error(
+          "[users] Failed to send credentials email:",
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      });
+
+    return createdUserResponse;
   },
 
   /**

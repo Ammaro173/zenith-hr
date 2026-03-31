@@ -73,7 +73,7 @@ export async function createContext({ context }: CreateContextOptions) {
     positions: createPositionsService(db),
     separations: createSeparationsService(db, storage, notifications),
     imports: createImportsService(db),
-    users: createUsersService(db),
+    users: createUsersService(db, { credentialEmailSender: notifications }),
     departments: createDepartmentsService(db),
     webhooks: createWebhooksService(db),
   };
