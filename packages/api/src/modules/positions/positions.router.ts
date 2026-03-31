@@ -4,6 +4,7 @@ import {
   createPositionSchema,
   deletePositionSchema,
   getPositionByIdSchema,
+  listPositionsSchema,
   searchPositionsSchema,
   updatePositionByIdSchema,
 } from "./positions.schema";
@@ -13,6 +14,12 @@ const positionManageRoles: Array<
 > = ["ADMIN", "HOD_HR", "CEO", "HOD_IT", "HOD_FINANCE", "MANAGER"];
 
 export const positionsRouter = o.router({
+  list: requireRoles(positionManageRoles)
+    .input(listPositionsSchema)
+    .handler(async ({ input, context }) => {
+      return await context.services.positions.list(input);
+    }),
+
   search: requireRoles(positionManageRoles)
     .input(searchPositionsSchema)
     .handler(async ({ input, context }) => {

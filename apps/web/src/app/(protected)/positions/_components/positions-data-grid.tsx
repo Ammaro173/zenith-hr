@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DataGrid, DataGridContainer } from "@/components/ui/data-grid";
+import { DataGridPagination } from "@/components/ui/data-grid-pagination";
 import { DataGridTable } from "@/components/ui/data-grid-table";
 import {
   DropdownMenu,
@@ -191,6 +192,7 @@ export function PositionsDataGrid() {
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </DataGridContainer>
+        <DataGridPagination />
       </div>
 
       <DeletePositionDialog

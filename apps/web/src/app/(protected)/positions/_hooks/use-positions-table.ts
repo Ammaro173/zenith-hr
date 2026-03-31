@@ -9,6 +9,10 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { orpc } from "@/utils/orpc";
 import type { PositionListItem } from "../_components/position-form";
 
+type SortByField = "name" | "createdAt";
+
+const validSortFields: SortByField[] = ["name", "createdAt"];
+
 export function usePositionsTable(columns: ColumnDef<PositionListItem>[]) {
   const [globalFilter, setGlobalFilter] = useQueryState("q", {
     defaultValue: "",
@@ -17,10 +21,10 @@ export function usePositionsTable(columns: ColumnDef<PositionListItem>[]) {
 
   const debouncedSearch = useDebouncedValue(globalFilter, 300);
 
-  const { table } = useDataTable({
+  const { table, sorting, pagination } = useDataTable({
     columns,
     data: [],
-    pageCount: 1,
+    pageCount: -1,
     initialState: {
       sorting: [{ id: "name", desc: false }],
     },
@@ -29,35 +33,40 @@ export function usePositionsTable(columns: ColumnDef<PositionListItem>[]) {
 
   const queryInput = useMemo(
     () => ({
-      query: debouncedSearch,
-      limit: 100,
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+      search: debouncedSearch || undefined,
+      sortBy: (validSortFields.includes(sorting[0]?.id as SortByField)
+        ? sorting[0]?.id
+        : "name") as SortByField,
+      sortOrder: (sorting[0]?.desc ? "desc" : "asc") as "desc" | "asc",
     }),
-    [debouncedSearch],
+    [pagination, debouncedSearch, sorting],
   );
 
   const { data, isLoading, isFetching } = useQuery({
-    ...orpc.positions.search.queryOptions({
+    ...orpc.positions.list.queryOptions({
       input: queryInput,
     }),
     placeholderData: (previousData) => previousData,
   });
 
-  const positions = (data ?? []) as PositionListItem[];
+  const positions = (data?.data ?? []) as PositionListItem[];
+  const totalCount = data?.total ?? 0;
 
   table.setOptions((prev) => ({
     ...prev,
     data: positions,
-    pageCount: 1,
-    rowCount: positions.length,
+    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    rowCount: totalCount,
   }));
 
   return {
     table,
-    positions,
     globalFilter,
     setGlobalFilter,
     isLoading,
     isFetching,
-    totalCount: positions.length,
+    totalCount,
   };
 }

@@ -1,11 +1,13 @@
 import type { DbOrTx } from "@zenith-hr/db";
 import { department } from "@zenith-hr/db/schema/departments";
 import { jobPosition } from "@zenith-hr/db/schema/position-slots";
-import { asc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { AppError } from "../../shared/errors";
 import type {
   CreatePositionInput,
+  ListPositionsInput,
+  PaginatedPositionsResult,
   PositionResponse,
   PositionSearchResponse,
   SearchPositionsInput,
@@ -68,6 +70,80 @@ export const createPositionsService = (db: DbOrTx) => {
   };
 
   return {
+    async list(params: ListPositionsInput): Promise<PaginatedPositionsResult> {
+      const { page, pageSize, search, sortBy, sortOrder } = params;
+      const baseSelect = {
+        id: jobPosition.id,
+        code: jobPosition.code,
+        name: jobPosition.name,
+        description: jobPosition.description,
+        responsibilities: jobPosition.responsibilities,
+        grade: jobPosition.grade,
+        departmentId: jobPosition.departmentId,
+        departmentName: department.name,
+        reportsToPositionId: jobPosition.reportsToPositionId,
+        reportsToPositionName: reportsTo.name,
+        role: jobPosition.role,
+        active: jobPosition.active,
+      };
+
+      const searchTerm = search?.trim();
+      // biome-ignore lint/suspicious/noExplicitAny: drizzle condition types are complex
+      const conditions: any[] = [];
+
+      if (searchTerm) {
+        conditions.push(
+          or(
+            ilike(jobPosition.name, `%${searchTerm}%`),
+            ilike(jobPosition.code, `%${searchTerm}%`),
+            ilike(jobPosition.description, `%${searchTerm}%`),
+            ilike(department.name, `%${searchTerm}%`),
+          ),
+        );
+      }
+
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
+      const offset = (page - 1) * pageSize;
+      const orderFn = sortOrder === "desc" ? desc : asc;
+      const sortColumn =
+        sortBy === "createdAt" ? jobPosition.createdAt : jobPosition.name;
+
+      const [rows, totalResult] = await Promise.all([
+        db
+          .select(baseSelect)
+          .from(jobPosition)
+          .leftJoin(department, eq(department.id, jobPosition.departmentId))
+          .leftJoin(
+            reportsTo,
+            eq(reportsTo.id, jobPosition.reportsToPositionId),
+          )
+          .where(whereClause)
+          .orderBy(orderFn(sortColumn))
+          .limit(pageSize)
+          .offset(offset),
+        db
+          .select({ count: count() })
+          .from(jobPosition)
+          .leftJoin(department, eq(department.id, jobPosition.departmentId))
+          .where(whereClause),
+      ]);
+
+      const total = totalResult[0]?.count ?? 0;
+
+      return {
+        data: rows.map((row) => ({
+          ...row,
+          departmentName: row.departmentName ?? null,
+          reportsToPositionName: row.reportsToPositionName ?? null,
+        })),
+        total,
+        page,
+        pageSize,
+        pageCount: Math.ceil(total / pageSize),
+      };
+    },
+
     async search(
       input: SearchPositionsInput,
     ): Promise<PositionSearchResponse[]> {

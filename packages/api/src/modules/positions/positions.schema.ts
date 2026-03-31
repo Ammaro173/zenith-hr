@@ -18,6 +18,16 @@ export const searchPositionsSchema = z.object({
 
 export type SearchPositionsInput = z.infer<typeof searchPositionsSchema>;
 
+export const listPositionsSchema = z.object({
+  page: z.number().min(1).default(1),
+  pageSize: z.number().min(1).max(100).default(10),
+  search: z.string().optional(),
+  sortBy: z.enum(["name", "createdAt"]).default("name"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
+});
+
+export type ListPositionsInput = z.infer<typeof listPositionsSchema>;
+
 // Base schema (plain z.object, no preprocess/transform — same pattern as requests.schema)
 const basePositionSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -94,4 +104,12 @@ export interface PositionSearchResponse {
   reportsToPositionName: string | null;
   responsibilities: string | null;
   role: string;
+}
+
+export interface PaginatedPositionsResult {
+  data: PositionSearchResponse[];
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
 }
