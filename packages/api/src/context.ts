@@ -71,7 +71,7 @@ export async function createContext({ context }: CreateContextOptions) {
       createPerformanceService(db),
     ),
     positions: createPositionsService(db),
-    separations: createSeparationsService(db, storage),
+    separations: createSeparationsService(db, storage, notifications),
     imports: createImportsService(db),
     users: createUsersService(db),
     departments: createDepartmentsService(db),

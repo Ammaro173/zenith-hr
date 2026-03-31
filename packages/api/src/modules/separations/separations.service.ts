@@ -22,6 +22,7 @@ import {
   getActorRole,
   isHODFamily,
 } from "../../shared/utils";
+import type { NotificationsService } from "../notifications/notifications.service";
 import {
   type addChecklistItemSchema,
   type approveByHrSchema,
@@ -33,6 +34,7 @@ import {
   type rejectByHrSchema,
   type rejectByManagerSchema,
   type reorderChecklistItemsSchema,
+  type sendClearanceReminderSchema,
   type startClearanceSchema,
   type updateChecklistSchema,
   type updateSeparationSchema,
@@ -60,7 +62,24 @@ const ALL_CLEARANCE_LANES: Lane[] = [
   "HR_PAYROLL",
 ];
 
+const LANE_LABELS: Record<Lane, string> = {
+  OPERATIONS: "Operations",
+  HOD_IT: "HOD IT",
+  HOD_FINANCE: "HOD Finance",
+  ADMIN_ASSETS: "Admin/Assets",
+  INSURANCE: "Insurance",
+  USED_CARS: "Used Cars",
+  HR_PAYROLL: "HR/Payroll",
+};
+
 const CLEARANCE_VIEW_STATUSES = ["CLEARANCE_IN_PROGRESS", "COMPLETED"] as const;
+
+type LaneFallbackRole = "HOD_IT" | "HOD_FINANCE" | "ADMIN" | "HOD_HR";
+
+interface ReminderRecipient {
+  email: string | null;
+  userId: string;
+}
 
 /** Mirrors `approveByManager` / `rejectByManager` role gate (position-derived role). */
 const MANAGER_APPROVER_ROLES = [
@@ -105,7 +124,23 @@ function sanitizeFileName(fileName: string): string {
 export const createSeparationsService = (
   db: DbOrTx,
   storage: StorageService,
+  notificationsService?: Pick<NotificationsService, "createNotification">,
 ) => {
+  const notifications: Pick<NotificationsService, "createNotification"> =
+    notificationsService ?? {
+      createNotification: async (
+        _userId: string,
+        _title: string,
+        _body: string,
+        _type?: "INFO" | "ACTION_REQUIRED" | "REMINDER",
+        _link?: string,
+        _email?: string,
+      ) =>
+        undefined as unknown as Awaited<
+          ReturnType<NotificationsService["createNotification"]>
+        >,
+    };
+
   const getRoleDefaultLanes = (role: string): Lane[] => {
     if (role === "HOD_HR") {
       return ["HR_PAYROLL"];
@@ -120,6 +155,47 @@ export const createSeparationsService = (
       return ["ADMIN_ASSETS"];
     }
     return [];
+  };
+
+  const getFallbackRoleForLane = (lane: Lane): LaneFallbackRole | null => {
+    if (lane === "HOD_IT") {
+      return "HOD_IT";
+    }
+    if (lane === "HOD_FINANCE") {
+      return "HOD_FINANCE";
+    }
+    if (lane === "ADMIN_ASSETS") {
+      return "ADMIN";
+    }
+    if (lane === "HR_PAYROLL") {
+      return "HOD_HR";
+    }
+    return null;
+  };
+
+  const getLaneReminderRecipients = async (
+    lane: Lane,
+  ): Promise<ReminderRecipient[]> => {
+    const memberships = await db
+      .select({ email: user.email, userId: user.id })
+      .from(userClearanceLane)
+      .innerJoin(user, eq(userClearanceLane.userId, user.id))
+      .where(and(eq(userClearanceLane.lane, lane), eq(user.status, "ACTIVE")));
+
+    if (memberships.length > 0) {
+      return memberships;
+    }
+
+    const fallbackRole = getFallbackRoleForLane(lane);
+    if (!fallbackRole) {
+      return [];
+    }
+
+    return await db
+      .select({ email: user.email, userId: user.id })
+      .from(user)
+      .where(and(eq(user.role, fallbackRole), eq(user.status, "ACTIVE")))
+      .limit(100);
   };
 
   const getUserLanes = async (
@@ -1239,6 +1315,128 @@ export const createSeparationsService = (
       }
 
       return updated;
+    },
+
+    async sendClearanceReminder(
+      input: z.infer<typeof sendClearanceReminderSchema>,
+      actorId: string,
+    ) {
+      const actorRole = await getActorRole(db, actorId);
+      if (!(actorRole === "HOD_HR" || actorRole === "ADMIN")) {
+        throw new AppError("FORBIDDEN", "Only HR can send reminders", 403);
+      }
+
+      const [request] = await db
+        .select({ id: separationRequest.id, status: separationRequest.status })
+        .from(separationRequest)
+        .where(eq(separationRequest.id, input.separationId))
+        .limit(1);
+
+      if (!request) {
+        throw AppError.notFound("Separation request not found");
+      }
+
+      if (request.status !== "CLEARANCE_IN_PROGRESS") {
+        throw AppError.badRequest(
+          "Reminders are only available while clearance is in progress",
+        );
+      }
+
+      const pendingRows = await db
+        .select({ lane: separationChecklist.lane })
+        .from(separationChecklist)
+        .where(
+          and(
+            eq(separationChecklist.separationId, input.separationId),
+            eq(separationChecklist.status, "PENDING"),
+          ),
+        );
+
+      const pendingLanes = Array.from(
+        new Set(pendingRows.map((row) => row.lane as Lane)),
+      );
+
+      if (pendingLanes.length === 0) {
+        throw AppError.badRequest("No pending clearance departments to remind");
+      }
+
+      const targetLanes =
+        input.scope === "LANE" ? [input.lane as Lane] : pendingLanes;
+
+      if (
+        input.scope === "LANE" &&
+        !pendingLanes.includes(input.lane as Lane)
+      ) {
+        throw AppError.badRequest(
+          "Selected department has no pending clearance items",
+        );
+      }
+
+      const skippedLanes: Lane[] = [];
+      let notifiedRecipients = 0;
+
+      for (const lane of targetLanes) {
+        const recipients = await getLaneReminderRecipients(lane);
+        const dedupedRecipients = Array.from(
+          new Map(
+            recipients.map((recipient) => [recipient.userId, recipient]),
+          ).values(),
+        );
+
+        if (dedupedRecipients.length === 0) {
+          skippedLanes.push(lane);
+          continue;
+        }
+
+        for (const recipient of dedupedRecipients) {
+          try {
+            await notifications.createNotification(
+              recipient.userId,
+              "Clearance reminder",
+              `${LANE_LABELS[lane]} has pending clearance tasks that require your action.`,
+              "REMINDER",
+              `/separations/${input.separationId}`,
+              recipient.email ?? undefined,
+            );
+            notifiedRecipients += 1;
+          } catch (error: unknown) {
+            console.warn("[separations] failed to send clearance reminder", {
+              error: error instanceof Error ? error.message : String(error),
+              lane,
+              recipientId: recipient.userId,
+              separationId: input.separationId,
+            });
+          }
+        }
+      }
+
+      if (notifiedRecipients === 0) {
+        throw AppError.badRequest(
+          "No active recipients found for pending clearance reminders",
+        );
+      }
+
+      await db.insert(auditLog).values({
+        entityId: input.separationId,
+        entityType: "SEPARATION",
+        action: "SEND_CLEARANCE_REMINDER",
+        metadata: {
+          lanes: targetLanes,
+          notifiedRecipients,
+          scope: input.scope,
+          skippedLanes,
+        },
+        performedAt: new Date(),
+        performedBy: actorId,
+      });
+
+      return {
+        lanes: targetLanes,
+        notifiedRecipients,
+        scope: input.scope,
+        separationId: input.separationId,
+        skippedLanes,
+      };
     },
 
     async getListForViewer(actorId: string) {

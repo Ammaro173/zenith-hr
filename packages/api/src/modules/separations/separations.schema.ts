@@ -79,17 +79,19 @@ export const rejectByHrSchema = z.object({
   comment: z.string().min(5),
 });
 
+const clearanceLaneSchema = z.enum([
+  "OPERATIONS",
+  "HOD_IT",
+  "HOD_FINANCE",
+  "ADMIN_ASSETS",
+  "INSURANCE",
+  "USED_CARS",
+  "HR_PAYROLL",
+]);
+
 export const addChecklistItemSchema = z.object({
   separationId: z.string().uuid(),
-  lane: z.enum([
-    "OPERATIONS",
-    "HOD_IT",
-    "HOD_FINANCE",
-    "ADMIN_ASSETS",
-    "INSURANCE",
-    "USED_CARS",
-    "HR_PAYROLL",
-  ]),
+  lane: clearanceLaneSchema,
   title: z.string().min(2),
   description: z.string().optional(),
   required: z.boolean().default(true),
@@ -98,17 +100,21 @@ export const addChecklistItemSchema = z.object({
 
 export const reorderChecklistItemsSchema = z.object({
   separationId: z.string().uuid(),
-  lane: z.enum([
-    "OPERATIONS",
-    "HOD_IT",
-    "HOD_FINANCE",
-    "ADMIN_ASSETS",
-    "INSURANCE",
-    "USED_CARS",
-    "HR_PAYROLL",
-  ]),
+  lane: clearanceLaneSchema,
   orderedIds: z.array(z.string().uuid()).min(1),
 });
+
+export const sendClearanceReminderSchema = z.discriminatedUnion("scope", [
+  z.object({
+    separationId: z.string().uuid(),
+    scope: z.literal("LANE"),
+    lane: clearanceLaneSchema,
+  }),
+  z.object({
+    separationId: z.string().uuid(),
+    scope: z.literal("ALL_PENDING"),
+  }),
+]);
 
 export const uploadSeparationDocumentSchema = z.object({
   separationId: z.string().uuid(),

@@ -1197,4 +1197,212 @@ describe("SeparationsService", () => {
     const rows = await service.listEligibleSubjects("admin-1", { limit: 10 });
     expect(rows[0]?.id).toBe("any-1");
   });
+
+  it("sendClearanceReminder() forbids non-HR users", async () => {
+    const storage = createMockStorage();
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      query: {},
+      select: mock(() => ({
+        from: mock(() => ({
+          innerJoin: mock(() => ({
+            where: mock(() => ({
+              limit: mock(() => Promise.resolve([{ role: "EMPLOYEE" }])),
+            })),
+          })),
+        })),
+      })),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb({} as MockDb),
+      ),
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+    );
+
+    await expect(
+      service.sendClearanceReminder(
+        {
+          separationId: "2f2134df-a829-44fd-9037-a89d57f1980c",
+          scope: "ALL_PENDING",
+        },
+        "emp-1",
+      ),
+    ).rejects.toThrow("Only HR can send reminders");
+  });
+
+  it("sendClearanceReminder() rejects lane scope when lane has no pending items", async () => {
+    const storage = createMockStorage();
+    let selectCall = 0;
+
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      query: {},
+      select: mock(() => {
+        selectCall++;
+
+        if (selectCall === 1) {
+          return {
+            from: mock(() => ({
+              innerJoin: mock(() => ({
+                where: mock(() => ({
+                  limit: mock(() => Promise.resolve([{ role: "HOD_HR" }])),
+                })),
+              })),
+            })),
+          };
+        }
+
+        if (selectCall === 2) {
+          const qb: any = {
+            from: mock(() => qb),
+            where: mock(() => qb),
+            limit: mock(() =>
+              Promise.resolve([
+                {
+                  id: "sep-1",
+                  status: "CLEARANCE_IN_PROGRESS",
+                },
+              ]),
+            ),
+          };
+          return qb;
+        }
+
+        return {
+          from: mock(() => ({
+            where: mock(() => Promise.resolve([{ lane: "HOD_FINANCE" }])),
+          })),
+        };
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb({} as MockDb),
+      ),
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+    );
+
+    await expect(
+      service.sendClearanceReminder(
+        {
+          separationId: "4f5e4f41-2933-4582-af65-0f95f4b0af6d",
+          scope: "LANE",
+          lane: "HOD_IT",
+        },
+        "hr-1",
+      ),
+    ).rejects.toThrow("Selected department has no pending clearance items");
+  });
+
+  it("sendClearanceReminder() sends reminder notifications to lane recipients", async () => {
+    const storage = createMockStorage();
+    let selectCall = 0;
+    const notifications = {
+      createNotification: mock(() => Promise.resolve(undefined)),
+    };
+
+    const mockDb: MockDb = {
+      insert: mock(() => ({ values: mock(() => Promise.resolve(undefined)) })),
+      update: mock(() => ({
+        set: mock(() => ({
+          where: mock(() => ({ returning: mock(() => Promise.resolve([])) })),
+        })),
+      })),
+      query: {},
+      select: mock(() => {
+        selectCall++;
+
+        if (selectCall === 1) {
+          return {
+            from: mock(() => ({
+              innerJoin: mock(() => ({
+                where: mock(() => ({
+                  limit: mock(() => Promise.resolve([{ role: "HOD_HR" }])),
+                })),
+              })),
+            })),
+          };
+        }
+
+        if (selectCall === 2) {
+          const qb: any = {
+            from: mock(() => qb),
+            where: mock(() => qb),
+            limit: mock(() =>
+              Promise.resolve([
+                {
+                  id: "sep-1",
+                  status: "CLEARANCE_IN_PROGRESS",
+                },
+              ]),
+            ),
+          };
+          return qb;
+        }
+
+        if (selectCall === 3) {
+          return {
+            from: mock(() => ({
+              where: mock(() => Promise.resolve([{ lane: "HOD_IT" }])),
+            })),
+          };
+        }
+
+        const qb: any = {
+          from: mock(() => qb),
+          innerJoin: mock(() => qb),
+          where: mock(() =>
+            Promise.resolve([
+              {
+                email: "it.hod@example.com",
+                userId: "it-hod-1",
+              },
+            ]),
+          ),
+        };
+        return qb;
+      }),
+      transaction: mock(
+        async (cb: (t: unknown) => Promise<unknown>) => await cb({} as MockDb),
+      ),
+    };
+
+    const service = createSeparationsService(
+      mockDb as unknown as Parameters<typeof createSeparationsService>[0],
+      storage as Parameters<typeof createSeparationsService>[1],
+      notifications,
+    );
+
+    const result = await service.sendClearanceReminder(
+      {
+        separationId: "f97fdb45-8b4f-491a-9f1e-fa5bf499eb48",
+        scope: "LANE",
+        lane: "HOD_IT",
+      },
+      "hr-1",
+    );
+
+    expect(result.notifiedRecipients).toBe(1);
+    expect(notifications.createNotification).toHaveBeenCalledTimes(1);
+    const firstCall = notifications.createNotification.mock
+      .calls[0] as unknown[];
+    expect(firstCall?.[0]).toBe("it-hod-1");
+    expect(firstCall?.[3]).toBe("REMINDER");
+    expect(firstCall?.[5]).toBe("it.hod@example.com");
+  });
 });
