@@ -1,15 +1,8 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 
-interface DashboardHeaderProps {
-  canCreateRequest: boolean;
-}
-
-export function DashboardHeader({ canCreateRequest }: DashboardHeaderProps) {
+export function DashboardHeader() {
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
@@ -30,16 +23,6 @@ export function DashboardHeader({ canCreateRequest }: DashboardHeaderProps) {
         <div className="flex items-center text-muted-foreground">
           {currentDate}
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {canCreateRequest && (
-          <Button asChild>
-            <Link href="/requests/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Request
-            </Link>
-          </Button>
-        )}
       </div>
     </div>
   );

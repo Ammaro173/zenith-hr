@@ -43,14 +43,10 @@ const ROLE_VIEWS: Record<
 };
 
 interface DashboardClientProps {
-  canCreateRequest: boolean;
   role: string;
 }
 
-export function DashboardClient({
-  role,
-  canCreateRequest,
-}: DashboardClientProps) {
+export function DashboardClient({ role }: DashboardClientProps) {
   const { data: stats, isLoading: isStatsLoading } = useQuery(
     orpc.dashboard.getStats.queryOptions(),
   );
@@ -58,7 +54,7 @@ export function DashboardClient({
   const isLoading = isStatsLoading && !stats;
 
   return (
-    <DashboardShell canCreateRequest={canCreateRequest}>
+    <DashboardShell>
       <Show>
         <Show.When isTrue={isLoading}>
           <div className="flex h-[50vh] w-full items-center justify-center">

@@ -6,15 +6,6 @@ export default async function DashboardPage() {
   const session = sessionData?.data;
 
   const role = session?.user?.role || "EMPLOYEE";
-  const canCreateRequest = [
-    "MANAGER",
-    "HOD",
-    "HOD_IT",
-    "ADMIN",
-    "CEO",
-    "HOD_HR",
-    "HOD_FINANCE",
-  ].includes(role);
 
-  return <DashboardClient canCreateRequest={canCreateRequest} role={role} />;
+  return <DashboardClient role={role} />;
 }
