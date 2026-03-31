@@ -10,6 +10,7 @@ import {
   rejectByHrSchema,
   rejectByManagerSchema,
   reorderChecklistItemsSchema,
+  sendClearanceReminderSchema,
   startClearanceSchema,
   updateChecklistSchema,
   updateSeparationSchema,
@@ -124,6 +125,15 @@ export const separationsRouter = o.router({
     .input(updateChecklistSchema)
     .handler(async ({ input, context }) =>
       context.services.separations.updateChecklist(
+        input,
+        context.session.user.id,
+      ),
+    ),
+
+  sendClearanceReminder: requireRoles(["HOD_HR", "ADMIN"])
+    .input(sendClearanceReminderSchema)
+    .handler(async ({ input, context }) =>
+      context.services.separations.sendClearanceReminder(
         input,
         context.session.user.id,
       ),
