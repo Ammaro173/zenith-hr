@@ -2,7 +2,14 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon, CheckCircle2, Lock, Plus, XCircle } from "lucide-react";
+import {
+  BellRing,
+  CalendarIcon,
+  CheckCircle2,
+  Lock,
+  Plus,
+  XCircle,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +132,25 @@ export function ClearanceBoard({
     }),
   );
 
+  const sendClearanceReminder = useMutation(
+    orpc.separations.sendClearanceReminder.mutationOptions({
+      onSuccess: (result) => {
+        if (result.skippedLanes.length > 0) {
+          const skippedCount = result.skippedLanes.length;
+          toast.success(
+            `Reminder sent to ${result.notifiedRecipients} recipients. ${skippedCount} lane${skippedCount === 1 ? "" : "s"} had no recipients.`,
+          );
+          return;
+        }
+
+        toast.success(
+          `Reminder sent to ${result.notifiedRecipients} recipient${result.notifiedRecipients === 1 ? "" : "s"}.`,
+        );
+      },
+      onError: (err) => toast.error(err.message),
+    }),
+  );
+
   const grouped = useMemo(() => {
     const initial: Record<Lane, SeparationBoardItem[]> = {
       OPERATIONS: [],
@@ -157,6 +183,18 @@ export function ClearanceBoard({
     return initial;
   }, [separation.checklistItems]);
 
+  const pendingLanes = useMemo(
+    () =>
+      LANE_ORDER.filter((lane) =>
+        grouped[lane].some((item) => item.status === "PENDING"),
+      ),
+    [grouped],
+  );
+
+  const canSendReminders =
+    separation.viewer.canAddClearanceItems &&
+    separation.status === "CLEARANCE_IN_PROGRESS";
+
   const required = separation.checklistItems.filter((i) => i.required);
   const cleared = required.filter((i) => i.status === "CLEARED");
   const progress = percent(cleared.length, required.length);
@@ -172,6 +210,26 @@ export function ClearanceBoard({
       checklistId: id,
       status,
       remarks: remark || undefined,
+    });
+  };
+
+  const handleLaneReminder = (lane: Lane) => {
+    sendClearanceReminder.mutate({
+      lane,
+      scope: "LANE",
+      separationId: separation.id,
+    });
+  };
+
+  const handleGlobalReminder = () => {
+    if (pendingLanes.length === 0) {
+      toast.error("No pending departments to remind");
+      return;
+    }
+
+    sendClearanceReminder.mutate({
+      scope: "ALL_PENDING",
+      separationId: separation.id,
     });
   };
 
@@ -206,6 +264,19 @@ export function ClearanceBoard({
                 {cleared.length}/{required.length} required cleared
               </div>
             </div>
+            {canSendReminders ? (
+              <Button
+                disabled={
+                  pendingLanes.length === 0 || sendClearanceReminder.isPending
+                }
+                onClick={handleGlobalReminder}
+                size="sm"
+                variant="outline"
+              >
+                <BellRing className="mr-1.5 h-4 w-4" />
+                Remind all pending ({pendingLanes.length})
+              </Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -226,6 +297,9 @@ export function ClearanceBoard({
             const canAct = laneCanAct(
               separation.viewer.clearanceActLanes ?? [],
               lane,
+            );
+            const laneHasPending = laneItems.some(
+              (item) => item.status === "PENDING",
             );
 
             return (
@@ -249,12 +323,28 @@ export function ClearanceBoard({
                       <Lock className="h-3 w-3 text-muted-foreground" />
                     )}
                   </div>
-                  <Badge
-                    className="shrink-0 text-[10px]"
-                    variant={laneProgress === 100 ? "default" : "outline"}
-                  >
-                    {laneProgress === 100 ? "Done" : `${laneProgress}%`}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    {canSendReminders ? (
+                      <Button
+                        className="h-6 w-6"
+                        disabled={
+                          !laneHasPending || sendClearanceReminder.isPending
+                        }
+                        onClick={() => handleLaneReminder(lane)}
+                        size="icon"
+                        title={`Send reminder to ${LANE_LABEL[lane]}`}
+                        variant="ghost"
+                      >
+                        <BellRing className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    <Badge
+                      className="shrink-0 text-[10px]"
+                      variant={laneProgress === 100 ? "default" : "outline"}
+                    >
+                      {laneProgress === 100 ? "Done" : `${laneProgress}%`}
+                    </Badge>
+                  </div>
                 </div>
 
                 {/* Items */}
