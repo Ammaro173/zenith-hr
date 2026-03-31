@@ -8,6 +8,13 @@ import { env } from "../../env";
 import { notificationEmitter } from "./emitter";
 import type { PushSubscriptionInput } from "./push.schema";
 
+export interface SendEmailInput {
+  html: string;
+  subject: string;
+  text?: string;
+  to: string;
+}
+
 export const createNotificationsService = (db: DB) => {
   const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
@@ -78,6 +85,25 @@ export const createNotificationsService = (db: DB) => {
     );
   };
 
+  const sendEmail = async ({
+    to,
+    subject,
+    html,
+    text,
+  }: SendEmailInput): Promise<void> => {
+    if (!(resend && env.EMAIL_FROM)) {
+      return;
+    }
+
+    await resend.emails.send({
+      from: env.EMAIL_FROM,
+      to,
+      subject,
+      html,
+      text,
+    });
+  };
+
   return {
     async createNotification(
       userId: string,
@@ -115,19 +141,18 @@ export const createNotificationsService = (db: DB) => {
       }
 
       // 3. Send Email if requested (fire and forget pattern)
-      if (email && resend && env.EMAIL_FROM) {
-        resend.emails
-          .send({
-            from: env.EMAIL_FROM,
-            to: email,
-            subject: title,
-            html: `<p>${body}</p>${link ? `<p><a href="${link}">View Details</a></p>` : ""}`,
-          })
-          .catch((err) => console.error("Resend error:", err)); // Non-blocking
+      if (email) {
+        sendEmail({
+          to: email,
+          subject: title,
+          html: `<p>${body}</p>${link ? `<p><a href="${link}">View Details</a></p>` : ""}`,
+        }).catch((err) => console.error("Resend error:", err)); // Non-blocking
       }
 
       return newNotification;
     },
+
+    sendEmail,
 
     sendPushNotification,
 
